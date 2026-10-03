@@ -18,7 +18,7 @@
 | state / ownership | 受控与非受控模式、当前值、disabled/readOnly/loading/error 语义 |
 | parts / slots / composition | 必需/可选部件、允许的嵌套关系、稳定部件标识 |
 | control interface | 程序化公开动作与状态订阅，不暴露私有实现 |
-| accessibility obligations | 名称、键盘、焦点、语义关系以及主题需补足的视觉条件 |
+| accessibility obligations | 结构/行为层的名称、键盘、焦点、语义关系，以及主题/消费者样式需补足的视觉层条件与声明范围 |
 | lifecycle | 实例创建/挂载/卸载与订阅资源回收 |
 
 组件契约分类型定义，不能用一个万能 API 抹平 Dialog 与 Select。公共约定复用，特有保证保留。
@@ -26,6 +26,8 @@
 设计例子：Select 的 value-change 只报告新选中值；不会自动添加购物车。Dialog 需要可访问名称、焦点进入/返回与关闭语义，但标题可以通过契约允许的不同公开方式提供。
 
 反例：替代 provider 不支持 searchable 却忽略该要求；受控 value 与内部默认值同时当权威；缺少 Dialog 名称但仅靠视觉文字猜测。均应得到明确诊断或被拒绝。
+
+可访问性结论分层：component/provider 的 conformance 只覆盖实际验证过的结构与行为义务；焦点可见性、对比度等视觉义务由 provider + theme/consumer style 的组合验收。不得因为 headless 层通过就泛称任意样式组合“完全可访问”。
 
 ## 2. Capability Contract
 
@@ -38,6 +40,7 @@
 | authorization / confirmation hooks | 应用接入身份、权限、策略和必要确认的接口；描述不是授权 |
 | state concurrency | 预期状态版本、冲突与更新返回的语义 |
 | idempotency / retry | 业务层支持的幂等范围与重试条件；不支持时明确 |
+| invocation / receipt / reconciliation | 调用唯一身份、业务执行/回执关联、unknown 结果的查询/对账句柄，以及与幂等键和审计链的关系 |
 | execution / cancellation | 等待、执行、完成、拒绝、失败、未知结果；取消不暗示已回滚 |
 | failure modes | 稳定错误类别、可安全重试条件、恢复/结果查询方式 |
 | visibility / audit | 向 Agent 暴露的最小状态与脱敏审计边界 |
@@ -54,6 +57,8 @@
 
 未知路径：服务端可能已完成写入，但客户端超时。调用结果必须标记 unknown，优先查询/对账；不把 timeout 当成确定失败后自动再次添加。
 
+调用身份与幂等语义必须分开定义。契约需要存在可关联一次调用的稳定 identity（字段名待冻结），业务执行在可用时返回 execution/receipt 标识；unknown 结果必须携带或可推导查询/对账句柄。idempotency key 用于约束重复 effect，不能默认等同于 invocation identity；审计记录必须能够把调用、授权决策、业务执行与最终对账结果关联起来。
+
 这些是要实现并验证的行为，不表示目前存在业务服务。
 
 ## 3. Binding Contract
@@ -62,6 +67,8 @@ Binding 关联 componentInstanceId、capabilityId、参数来源/映射、草稿
 
 必须说明：用户事件何时触发业务动作；Agent 从何处获得参数；哪些状态是只读投影；执行结果如何影响 loading/error/success；并发或过期视图如何处理；页面卸载如何解除绑定。
 
+Binding 还必须显式定义**数据投影边界**：source、direction、agent visibility、mutability、redaction 与 invocation-only/agent-readable 等语义。组件或表单进入 Binding 不得自动把全部状态加入 Agent 可发现上下文；Agent 可读字段采用显式 allowlist。仅在业务调用内部取值的参数可以参与 invocation，但不因此变成 discovery/read context。审计投影可与 Agent 可见投影不同，并按契约脱敏。
+
 仅消费公开接口。组件的焦点不必同步给业务服务，业务权限不能由组件状态决定，敏感草稿不能因为绑定存在就全部公开。一个能力可绑定多个 UI 入口，一个表单可整体绑定一个能力，不要求一组件一工具。
 
 反例：按钮内部直接注册 WebMCP；Agent 路径复制另一套提交逻辑；用 provider 私有字段拼出业务状态；卸载后遗留工具注册；收到 Agent 结果就直接改 DOM。上述均违反边界。
@@ -69,6 +76,8 @@ Binding 关联 componentInstanceId、capabilityId、参数来源/映射、草稿
 ## 4. Plugin Contract
 
 字段族：kind、id、version、provides、requires、contract compatibility、feature support、scope、lifecycle。协议/组件/主题插件分类型定义，不共用不受限的万能 hook。
+
+M0 只冻结并实现最小 Plugin Kernel 所需语义：应用实例作用域、manifest、依赖/提供能力、兼容检查、init/dispose、冲突与失败清理。具体 component/theme/capability/protocol 扩展点由真实消费者首次接入后再收敛，不在无实现证据时提前设计通用 hook。
 
 注册时检查依赖和特性；初始化失败清理已创建资源；dispose 解除注册/订阅。应用实例与 SSR 请求隔离。优先安装时可选与启动时配置，不承诺任意 runtime replacement。
 

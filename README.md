@@ -26,8 +26,10 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 
 [GitHub Issues](https://github.com/zlpoot/future-ui/issues) 是任务事实源；[Notion 协作参考](https://app.notion.com/p/3ee27cd8a5c9813ebe0fca494e245d2d) 只保存方法、解释和提示词，不维护重复进度。
 
-## 当前边界
+## 状态与当前边界
 
-本轮只准备 Markdown 文档和 Issue。无 package.json、源码、依赖安装、CI 工作流、部署或模型/浏览器调用。main 的初始化仅包含授权边界；完整候选文档位于 `prep/g0-foundations` 的 Draft PR，未合并不视为接受。
+本轮只准备 Markdown 文档和 Issue。无 package.json、源码、依赖安装、CI 工作流、部署或模型/浏览器调用。
 
-**文档被接受或合并 ≠ 开始开发。** 只有负责人在 G0 明确批准具体任务范围，且对应任务满足 Ready 条件，才允许实现；不自动 merge、关闭任务或进入下一阶段。
+准备基线、具体契约成熟度和开发授权是三个独立状态：准备基线是否已进入 main 以 #1、PR #15 和 main 当前内容为准；Component / Capability / Binding / Plugin 等具体契约是否冻结以 #2、#3 与对应 ADR 的状态为准；开发授权只以 #4 为准。任一状态变化都不能推断另外两项。
+
+**文档进入 main ≠ 具体契约全部冻结 ≠ 开始开发。** 只有负责人在 G0 明确批准具体任务范围，且对应任务满足 Ready 条件，才允许实现；不自动 merge、关闭任务或进入下一阶段。

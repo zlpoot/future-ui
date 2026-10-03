@@ -1,6 +1,6 @@
 # 架构与模块边界 · 候选基线
 
-状态：Draft / design only。所有模块名均为逻辑边界，不表示仓库已经存在对应包。工程实现必须先通过 [G0](https://github.com/zlpoot/future-ui/issues/4)。
+状态：开发前架构基线。核心方向已确认；具体公开契约和技术细节仍由 #2/#3 冻结。所有模块名均为逻辑边界，不表示仓库已经存在对应包；本文进入 main 也不授予工程实现，开发仍必须先通过 [G0](https://github.com/zlpoot/future-ui/issues/4)。
 
 ## 总体结构
 
@@ -46,7 +46,11 @@ Agent 修改业务后通过正常订阅/数据刷新反映到 UI，不偷偷写 
 
 ## 组件可访问性与样式
 
-无样式不等于无结构、无键盘或无焦点语义。provider/renderer 负责结构语义、键盘、焦点与名称关联；主题负责焦点可见性、对比等视觉要求；组合后仍需验证。替换 provider 或主题不能自动继承原组合的验收结论。
+无样式不等于无结构、无键盘或无焦点语义。可访问性分两层记录：
+- **结构/行为可访问性**：HTML/ARIA 语义、键盘交互、焦点管理、可访问名称与状态关系，主要由 component contract、provider 和 renderer 负责。
+- **视觉可访问性**：焦点可见性、对比度、视觉错误/状态提示等，由主题或消费者样式与 provider 的组合负责。
+
+因此 headless provider 只能在其实际验证范围内声明结构/行为契约符合；完整“可访问”结论必须对 provider + theme/consumer style 的组合验证。替换 provider 或主题不能自动继承原组合的验收结论。
 
 跨框架共享的是契约和 conformance 用例，不强制 JSX/Vue 模板使用相同语法。原生 Select 与复杂可搜索 Select 只能在双方声明的公共特性范围内替换。
 
@@ -59,6 +63,8 @@ Agent 修改业务后通过正常订阅/数据刷新反映到 UI，不偷偷写 
 ## 插件化范围
 
 第一版支持安装时可选、启动时可配置。主题运行时切换可在定义清理和兼容规则后做；行为 provider 的状态迁移式热替换延期。
+
+M0 的 Plugin 工作只建立**最小 Kernel**：应用实例作用域、manifest、provides/requires、契约兼容检查、init/dispose、冲突检测和失败清理。不会在尚无真实消费者时先设计通用 component/theme/capability/protocol 万能 hook；具体 extension point 由后续首个 provider、capability runtime 和 protocol adapter 反向验证后再进入契约。
 
 插件声明 kind/version/provides/requires/兼容范围。冲突、缺依赖或能力缺失在启动/开发期明确失败。插件生命周期属于应用实例；SSR 请求隔离、卸载释放订阅、初始化失败清理和重复注册处理必须有规则。只支持受信任构建内插件；声明权限不是恶意代码沙箱。
 

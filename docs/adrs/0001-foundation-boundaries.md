@@ -1,7 +1,7 @@
 # ADR-0001 · 基础边界
 
 日期：2026-10-03。
-状态：**Proposed engineering record**。用户已确认本轮产品方向；本 ADR 的工程表述与具体实现尚待 Review/接受。记录不等于 G0 启动授权。
+状态：**Direction confirmed / implementation details open**。用户已确认本轮产品方向；本记录是否成为 main 的开发前基线以包含它的 PR/main 历史为准，具体公开契约与技术选择仍由 #2/#3 冻结。记录进入 main 不等于 G0 启动授权。
 
 ## 背景
 
