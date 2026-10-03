@@ -8,8 +8,8 @@
 | D02 | Schema 方言、生成方向、未知字段与兼容规则 | 单一权威定义生成目录/校验，技术 TBD | M0-02 |
 | D03 | 首个 provider 与框架 | Ark UI + React 优先，Vue 小范围对照；版本/许可待核验 | M1-01/04 |
 | D04 | 首批组件与公共特性 | Button/TextInput/Select/Dialog 候选；替代 provider 的共同范围待定 | M1-01/04 |
-| D05 | Component/Binding 公开字段、受控状态及错误码 | 见契约字段族；精确接口未冻结 | M0-02/M1-03 |
-| D06 | 能力 effect、授权 hook、幂等、并发及 unknown 语义 | 业务层落实，runtime 不假保证；参数与恢复策略待定 | M1-02/03 |
+| D05 | Component/Binding 公开字段、受控状态、数据投影/Agent visibility 及错误码 | 见契约字段族；精确接口未冻结 | M0-02/M1-03 |
+| D06 | 能力 effect、授权 hook、invocation/receipt、幂等、并发及 unknown reconciliation 语义 | 业务层落实实际 effect；runtime 只声明可验证调用/回执/对账契约，不假保证；参数与恢复策略待定 | M1-02/03 |
 | D07 | 浏览器、SSR/hydration、多实例与可访问性支持范围 | 先明确有限支持矩阵；结构/行为与视觉可访问性分层声明，自动+必要人工检查 | M1-01/04/07 |
 | D08 | 主题机制与视觉约束 | token/parts/variants；主题可选，不承诺行为热替换 | M1-01 |
 | D09 | WebMCP API、浏览器环境和能力降级规则 | 独立实验 adapter；mock/真机分开 | M1-05 |

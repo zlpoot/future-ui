@@ -18,7 +18,7 @@
 | [#4](https://github.com/zlpoot/future-ui/issues/4) G0 | 人工开发启动审批 | #1 接受及本次范围的 #2/#3 决策 |
 | [#5](https://github.com/zlpoot/future-ui/issues/5) M0-01 | 最小工具链与包边界 | #4；M0 工具链已冻结 |
 | [#6](https://github.com/zlpoot/future-ui/issues/6) M0-02 | Schema、版本与正反例 | #4、#5、#2 |
-| [#7](https://github.com/zlpoot/future-ui/issues/7) M0-03 | 插件组合与生命周期 | #4、#6 |
+| [#7](https://github.com/zlpoot/future-ui/issues/7) M0-03 | 最小 Plugin Kernel、兼容检查与生命周期 | #4、#6 |
 | [#8](https://github.com/zlpoot/future-ui/issues/8) M1-01 | React/Ark 组件与主题 | #4、#7、相关 #3 决策 |
 | [#9](https://github.com/zlpoot/future-ui/issues/9) M1-02 | 独立能力与旧页面接入 | #4、#7、能力契约 |
 | [#10](https://github.com/zlpoot/future-ui/issues/10) M1-03 | Binding 与购物车闭环 | #4、#8、#9 |
