@@ -30,6 +30,12 @@ importers:
         specifier: 8.17.1
         version: 8.17.1
 
+  packages/plugin-kernel:
+    dependencies:
+      '@future-ui/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
 packages:
 
   '@cacheable/memory@2.2.0':
