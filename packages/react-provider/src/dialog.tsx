@@ -113,16 +113,17 @@ export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
         else if (ref) ref.current = node;
       }}
       role="dialog"
+      data-part="root"
       aria-modal="true"
       aria-labelledby={label !== '' ? titleId : undefined}
       aria-describedby={description !== '' ? contentId : undefined}
     >
       {label !== '' && (
-        <h2 id={titleId} className="future-ui-dialog-title">
+        <h2 id={titleId} data-part="title" className="future-ui-dialog-title">
           {label}
         </h2>
       )}
-      <div id={contentId} className="future-ui-dialog-content">
+      <div id={contentId} data-part="content" className="future-ui-dialog-content">
         {children}
       </div>
     </div>

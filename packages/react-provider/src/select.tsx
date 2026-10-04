@@ -47,6 +47,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <select
       ref={ref}
+      data-part="root"
       defaultValue={defaultValue ?? ''}
       disabled={disabled}
       aria-label={ariaLabel}
