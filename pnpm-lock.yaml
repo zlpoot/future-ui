@@ -30,6 +30,12 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
+  packages/capability-runtime:
+    dependencies:
+      '@future-ui/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
   packages/conformance:
     dependencies:
       '@future-ui/contracts':

@@ -1,0 +1,13 @@
+{
+  "name": "@future-ui/capability-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent-only structured capability runtime: explicit registration, unified gated invocation path, effect-safe execution semantics, minimal agent-visible state (M1-02)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*"
+  }
+}
