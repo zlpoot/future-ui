@@ -10,13 +10,14 @@
 | D04 | 首批组件与公共特性 | Button/TextInput/Select/Dialog 候选；替代 provider 的共同范围待定 | M1-01/04 |
 | D05 | Component/Binding 公开字段、受控状态、数据投影/Agent visibility 及错误码 | **Accepted for #6 (2026-10-04), active on main @ `73cd599`:** Component M0 最小字段族（identity/version/features/props/events/state/parts/control/accessibility/lifecycle）与 Binding M0 最小字段族（componentInstanceId/capabilityId/params/projection/invocation-only/subscription）已冻结于 `m0-02-contract-freeze-proposal.md`；精确 TS 接口随 #6 Schema 实现 | M0-02/M1-03 |
 | D06 | 能力 effect、授权 hook、invocation/receipt、幂等、并发及 unknown reconciliation 语义 | **Accepted for #6 (2026-10-04), active on main @ `73cd599`:** D06(M0) 最小字段族与不变量（invocation identity ≠ idempotency key、unknown 必须可对账、schema-valid ≠ authorized ≠ executed、cancel 不暗示 rollback）冻结于 `m0-02-contract-freeze-proposal.md`；D06(M1) runtime 执行、恢复和业务对账策略保持 Deferred。业务层落实实际 effect，runtime 不假保证 | M0-02（最小规则）/M1-02/03（完整执行语义） |
-| D07 | 实例隔离、SSR/hydration、浏览器与可访问性支持范围 | **Proposed for #7 (2026-10-04), awaiting Owner acceptance:** D07(M0) 冻结 app/request scope、实例隔离与清理、manifest/兼容检查和 Kernel 边界的最小规则，详见 `m0-03-plugin-kernel-freeze-proposal.md`；M1 再冻结浏览器/SSR-hydration 支持矩阵及结构/行为与视觉可访问性范围 | M0-03（最小隔离规则）/M1-01/04/07（完整支持矩阵） |
+| D07 | 实例隔离、SSR/hydration、浏览器与可访问性支持范围 | **Accepted for #7 (2026-10-04), active on main @ `74873a6`:** D07(M0) 冻结 app/request scope、实例隔离与清理、manifest/兼容检查和 Kernel 边界的最小规则（冻结 PR #32 已接受，实现 PR #33 合并），详见 `m0-03-plugin-kernel-freeze-proposal.md`；M1 再冻结浏览器/SSR-hydration 支持矩阵及结构/行为与视觉可访问性范围 | M0-03（最小隔离规则）/M1-01/04/07（完整支持矩阵） |
 | D08 | 主题机制与视觉约束 | token/parts/variants；主题可选，不承诺行为热替换 | M1-01 |
 | D09 | WebMCP API、浏览器环境和能力降级规则 | 独立实验 adapter；mock/真机分开 | M1-05 |
 | D10 | AI 任务集、模型、样本量、预算、比较方法 | 直接 Ark UI 工具资料 vs future-ui，同任务/预算；数值 TBD | M1-06/07 |
 | D11 | bundle/初始化/订阅清理等性能指标与阈值 | 先做明确标记且不计入验收的 calibration；随后冻结测量法/阈值，再用独立 acceptance 样本验收 | 对应性能验收 |
 | D12 | 私有 workspace/package 命名与依赖许可兼容 | **Accepted for #5 (2026-10-04), active on main @ `93ae277`:** root/private workspace + `@future-ui/*` 内部命名；直接工具依赖为 MIT / Apache-2.0 permissive 组合；公共 npm 命名仍由 D13 决定，详见 `m0-01-toolchain-proposal.md` | M0-01 |
 | D13 | 公开许可、npm 发布范围与发布供应链策略 | 是否开源、公开 npm scope/包名、签名/来源证明/发布权限等在真正发布前另行决策 | 发布前；不阻塞仅本地/私有的 M0/M1 |
+| D14 | AI Contract Core 的 catalog/validate/diagnostics/patch 最小语义 | **Proposed for #22 (2026-10-04), awaiting Owner acceptance:** machine-readable catalog 由 #6 Schema 单一权威生成、validate/diagnostics 直接消费 #6 M0 错误码与诊断结构、stable node ID + expected version 且 stale 拒绝、patch 仅受控声明范围（禁任意 JS/eval）、开发宿主与生产 runtime 隔离、Contract 缺口回填 #2/#6；详见 `m0-04-ai-contract-core-freeze-proposal.md`；D10/模型预算不适用 | M1-06A1（确定性 AI Contract Core） |
 
 ## 决策记录最小结构
 
