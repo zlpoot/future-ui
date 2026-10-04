@@ -30,7 +30,8 @@ export interface ComponentEvent {
 }
 
 export interface ComponentState {
-  ownership: 'controlled' | 'uncontrolled';
+  /** 'controlled' / 'uncontrolled' / 'hybrid' (controlled while a value prop is provided, otherwise uncontrolled) — D05. */
+  ownership: 'controlled' | 'uncontrolled' | 'hybrid';
   fields?: Record<string, string | number | boolean | null>;
 }
 
