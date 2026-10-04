@@ -1,0 +1,19 @@
+{
+  "name": "@future-ui/plugin-kernel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "M0-03 minimal Plugin Kernel: per-instance registry, manifest/compatibility checks, init/dispose with failure cleanup",
+  "engines": {
+    "node": ">=24.21.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*"
+  }
+}
