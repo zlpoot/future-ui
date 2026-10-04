@@ -1,0 +1,19 @@
+{
+  "name": "@future-ui/ai-contract-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "deterministic AI Contract Core: machine-readable catalog, validate/diagnostics and patch primitives over the M0-02 contracts (M1-06A1)",
+  "engines": {
+    "node": ">=24.21.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*"
+  }
+}

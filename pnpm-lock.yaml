@@ -24,6 +24,12 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@24.19.1)(vite@8.3.2(@types/node@24.19.1))
 
+  packages/ai-contract-core:
+    dependencies:
+      '@future-ui/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
   packages/contracts:
     dependencies:
       ajv:
