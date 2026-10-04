@@ -16,6 +16,8 @@ export interface DomButtonOptions {
   appId: string;
   disabled?: boolean;
   onClick?: (event: { originalEvent: Event; appId: string }) => void;
+  /** Lifecycle: aborting this signal disposes the listeners (native DOM semantics). */
+  signal?: AbortSignal;
 }
 
 export interface DomSelectOption {
@@ -30,6 +32,8 @@ export interface DomSelectOptions {
   placeholder?: string;
   disabled?: boolean;
   onValueChange?: (event: { value: string | null; appId: string }) => void;
+  /** Lifecycle: aborting this signal disposes the listeners (native DOM semantics). */
+  signal?: AbortSignal;
 }
 
 /** Creates a native <button> honoring the Button contract public semantics. */
@@ -37,10 +41,23 @@ export function createDomButton(options: DomButtonOptions): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   if (options.disabled) button.disabled = true;
-  button.addEventListener('click', (event) => {
+  const activate = (originalEvent: Event): void => {
     if (button.disabled) return;
-    options.onClick?.({ originalEvent: event, appId: options.appId });
-  });
+    options.onClick?.({ originalEvent, appId: options.appId });
+  };
+  button.addEventListener('click', (event) => activate(event), { signal: options.signal });
+  // Keyboard activation (Enter/Space) mirrors the UI host's explicit
+  // handling, so both implementations give identical interaction semantics in
+  // jsdom (#11 acceptance 1).
+  button.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      activate(event);
+    },
+    { signal: options.signal },
+  );
   return button;
 }
 
@@ -61,15 +78,61 @@ export function createDomSelect(options: DomSelectOptions): HTMLSelectElement {
     select.appendChild(el);
   }
   if (options.defaultValue != null) select.value = options.defaultValue;
-  select.addEventListener('change', () => {
-    if (select.disabled) return;
-    const value = select.value;
-    options.onValueChange?.({ value: value === '' ? null : value, appId: options.appId });
-  });
+  select.addEventListener(
+    'change',
+    () => {
+      if (select.disabled) return;
+      const value = select.value;
+      options.onValueChange?.({ value: value === '' ? null : value, appId: options.appId });
+    },
+    { signal: options.signal },
+  );
   return select;
 }
 
 /** Contract shape check reused from the frozen M0-02 schema (D14 rule 3). */
 export function validateConsumerContract(contract: ComponentContract): Diagnostic[] {
   return validateComponent(contract).diagnostics;
+}
+
+export interface DomTextInputOptions {
+  appId: string;
+  defaultValue?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  error?: boolean;
+  'aria-label'?: string;
+  onValueChange?: (event: { value: string; appId: string }) => void;
+  /** Lifecycle: aborting this signal disposes the listeners (native DOM semantics). */
+  signal?: AbortSignal;
+}
+
+/** Creates a native <input> honoring the TextInput contract public semantics. */
+export function createDomTextInput(options: DomTextInputOptions): HTMLInputElement {
+  const input = document.createElement('input');
+  input.setAttribute('data-part', 'root');
+  if (options.defaultValue !== undefined) input.value = options.defaultValue;
+  if (options.placeholder !== undefined) input.placeholder = options.placeholder;
+  if (options.disabled) input.disabled = true;
+  if (options.readOnly) input.readOnly = true;
+  if (options.error) input.setAttribute('aria-invalid', 'true');
+  if (options['aria-label'] !== undefined) input.setAttribute('aria-label', options['aria-label']);
+  input.addEventListener(
+    'change',
+    () => {
+      if (input.disabled || input.readOnly) return;
+      options.onValueChange?.({ value: input.value, appId: options.appId });
+    },
+    { signal: options.signal },
+  );
+  input.addEventListener(
+    'input',
+    () => {
+      if (input.disabled || input.readOnly) return;
+      options.onValueChange?.({ value: input.value, appId: options.appId });
+    },
+    { signal: options.signal },
+  );
+  return input;
 }
