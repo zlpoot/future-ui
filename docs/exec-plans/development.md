@@ -30,6 +30,14 @@ Ready → Coding → Review → [Verify] → Merge → Closeout → Done → Clo
 
 一次 grant 可以覆盖真正独立且可并行的多个子 Issue，但必须逐项列出，不以父工作包编号代替。
 
+## 2.1 Autonomous Engineering Window
+
+上述 Batch 是 dependency planning，不要求每个 Issue 都人工重新批准。长时间运行时，负责人可以用一个 Engineering Window grant 一次授权一段 work graph；Supervisor 在该图内自主推进，并仅在 escalation 条件出现时暂停。
+
+角色绑定可动态修改。例如仓库默认 Worker=Codex，某个 Window 改为豆包工作，某个 Issue 再覆盖回 Codex，某次 repair attempt 还可以临时切换。权限始终取 Role 与 Grant 的交集。
+
+当前 G0-001 仍只覆盖 #5，用于 bootstrap 这套循环；后续是否创建覆盖 #6/#7/#22 的 Engineering Window，以及是否允许 low-risk auto merge/close，需要 Owner 另行授权。
+
 ## 3. M0
 
 ### #5 M0-01 工具链
