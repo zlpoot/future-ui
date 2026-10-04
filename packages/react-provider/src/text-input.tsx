@@ -76,6 +76,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       <input
         ref={ref}
         type={type}
+        data-part="root"
         value={currentValue}
         disabled={disabled}
         readOnly={readOnly}
