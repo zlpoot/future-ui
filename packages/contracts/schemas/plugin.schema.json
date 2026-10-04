@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://future-ui.dev/contracts/plugin.schema.json",
+  "title": "Plugin contract (M0)",
+  "description": "M0 freezes only the minimal Plugin Kernel semantics: app/request scope, manifest, provides/requires, compatibility, init/dispose and conflict/failure cleanup. Full extension points are deferred until a real consumer arrives.",
+  "type": "object",
+  "required": ["kind", "id", "contractVersion", "provides", "requires", "compatibility", "scope", "lifecycle"],
+  "properties": {
+    "kind": {"enum": ["protocol", "component", "theme", "capability"]},
+    "id": {"type": "string", "minLength": 1},
+    "contractVersion": {"$ref": "https://future-ui.dev/contracts/version.schema.json"},
+    "provides": {"type": "array", "items": {"type": "string"}},
+    "requires": {"type": "array", "items": {"type": "string"}},
+    "compatibility": {"type": "object", "required": ["platform"], "properties": {"platform": {"type": "string"}, "engines": {"type": "object", "additionalProperties": {"type": "string"}}}, "additionalProperties": false},
+    "scope": {"type": "object", "required": ["app", "request"], "properties": {"app": {"type": "boolean"}, "request": {"type": "boolean"}, "description": {"type": "string"}}, "additionalProperties": false},
+    "lifecycle": {"type": "object", "required": ["init", "dispose"], "properties": {"init": {"type": "boolean"}, "dispose": {"type": "boolean"}, "cleanupOnFailure": {"type": "boolean"}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

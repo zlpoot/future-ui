@@ -1,0 +1,20 @@
+{
+  "name": "@future-ui/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "framework-agnostic Component/Capability/Binding/Plugin contract schemas, validation and diagnostics (M0-02)",
+  "engines": {
+    "node": ">=24.21.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./schemas/*": "./schemas/*.json"
+  },
+  "dependencies": {
+    "ajv": "8.17.1"
+  }
+}

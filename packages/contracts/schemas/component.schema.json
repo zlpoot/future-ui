@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://future-ui.dev/contracts/component.schema.json",
+  "title": "Component contract (M0)",
+  "description": "Component contracts are defined per componentType; a universal component interface is forbidden. See docs/management/m0-02-contract-freeze-proposal.md (D05 M0).",
+  "type": "object",
+  "required": ["componentType", "contractVersion", "features", "props", "events", "state", "parts", "control", "accessibility", "lifecycle"],
+  "properties": {
+    "componentType": {"type": "string", "minLength": 1, "description": "stable component type identifier, e.g. dialog / select"},
+    "contractVersion": {"$ref": "https://future-ui.dev/contracts/version.schema.json"},
+    "features": {"type": "object", "description": "public feature set; unimplemented features must be declared absent (false)", "additionalProperties": {"type": "boolean"}},
+    "props": {"type": "object", "additionalProperties": {"$ref": "#/$defs/prop"}},
+    "events": {"type": "object", "description": "event name -> payload + occurrence description; event names do not imply business writes", "additionalProperties": {"$ref": "#/$defs/event"}},
+    "state": {"$ref": "#/$defs/state"},
+    "parts": {"type": "object", "description": "stable partId -> part definition", "additionalProperties": {"$ref": "#/$defs/part"}},
+    "control": {"type": "object", "description": "programmatic public actions; no private implementation exposure", "additionalProperties": {"$ref": "#/$defs/controlMethod"}},
+    "accessibility": {"$ref": "#/$defs/accessibility"},
+    "lifecycle": {"$ref": "#/$defs/lifecycle"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "prop": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["string", "number", "boolean", "object", "array", "null"]}, "default": {}, "required": {"type": "boolean"}, "enum": {"type": "array", "items": {}}, "description": {"type": "string"}}, "additionalProperties": false},
+    "event": {"type": "object", "required": ["description", "payload"], "properties": {"description": {"type": "string"}, "payload": {"type": "object", "additionalProperties": true}}, "additionalProperties": false},
+    "state": {"type": "object", "required": ["ownership"], "properties": {"ownership": {"enum": ["controlled", "uncontrolled"]}, "fields": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}}}, "additionalProperties": false},
+    "part": {"type": "object", "required": ["required"], "properties": {"required": {"type": "boolean"}, "description": {"type": "string"}, "slots": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+    "controlMethod": {"type": "object", "required": ["params"], "properties": {"params": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "object", "array", "null"]}}, "returns": {"type": "string"}, "description": {"type": "string"}}, "additionalProperties": false},
+    "accessibility": {"type": "object", "required": ["role"], "properties": {"role": {"type": "string"}, "keyboard": {"type": "boolean"}, "focus": {"type": "boolean"}, "semanticRelations": {"type": "boolean"}, "description": {"type": "string"}}, "additionalProperties": false},
+    "lifecycle": {"type": "object", "required": ["requiresCleanup"], "properties": {"requiresCleanup": {"type": "boolean"}, "description": {"type": "string"}}, "additionalProperties": false}
+  }
+}
