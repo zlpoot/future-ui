@@ -36,6 +36,40 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
+  packages/cart-demo:
+    dependencies:
+      '@future-ui/capability-runtime':
+        specifier: workspace:*
+        version: link:../capability-runtime
+      '@future-ui/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@future-ui/react-provider':
+        specifier: workspace:*
+        version: link:../react-provider
+      '@testing-library/jest-dom':
+        specifier: ^6.6.0
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.3.0(@types/react@19.3.0)
+      jsdom:
+        specifier: ^26.0.0
+        version: 26.1.0
+      react:
+        specifier: ^19.2.0
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.3.0(react@19.3.0)
+
   packages/conformance:
     dependencies:
       '@future-ui/contracts':
