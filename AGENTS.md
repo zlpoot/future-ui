@@ -27,6 +27,14 @@ future-ui 不要求在 M0 前一次性冻结全部 M1 方案。
 
 依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。G0-001 也不自动授权 #6 或其他 Issue。
 
+## Role / Agent 解耦
+
+工程角色与具体 Agent 产品分离。当前开发 Agent Pool 为 `doubao-work` 与 `codex`；Supervisor / Planner / Worker / Reviewer / Verifier 等角色可以在 Repository default、Engineering Window、Issue、Attempt 四个层级重新绑定。角色切换不能扩大 Current Grant。
+
+普通 Review 至少使用不同 execution/session；高风险 Verify 默认使用不同于 Worker 的 Agent Profile。Reviewer/Verifier 一旦修改代码，该执行身份即视为 Worker，旧 Review/Verify 对新 head 失效。
+
+长时间工程的恢复状态必须落到 GitHub；不得依赖单个 Agent session 记忆。详见 [Autonomous Engineering Workflow](docs/management/autonomous-engineering-workflow.md)。
+
 ## 实现工作方式
 
 授权后默认流程：
