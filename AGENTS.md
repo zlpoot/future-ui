@@ -2,41 +2,66 @@
 
 ## 当前授权边界：PREPARATION_ONLY
 
-用户于 2026-10-03 授权：整理开发前文档、GitHub Issues 和 Notion 规范参考；明确不进入开发。
+准备基线已由 PR #15 合并进入 main；**这不等于开始开发**。当前 #4 没有有效开发 grant，所有实现任务继续保持 Blocked / NOT_AUTHORIZED。
 
-本轮仅允许文档、任务定义、依赖梳理和只读审阅。不得创建产品源码、测试实现、package.json、锁文件、构建或 CI 工作流；不得安装依赖、启动 Codex/其他实现 Agent、执行 live/付费调用、部署、发布 npm 包或自动推进任务。文档中的 API、目录和命令均为设计示意，除非仓库事实明确证明已经实现。
-
-G0 开发启动门禁未获负责人明确批准前，所有实现任务保持 Blocked，不能因文档完成、PR 合并、Issue 创建或依赖完成而自动转 Ready。批准合并文档与批准启动开发是两个独立授权。
+当前只允许：文档、Issue、契约/决策整理、依赖梳理、Review，以及用户明确授权的其他准备动作。不得创建产品源码、测试实现、package.json、锁文件、构建/CI 工作流；不得安装依赖、启动实现 Agent、执行 live/付费调用、部署或发布。
 
 ## 事实源与协作边界
 
-1. 当前用户授权决定操作范围；遇到与仓库规则的冲突必须说明，不能自行扩大权限。
-2. GitHub main 中已接受的 AGENTS、ADR、Contract、对应 Issue Acceptance 是工程规范；当前代码、PR exact head、实际检查与原始证据是工程事实。
-3. 未合并分支、Draft PR 和 Draft Contract 只是候选设计，不得称为已接受、已实现或验收通过。
-4. Notion 只保存协作方法、解释、提示词模板、讨论与 GitHub 链接，不维护第二套任务状态、验收结论或权威契约。
-5. 历史聊天、旧批准、旧 SHA 和别的项目的流程不能替代当前仓库事实。
+1. 当前用户授权决定操作范围；不得从历史聊天、旧批准或“以前 G0 开过”推导新权限。
+2. GitHub main 的 AGENTS、已接受 Contract/ADR、Issue Acceptance 是工程规范；代码、PR exact head、实际检查与原始证据是工程事实。
+3. GitHub Issue 正文的 `Status:` 是当前任务状态载体；Notion 不维护第二套动态状态。
+4. 未合并分支、Draft PR、Draft Contract 只是候选，不得称为已接受或已实现。
+5. Notion 只保存长期方法、解释、提示词与 GitHub 链接。
 
-## 工作方式
+## 开发准入：Just-in-time Freeze + G0 Grant
 
-- 中文文档与 Issue；代码/协议标识使用英文。
-- 先刷新仓库、Issue、依赖和已有 PR，再做本次获准的动作。
-- 一个实现 Issue 对应一个可独立证明的变化；大任务在解锁前拆分。
-- 后续开发拟采用人工逐步、轻量 Review；不引入 webskill 的 Supervisor、自动合并或阶段专用治理。
-- 默认工作分支 + PR。仅空仓库首次文档引导允许直接初始化默认分支；后续文档在准备分支提交审阅。
-- 未获明确授权不 merge、close Issue、启用自动任务、修改仓库可见性或保护设置。
-- PR 使用 Refs #N，避免因合并自动关闭尚未验收的任务。
-- 不覆盖未知修改，不 reset/clean/discard，不 force-push。
+future-ui 不要求在 M0 前一次性冻结全部 M1 方案。
+
+- #2 是持续的 Contract Freeze 工作流；只在目标 Issue Ready 前冻结它真正依赖的最小公开契约。
+- #3 是持续的 Decision Freeze 工作流；只在目标 Issue Ready 前冻结对应技术、兼容和验收决策。
+- #4 是持续开发授权账本，不是一次性全局开关。只有 Current Grant 明确列出的**具体可执行 Issue**与动作才获得授权。
+- 父工作包不自动授权子 Issue；大任务必须在 Ready 前拆成真正子 Issue，一个实现 Issue 对应一个可独立审阅 PR。
+
+依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。
+
+## 实现工作方式
+
+授权后默认流程：
+
+```text
+JIT Contract/Decision Freeze
+→ G0 Current Grant
+→ Definition of Ready
+→ Ready
+→ Coding（独立分支）
+→ 最小充分检查
+→ PR
+→ Review
+→ Verify（仅规定的高风险/阶段任务）
+→ 负责人 exact-head merge 授权
+→ Merge
+→ main Closeout
+→ Done
+→ explicit Close
+```
+
+- Review 后 PR head 有实质变化，原 Review / merge authorization 失效，必须重新 Review。
+- PR 使用 `Refs #N`，不得用自动关闭语句掩盖尚未完成的 closeout。
+- Merge、Close、live、费用、发布、下一 Issue 授权互相独立；除非负责人明确把它们一起授权。
+- Closeout 只验证已合并内容在 main 上满足该 Issue 的冻结 Acceptance，不借 closeout 扩大实现范围。
+- 若 merge 后 closeout 失败，Issue 不得标 Done；回到 Blocked/Coding 并建立新的修复 PR。
+- 不 force-push，不 reset/clean/discard，不覆盖未知修改。
 
 ## 架构底线
 
-future-ui 是独立项目：AI 优先开发、跨框架、无样式且可访问的模块化 Web UI 框架。
+future-ui 是 AI 优先开发、跨框架、无样式且可访问的模块化 Web UI 框架。
 UI 与能力系统独立，通过可选 Binding 连接；Ark UI 和 WebMCP 都是可替换适配方向，不得成为公共契约硬依赖。
-AI 开发期工具与网站运行期能力分离；AI 优先不代表取消人的可访问性。
-业务动作与组件事件分离；人和 Agent 复用同一业务动作。能力可发现、注解或前端可用状态不等于执行授权。
-默认拒绝未声明能力，不盲目重试结果未知的写入，不把提示词或插件声明当作安全沙箱。
+AI 开发期工具与网站运行期能力分离；业务动作与组件事件分离；人和 Agent 复用同一业务动作。
+能力可发现、注解或前端可用状态不等于执行授权。默认拒绝未声明能力，不盲重试 unknown write，不把提示词或插件声明当安全沙箱。
 
-## 准备期验证与报告
+## 证据与报告
 
-只检查文档一致性、链接/引用、任务依赖、范围和授权边界。不得以文档校验冒充编译、组件测试、浏览器兼容、AI 效果或产品验收。
-后续使用最小充分检查；高风险调用边界和阶段最终验收保留独立 Verify，具体测试及阈值必须在执行前冻结。
-报告写清实际完成项、所在分支/commit、未做项与原因。不得虚构包、命令、测试通过数或线上能力。
+文档只能证明文档；Schema-valid 不证明业务授权；Mock 不证明真实浏览器；确定性工具测试不证明模型效果；请求已发送不等于业务完成。
+
+普通实现使用最小充分检查；权限/unknown write 等高风险边界和阶段收口按 Issue 要求独立 Verify。报告必须包含 exact SHA、实际命令/环境、结果、失败、未测和限制。
