@@ -1,0 +1,27 @@
+{
+  "name": "@future-ui/theme",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional first-round theme mechanism: public token/parts/variants consumed through public DOM contracts (data-part + CSS variables). Theme never changes structure/behavior semantics or business/capability state (D08 / #20).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@future-ui/react-provider": "workspace:*",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
