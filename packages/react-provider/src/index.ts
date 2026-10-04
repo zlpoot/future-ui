@@ -6,3 +6,6 @@ export { buttonContract, BUTTON_COMPONENT_TYPE, validateButtonContract } from '.
 export { Select } from './select.js';
 export type { SelectOption, SelectProps, SelectValueChangeEvent } from './select.js';
 export { selectContract, SELECT_COMPONENT_TYPE, validateSelectContract } from './select-contract.js';
+export { TextInput } from './text-input.js';
+export type { TextInputProps, TextInputValueChangeEvent } from './text-input.js';
+export { textInputContract, TEXT_INPUT_COMPONENT_TYPE, validateTextInputContract } from './text-input-contract.js';
