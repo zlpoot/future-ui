@@ -17,7 +17,7 @@
 | D11 | bundle/初始化/订阅清理等性能指标与阈值 | 先做明确标记且不计入验收的 calibration；随后冻结测量法/阈值，再用独立 acceptance 样本验收 | 对应性能验收 |
 | D12 | 私有 workspace/package 命名与依赖许可兼容 | **Accepted for #5 (2026-10-04), active on main @ `93ae277`:** root/private workspace + `@future-ui/*` 内部命名；直接工具依赖为 MIT / Apache-2.0 permissive 组合；公共 npm 命名仍由 D13 决定，详见 `m0-01-toolchain-proposal.md` | M0-01 |
 | D13 | 公开许可、npm 发布范围与发布供应链策略 | 是否开源、公开 npm scope/包名、签名/来源证明/发布权限等在真正发布前另行决策 | 发布前；不阻塞仅本地/私有的 M0/M1 |
-| D14 | AI Contract Core 的 catalog/validate/diagnostics/patch 最小语义 | **Proposed for #22 (2026-10-04), awaiting Owner acceptance:** machine-readable catalog 由 #6 Schema 单一权威生成、validate/diagnostics 直接消费 #6 M0 错误码与诊断结构、stable node ID + expected version 且 stale 拒绝、patch 仅受控声明范围（禁任意 JS/eval）、开发宿主与生产 runtime 隔离、Contract 缺口回填 #2/#6；详见 `m0-04-ai-contract-core-freeze-proposal.md`；D10/模型预算不适用 | M1-06A1（确定性 AI Contract Core） |
+| D14 | AI Contract Core 的 catalog/validate/diagnostics/patch 最小语义 | **Accepted for #22 (2026-10-04), active on main @ `ac63562c`:** machine-readable catalog 由 #6 Schema 单一权威生成、validate/diagnostics 直接消费 #6 M0 错误码与诊断结构、stable node ID + expected version 且 stale 拒绝、patch 仅受控声明范围（禁任意 JS/eval）、开发宿主与生产 runtime 隔离、Contract 缺口回填 #2/#6；详见 `m0-04-ai-contract-core-freeze-proposal.md`（冻结 PR #34 已接受，实现 PR #35 合并）；D10/模型预算不适用 | M1-06A1（确定性 AI Contract Core） |
 
 ## 决策记录最小结构
 
