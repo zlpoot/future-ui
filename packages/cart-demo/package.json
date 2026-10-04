@@ -1,0 +1,24 @@
+{
+  "name": "@future-ui/cart-demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local vertical example (#10): select product -> set qty -> add to cart -> show real execution result. UI and programmatic calls share ONE business action (cart.add) through the capability runtime. Cart business lives ONLY here, never in common component packages.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/capability-runtime": "workspace:*",
+    "@future-ui/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@future-ui/react-provider": "workspace:*",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
