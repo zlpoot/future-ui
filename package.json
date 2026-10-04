@@ -1,0 +1,23 @@
+{
+  "name": "future-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-first, contract-driven modular Web UI framework (M0-01 toolchain baseline)",
+  "packageManager": "pnpm@11.28.2",
+  "engines": {
+    "node": ">=24.21.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.3"
+  }
+}

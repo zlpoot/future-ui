@@ -1,6 +1,6 @@
 # future-ui
 
-> **SCOPED DEVELOPMENT · G0-001。** 当前仅 #5 M0-01 获得范围受限的开发授权；其余实现任务仍未授权。仓库当前尚无已验收产品组件、npm 发布物或 Agent 服务。
+> **SCOPED DEVELOPMENT · G0-001 + ENG-001。** 当前 #5 M0-01 已授权实现，后续实现类 Issue 按 [ENG-001 窗口](https://github.com/zlpoot/future-ui/issues/4#issuecomment-5975775590) 推进；仓库尚无已验收产品组件、npm 发布物或 Agent 服务。
 
 一套 **AI 优先开发、契约驱动的模块化 Web UI 框架**：提供跨框架、无样式且可访问的组件体系；通过独立、可插拔的能力模块连接 WebMCP 等 Agent 生态；以元数据、校验、局部修改和测试工具链支持 AI 稳定开发界面。
 
@@ -24,13 +24,15 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 
 ## 工程入口
 
-[准备包审阅 #1](https://github.com/zlpoot/future-ui/issues/1) · [契约审阅 #2](https://github.com/zlpoot/future-ui/issues/2) · [技术与验收决策 #3](https://github.com/zlpoot/future-ui/issues/3) · [G0 启动审批 #4](https://github.com/zlpoot/future-ui/issues/4)
+[准备包审阅 #1](https://github.com/zlpoot/future-ui/issues/1) · [契约审阅 #2](https://github.com/zlpoot/future-ui/issues/2) · [技术与验收决策 #3](https://github.com/zlpoot/future-ui/issues/3) · [G0 授权账本 #4](https://github.com/zlpoot/future-ui/issues/4) · [M0-01 工具链 #5](https://github.com/zlpoot/future-ui/issues/5)
 
 [GitHub Issues](https://github.com/zlpoot/future-ui/issues) 是任务事实源；[Notion 协作参考](https://app.notion.com/p/3ee27cd8a5c9813ebe0fca494e245d2d) 只保存方法、解释和提示词，不维护重复进度。
 
 ## 状态与当前边界
 
-准备基线与 D01/D12 已进入 main。动态开发授权只以 #4 Current Grant 为准；当前 G0-001 仅允许 #5，在 #5 通过 Ready 后实施最小工程工具链。browser/model/external write/deploy/publish 仍未授权。
+准备基线与 D01/D12 已进入 main；M0-01（#5）已建立最小 TypeScript 工程（root private workspace、`packages/*` 规则、lint/typecheck/test 独立入口、轻量 CI），工具链选型见 [D01/D12 决策](docs/management/m0-01-toolchain-proposal.md)。尚无产品源码、组件、能力运行时、Agent 服务、部署或模型/浏览器调用。
+
+动态开发授权只以 #4 为准（G0-001 覆盖 #5；ENG-001 窗口覆盖后续实现类 Issue）。browser/model/external write/deploy/publish 仍未授权。
 
 准备基线、具体契约成熟度和开发授权是三个独立状态：准备基线是否已进入 main 以 #1、PR #15 和 main 当前内容为准；Component / Capability / Binding / Plugin 等具体契约是否冻结以 #2、#3 与对应 ADR 的状态为准；开发授权只以 #4 为准。任一状态变化都不能推断另外两项。
 
