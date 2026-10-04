@@ -9,3 +9,6 @@ export { selectContract, SELECT_COMPONENT_TYPE, validateSelectContract } from '.
 export { TextInput } from './text-input.js';
 export type { TextInputProps, TextInputValueChangeEvent } from './text-input.js';
 export { textInputContract, TEXT_INPUT_COMPONENT_TYPE, validateTextInputContract } from './text-input-contract.js';
+export { Dialog } from './dialog.js';
+export type { DialogOpenChangeEvent, DialogProps } from './dialog.js';
+export { dialogContract, DIALOG_COMPONENT_TYPE, validateDialogContract } from './dialog-contract.js';
