@@ -1,13 +1,13 @@
-# M0-01 工具链与私有包边界候选
+# M0-01 工具链与私有包边界决策
 
 日期：2026-10-04  
-状态：**Proposed / not accepted**。本文件只为 #3 的 D01 / D12 决策提供候选，不是开发授权，不表示依赖已经安装。最终选择需负责人接受后写入 decision register / ADR，并由 #4 对 #5 单独授权。
+状态：**Owner accepted for #5 / pending main merge**。负责人于 2026-10-04 明确接受本文件的 D01 / D12 方案。该接受只冻结 #5 的工具链与私有包边界；在包含本文件的 PR #24 合并到 main 前，工程事实仍以 main 为准，#5 不因此变为 Ready。即使合并后，仍必须由 #4 Current Grant 单独授权 #5 才能开发。
 
 ## 目标
 
 为 #5 提供最小、可复现、低耦合的 TypeScript 工程基础。M0-01 只建立 workspace、lint/typecheck/test、轻量 CI 和私有包命名规则；不提前引入 React、Ark UI、WebMCP、DOM 测试环境、bundler、发布工具或模型 SDK。
 
-## D01 候选工具链
+## D01 已接受工具链
 
 | 项目 | 建议冻结版本 / 规则 | 理由 |
 | --- | --- | --- |
@@ -32,7 +32,7 @@
 - lint、typecheck、test 三个入口保持独立；不使用“一个总脚本成功”掩盖某一项未运行。
 - M0 test environment 只使用 Node；jsdom / browser mode 留到组件消费者需要时 JIT 冻结。
 
-### 轻量 CI 候选
+### 轻量 CI 已接受范围
 
 第一版只跑一个 Linux job，不做 OS / Node 多矩阵：
 
@@ -49,18 +49,18 @@
 - `actions/setup-node@v7.0.0`
 - `pnpm/action-setup@v6.1.0`
 
-这些仅是 #5 候选；真正 workflow 在 #5 获 G0 grant 后创建。M0 不跑浏览器、模型、真实 provider 或发布。
+这些是 #5 已接受的工具链范围；真正 workflow 只能在 #5 获得 G0 Current Grant 后创建。M0 不跑浏览器、模型、真实 provider 或发布。
 
 ## 为什么暂不采用 TypeScript 7
 
 TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新的 native compiler 代际；与此同时，typescript-eslint 当前声明的正式 TypeScript 支持范围仍是 `>=4.8.4 <6.1.0`。因此 M0 若采用 ESLint + typescript-eslint，直接选 TS 7 会让项目一开始就进入“核心 lint 工具未声明正式支持”的组合。
 
-候选策略：
+已接受策略：
 - M0 锁定 TypeScript 6.0.3。
 - 将 TypeScript 7 升级作为后续独立 dependency decision；等 typescript-eslint 明确支持后再评估。
 - 不为了追“最新版本”牺牲第一条工程基线的可复现性。
 
-## D12 私有 package 命名候选
+## D12 已接受私有 package 命名
 
 ### 内部命名
 
@@ -77,7 +77,7 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 - 不提前创建 `@future-ui/react`、`@future-ui/webmcp` 等空包占位。
 - 如果 D13 最终发现公共 npm scope 不可用或公开命名策略不同，可以在发布前统一迁移；不让发布决策阻塞本地 M0/M1。
 
-### #5 候选直接工具/依赖许可
+### #5 已接受直接工具/依赖许可记录
 
 | 工具 | 许可 | M0 判断 |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 | typescript-eslint | MIT | permissive |
 | Vitest | MIT | permissive |
 
-当前候选没有直接引入 copyleft runtime dependency。此表只记录 #5 直接选用工具/依赖的许可，不替代未来发布前的完整供应链/NOTICE/传递义务审查；D13 仍保持 Deferred。
+当前已接受方案没有直接引入 copyleft runtime dependency。此表只记录 #5 直接选用工具/依赖的许可，不替代未来发布前的完整供应链/NOTICE/传递义务审查；D13 仍保持 Deferred。
 
 ## 官方/上游依据
 
@@ -108,9 +108,9 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 - GitHub Actions setup-node releases：https://github.com/actions/setup-node/releases
 - pnpm/action-setup releases：https://github.com/pnpm/action-setup/releases
 
-## 负责人需要决定的最小事项
+## 已接受决定
 
-要让 #5 进入 G0 Ready 流程，只需要接受或修改以下候选：
+负责人于 2026-10-04 明确接受以下决定：
 
 1. Node 24.21.0。
 2. pnpm 11.28.2。
@@ -120,4 +120,4 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 6. root private + workspace-local `@future-ui/*`；公共 npm naming 留到 D13。
 7. #5 允许创建单 job GitHub Actions CI，并允许 install/lint/typecheck/test。
 
-接受这些不等于授权 #5 开发；接受后仍需 #4 Current Grant 明确列出 #5 与允许动作。
+以上决定只解决 #5 的 D01/D12 前置，不等于授权 #5 开发。PR #24 合并进入 main 后，仍需 #4 Current Grant 明确列出 #5 与允许动作，#5 才可能通过 DoR 进入 Ready。
