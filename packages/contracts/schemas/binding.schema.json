@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://future-ui.dev/contracts/binding.schema.json",
+  "title": "Binding contract (M0)",
+  "description": "Binding connects componentInstanceId to capabilityId with explicit data projection boundaries: source, direction, agent visibility allowlist, mutability, redaction and invocation-only params. See docs/management/m0-02-contract-freeze-proposal.md (D05 M0).",
+  "type": "object",
+  "required": ["componentInstanceId", "capabilityId", "contractVersion", "params", "projection", "invocationOnly", "subscription", "lifecycle"],
+  "properties": {
+    "componentInstanceId": {"type": "string", "minLength": 1, "description": "stable node id"},
+    "capabilityId": {"type": "string", "minLength": 1},
+    "contractVersion": {"$ref": "https://future-ui.dev/contracts/version.schema.json"},
+    "params": {"type": "object", "required": ["source", "mapping"], "properties": {"source": {"enum": ["userEvent", "agent", "discovery"]}, "mapping": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}}}, "additionalProperties": false},
+    "projection": {"type": "object", "required": ["source", "direction", "agentVisibility", "mutability", "redaction"], "properties": {"source": {"type": "string"}, "direction": {"enum": ["read", "write", "read-write"]}, "agentVisibility": {"type": "array", "items": {"type": "string"}, "description": "explicit allowlist; entering a binding does not auto-publicize component state"}, "mutability": {"enum": ["readonly", "mutable"]}, "redaction": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+    "invocationOnly": {"type": "array", "items": {"type": "string"}, "description": "params used only inside business invocation; they do not enter discovery/read context"},
+    "subscription": {"type": "object", "required": ["onChange"], "properties": {"onChange": {"type": "boolean"}, "unmountUnbinds": {"type": "boolean"}}, "additionalProperties": false},
+    "lifecycle": {"type": "object", "required": ["requiresCleanup"], "properties": {"requiresCleanup": {"type": "boolean"}, "description": {"type": "string"}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

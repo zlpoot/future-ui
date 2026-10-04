@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://future-ui.dev/contracts/diagnostics.schema.json",
+  "title": "future-ui contract diagnostics",
+  "description": "Stable structured diagnostic emitted by contract validation. code is a stable error code; path is a JSON Pointer into the validated document.",
+  "type": "object",
+  "required": ["code", "path", "expected", "actual", "explanation"],
+  "properties": {
+    "code": {"type": "string", "enum": ["unknown_major_version", "unknown_field", "missing_required", "type_mismatch", "constraint_violation", "invalid_combination", "conflict", "unauthorized", "unavailable", "capability_conflict", "unsupported_feature", "node_not_found"]},
+    "path": {"type": "string", "description": "JSON Pointer (RFC 6901) locating the offending node"},
+    "expected": {"description": "expected value or description"},
+    "actual": {"description": "actual value or description"},
+    "explanation": {"type": "string"},
+    "repairHint": {"type": "string", "description": "optional repair suggestion"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://future-ui.dev/contracts/capability.schema.json",
+  "title": "Capability contract (M0)",
+  "description": "Capability effect semantics per D06(M0). Invariants enforced by validator semantic checks: invocation identity != idempotency key; unknown results must be reconcilable; cancel does not imply rollback; schema-valid != authorized != executed.",
+  "type": "object",
+  "required": ["id", "contractVersion", "description", "input", "output", "availability", "effects", "authorization", "concurrency", "idempotency", "invocation", "execution", "failureModes", "visibility"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1, "description": "stable business capability identity"},
+    "contractVersion": {"$ref": "https://future-ui.dev/contracts/version.schema.json"},
+    "description": {"type": "string"},
+    "input": {"$ref": "#/$defs/dataShape"},
+    "output": {"$ref": "#/$defs/dataShape"},
+    "availability": {"type": "object", "required": ["preconditions"], "properties": {"preconditions": {"type": "array", "items": {"type": "string"}}, "unavailableReason": {"type": "string", "description": "publicly explainable unavailability reason; snapshot only, re-verified before execution"}}, "additionalProperties": false},
+    "effects": {"type": "object", "required": ["local", "remote"], "properties": {"local": {"type": "array", "items": {"type": "string"}}, "remote": {"type": "array", "items": {"type": "string"}}, "irreversible": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+    "authorization": {"type": "object", "required": ["hooks"], "properties": {"hooks": {"type": "array", "items": {"type": "string"}, "description": "application-integrable identity/permission/policy/confirmation hook interfaces; a description is not an authorization"}, "description": {"type": "string"}}, "additionalProperties": false},
+    "concurrency": {"type": "object", "required": ["conflictPolicy"], "properties": {"expectedVersion": {"type": "boolean", "description": "whether the capability accepts an expected state version (e.g. expectedCartVersion)"}, "conflictPolicy": {"enum": ["reject", "no-op", "none"]}}, "additionalProperties": false},
+    "idempotency": {"type": "object", "required": ["scope"], "properties": {"scope": {"enum": ["none", "request", "operation"]}, "retrySafe": {"type": "boolean"}}, "additionalProperties": false},
+    "invocation": {"type": "object", "required": ["invocationId", "receipt", "reconciliation"], "properties": {"invocationId": {"type": "boolean", "description": "stable per-call identity"}, "receipt": {"type": "boolean", "description": "business execution / receipt identifier available when supported"}, "reconciliation": {"type": "boolean", "description": "unknown results must carry or allow deriving a query/reconciliation handle"}, "idempotencyKeyDistinct": {"type": "boolean", "description": "invocation identity is distinct from idempotency key; same key + different params must not count as same success"}}, "additionalProperties": false},
+    "execution": {"type": "object", "required": ["states"], "properties": {"states": {"type": "array", "items": {"enum": ["pending", "executing", "completed", "rejected", "failed", "unknown", "cancelled"]}}, "cancelImpliesRollback": {"type": "boolean", "description": "must be false per D06(M0): cancellation does not imply rollback"}}, "additionalProperties": false},
+    "failureModes": {"type": "object", "additionalProperties": {"type": "object", "required": ["retrySafe"], "properties": {"retrySafe": {"type": "boolean"}, "recovery": {"type": "string"}}, "additionalProperties": false}},
+    "visibility": {"type": "object", "required": ["agentAllowlist"], "properties": {"agentAllowlist": {"type": "array", "items": {"type": "string"}, "description": "explicit allowlist of Agent-visible state fields; invocation-only values do not enter discovery/read context"}, "redaction": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}
+  },
+  "additionalProperties": false,
+  "$defs": {"dataShape": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["object"]}, "properties": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "object", "array", "null"]}}, "requiredFields": {"type": "array", "items": {"type": "string"}}, "description": {"type": "string"}}, "additionalProperties": false}}
+}
