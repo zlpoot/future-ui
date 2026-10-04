@@ -1,6 +1,6 @@
 # 开发工作流与事实源
 
-状态：准备基线已进入 main；当前仍为 PREPARATION_ONLY，#4 无有效开发 grant。本文定义未来获授权后的统一流程，不自行产生开发权限。
+状态：本文定义统一开发流程，不自行产生授权。动态授权状态只以 #4 Current Grant 为准；AGENTS 仅同步当前可执行边界。
 
 ## 1. 事实源
 
@@ -152,6 +152,8 @@ Closeout PASS 后将 Status 置为 Done。只有负责人明确允许 close（�
 
 报告必须列 exact SHA、环境/版本、实际命令、结果、原始证据位置、未运行项及原因。未测/skip/环境失败不是 PASS。
 
-## 10. 当前停止点
+## 10. 动态授权与停止点
 
-准备基线 PR #15 已 merge。#8/#13 已拆成真正子 Issue。#4 当前仍 `NOT_GRANTED`，没有任何实现 Issue Ready；因此不启动实现 Agent、依赖安装、CI、浏览器 live 或模型调用。
+本文不维护 Current Grant 的动态副本。每次开始任务前必须读取 #4 与目标 Issue。
+
+即使某个 Issue 获得 grant，也必须先满足 JIT Freeze 与 Definition of Ready；未列入 Current Grant 的任务不得进入 Coding。browser/provider live、模型、外部账号写入、部署与发布只有在 #4 明确授权时才能执行。
