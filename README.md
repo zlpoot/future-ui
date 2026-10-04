@@ -16,7 +16,8 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 - [基础边界 ADR](docs/adrs/0001-foundation-boundaries.md)
 - [开发工作流与事实源](docs/management/workflow.md)
 - [待决策登记](docs/management/decision-register.md)
-- [开发前准备与后续任务图](docs/exec-plans/preparation.md)
+- [准备基线 Closeout 与开发依赖图](docs/exec-plans/preparation.md)
+- [开发执行计划](docs/exec-plans/development.md)
 - [验收与 AI 对照策略](docs/benchmarks/strategy.md)
 - [来源与参考边界](docs/references/source-map.md)
 
@@ -28,7 +29,7 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 
 ## 状态与当前边界
 
-本轮只准备 Markdown 文档和 Issue。无 package.json、源码、依赖安装、CI 工作流、部署或模型/浏览器调用。
+准备基线已进入 main；当前仍无 package.json、源码、依赖安装、CI 工作流、部署或模型/浏览器调用。#4 Current Grant 为 NONE，因此开发尚未开始。
 
 准备基线、具体契约成熟度和开发授权是三个独立状态：准备基线是否已进入 main 以 #1、PR #15 和 main 当前内容为准；Component / Capability / Binding / Plugin 等具体契约是否冻结以 #2、#3 与对应 ADR 的状态为准；开发授权只以 #4 为准。任一状态变化都不能推断另外两项。
 

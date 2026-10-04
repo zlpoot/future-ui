@@ -1,59 +1,157 @@
 # 开发工作流与事实源
 
-状态：准备期工作流。main 的 [AGENTS](../../AGENTS.md) 与当前 G0 #4 授权边界优先；本文件进入 main 后成为准备期协作规则，但不会自行改变 G0。后续开发仅在 #4 明确批准范围内执行。
+状态：准备基线已进入 main；当前仍为 PREPARATION_ONLY，#4 无有效开发 grant。本文定义未来获授权后的统一流程，不自行产生开发权限。
 
-## 事实源边界
+## 1. 事实源
 
-GitHub：AGENTS、已接受 ADR/Contract、Issue Acceptance、当前代码、PR exact head、实际 CI/测试/原始证据。规范性承诺与描述性事实分开：代码行为不自动修改契约，Draft 文档不自动代表实现。
+GitHub 是唯一工程事实源：
+- AGENTS 与当前用户授权：操作边界；
+- 已接受 Contract / ADR：规范；
+- Issue `Status:`、Acceptance、依赖：任务事实；
+- PR exact head、代码、实际检查与原始证据：实现事实。
 
-Notion：协作方法、提示词、概念解释、讨论和 GitHub 链接。不得保存第二套任务状态、动态验收结果、版本清单或权威 API；讨论影响工程时进入 Issue/ADR。Notion 页面、历史聊天与旧批准不能解锁任务。
+Notion 只保存方法、解释、提示词和 GitHub 链接，不维护动态任务状态、验收结果、版本清单或权威 API。
 
-## 角色与默认流程
+## 2. 角色
 
-用户负责方向、启动范围、费用/凭据/外部真实写与 merge authority；ChatGPT 负责计划与独立 Review；Codex 在获准后负责单项实现。当前不启动 Codex，不运行 Supervisor。
+- 负责人：方向、G0 grant、费用/凭据/live/外部写、merge、close 与阶段范围。
+- ChatGPT：计划、契约/决策整理、Review；需要时执行获准的 GitHub 文档管理。
+- 实现 Agent（如 Codex）：只执行 #4 Current Grant 覆盖且已 Ready 的单项 Issue。
+- Verifier：仅在 Issue 明确要求的高风险边界或阶段收口执行独立 Verify。
 
-授权后默认流程：Issue → Ready 核对 → 独立分支实现 → 最小充分检查 → PR → 独立 Review → 用户授权 merge → 对应验收和简短 closeout。
+不引入 webskill 的 Supervisor、自动 merge 或全局自动推进。
 
-普通实现不默认叠加独立 Verify/full 审计。能力授权、未知写等关键边界的最终验收及阶段收口需要独立 Verify 和阶段回归；范围按 Issue 冻结，不复制 webskill 特定脚本/门禁。
+## 3. Just-in-time Freeze
 
-## 状态载体
+不设置“#2/#3 全部完成后才能开发”的全量前置门。
 
-本轮不建立 GitHub Project 或状态标签体系。每个 Issue 正文中的一个 `Status:` 字段是当前唯一活跃状态载体；Issue open/closed 表示生命周期。Notion 和文档任务图不维护第二份动态状态。
+每个目标 Issue 在 Ready 前依次检查：
+1. 它依赖的最小 Component/Capability/Binding/Plugin 契约是否已由 #2 接受并进入 main。
+2. 它依赖的工具链、兼容、支持范围、验收方法是否已由 #3 接受并进入 main/ADR。
+3. 未被当前 Issue 消费的未来方案保持 TBD/Deferred。
 
-后续若采用 Project，须显式迁移状态并停止维护旧字段；不同时维持 Project、labels 和正文三套状态。
+典型 Ready Gate：
+- #5：D01 + D12。
+- #6：D02 + D05(Schema 子集) + D06(M0) + #2 的 Schema 最小契约。
+- **#22：#6 后即可进入；冻结 machine-readable catalog / diagnostics / stable node+version / patch primitives；不需要 #10 或模型预算。**
+- #7：D07(M0)。
+- #16/#18：D03/D04 + 对应 D07(M1) 最小支持子集。
+- **#26：#16 + #18 后，冻结最小第二 framework/provider 与 conformance 范围；通过/修订后再批量扩展。**
+- #17/#19/#20/#21：#26 已通过或其 Contract 问题已收敛，再冻结 D04/D08 与对应支持子集。
+- **#25：#22 + 代表 UI 消费者后，冻结 deterministic preview/test 宿主、fixture、结构化结果和生产隔离。**
+- #9/#10：D06(M1) 与完整 Capability/Binding 执行语义。
+- #11：#26 后的完整 Vue/alternate provider 对照范围。
+- #12：D09。
+- #23/#14：D10、相应 D11 与模型/预算授权。
+- D13 只在公开发布前冻结。
 
-状态：Inbox → Spec → Ready → Coding → Review → Done；Blocked 独立表达规范/依赖/授权/环境阻塞；必要时进入 Verify。准备期文档可以 Spec/Review，但不因此进入产品 Coding。
+## 4. G0 是持续授权账本
 
-## Definition of Ready
+#4 整个 M0/M1 期间保持授权入口，不理解成一次性 PASS。
 
-- 当前 G0 授权明确包含该 Issue 和所需动作。
-- 目标、当前/预期行为、范围、依赖、契约、验收、最小测试及禁止项齐全。
-- 依赖已接受且有可访问证据，不只检查“已关闭”。
-- 阻碍该任务的公开契约、权限和预算未决项已解决。
-- 单项可在一个 PR 内审阅；较大的候选工作包先拆分，不能直接交给实现器。
+Current Grant 必须记录：
+- Grant ID / 日期；
+- baseline commit；
+- 具体可执行 Issue 编号；
+- code write、dependency install/update、local build/test、CI config/change、CI run 分别是否允许；
+- browser/provider live、model/API、external account/data write、deploy/publish 是否允许；
+- 预算、凭据、数据边界、停止条件；
+- grant 结束/替换条件。
 
-依赖完成不自动授予 Ready，Ready 也不包含自动 merge、live/付费调用或下一阶段授权。
+父工作包不自动授权子 Issue。可以一次授权多个真正可并行的子 Issue，但必须逐项列出。
 
-## Definition of Done
+**Grant 不等于 Ready。** 如果 Current Grant 不足以完成目标 Issue 的 Acceptance（例如验收要求 CI 而 grant 禁止 CI），不得把未运行项记 PASS；应扩大 grant 或正式修改 Issue Scope/Acceptance。
 
-必要的代码/契约/例子/文档一致；规定检查真实执行；独立 Review 通过；需要的 Verify 已完成；用户授权合并后基线检查满足 Issue；在有授权的 closeout 中记录结果并关闭。
+## 5. 大工作包必须拆成真正子 Issue
 
-纯文档只验收文档，不要求不存在的产品 E2E，也不得因文档通过声称产品完成。PR 使用 Refs #N，不使用自动关闭语句掩盖未验收任务。
+一个实现 Issue 对应一个可独立证明的变化和一个可独立审阅 PR。父 Issue 只做范围/依赖/阶段验收跟踪，不直接 Ready/Coding。
 
-## 证据和轻量检查
+当前：
+- #8 是父工作包；实现拆为 #16–#21，并由 #26 在批量扩展前做早期 portability checkpoint。
+- #13 是 AI-first 父工作包；#22 Contract Core 提前到 #6 后，#25 补确定性 preview/test，#23 单独做真实模型评估。
+- #11 保留为 #26 之后更完整的 Vue/alternate provider 对照。
+- #7 若 DoR 评估发现无法用一个清晰 PR 同时证明兼容注册与生命周期清理，则在 Ready 前再拆子 Issue。
 
-文档：路径、交叉引用、术语、依赖图、授权一致性。
-普通代码：lint/typecheck、所改包测试、关键消费者 smoke，具体命令以实际 package.json/Issue 为准。
-关键安全与阶段：指定负例、真实 effect 与同一基线阶段回归；模拟/离线/浏览器/模型证据不互相替代。
+## 6. 状态机
 
-报告包含 exact SHA、实际命令、环境、结果、未运行项及原因。未测、skip、环境失败不是 PASS；不能事后降验收阈值掩盖失败。
+Issue 正文一个 `Status:` 字段为唯一活跃任务状态。推荐值：
 
-## 变更与保护
+```text
+Inbox / Spec
+      ↓
+Blocked ──(JIT freeze + grant + DoR)──→ Ready
+      ↓                                  ↓
+   原因解除                           Coding
+                                         ↓
+                                      Review
+                                         ↓
+                              Verify（条件分支）
+                                         ↓
+                              等待 exact-head merge
+                                         ↓
+                                       Merge
+                                         ↓
+                                      Closeout
+                                         ↓
+                                        Done
+                                         ↓
+                                  explicit Close
+```
 
-方向未决用 Issue/RFC；明确选择写 ADR。常规实现细节授权后由实现者自主决定，公开契约/权限/范围变化才升级决策。不为原型增加无关治理平台。
+说明：
+- `Blocked`：依赖、授权、决策、预算、环境任一不满足。
+- `Ready`：Current Grant 足够完成整个 Acceptance，且 DoR 全部满足。
+- `Coding`：实现 Agent 已在独立分支开始本 Issue。
+- `Review`：PR 和规定检查已提交；等待独立 Review/修复/merge authorization。
+- `Verify`：仅高风险边界或阶段验收；普通任务不默认追加。
+- `Closeout`：PR 已 merge，在 main 上确认目标行为、文档/证据/消费者一致。
+- `Done`：Acceptance 在 main 上满足，但 GitHub Issue 可以仍 open 等待明确 close 授权。
+- GitHub closed：生命周期结束；close 不能从 merge 自动推断。
 
-不 force-push，不 reset/clean/discard，不覆盖未知工作区。读取工作区不等于获得修改授权。merge 授权绑定当前范围和 head，发生实质变化须重新 Review。
+PR head 发生实质变化后，之前对旧 head 的 Review / Verify / merge authorization 无效。
 
-## 准备期停止点
+## 7. Definition of Ready
 
-本轮交付后停在 Draft PR/准备包 Review。#4 未批准；所有实现/阶段验收任务保持 Blocked。未合并文档不标 Accepted；不关闭 Issue、不启动后台任务、自动执行器或产品验证。
+- #4 Current Grant 明确包含目标 Issue，且授权动作足够完成其 Acceptance。
+- JIT Contract/Decision 已冻结并进入可访问 GitHub 基线。
+- 依赖已接受并有证据，不只看“closed”。
+- 范围、非目标、Acceptance、最小检查和禁止项清楚。
+- 单项可在一个 PR 内审阅；否则先拆子 Issue。
+- live/模型/外部账号/费用需要时已有独立 grant。
+
+## 8. Review → Verify → Merge → Closeout → Done/Close
+
+### Review
+检查范围、契约、依赖泄漏、关键负例、消费者影响和实际测试。Review PASS 绑定 exact head。
+
+### Verify
+只在 Issue 明确规定时执行，例如权限边界、unknown write、阶段最终验收。Verify 也绑定 exact head；不能用同一作者自查冒充需要的独立 Verify。
+
+### Merge
+负责人授权 merge，默认只针对 Review/Verify 过的 exact head。Merge 不自动 close Issue，也不授权下一任务。
+
+### Closeout
+在 main 上：
+- 确认 merge commit / main exact baseline；
+- 执行 Issue 明确要求的最小 post-merge/main 检查；
+- 确认文档、证据和消费者没有因 merge 丢失；
+- 记录 achieved / failed / not tested / deferred。
+
+Closeout 不新增功能；若发现问题，回到 Blocked/Coding 开修复 PR。
+
+### Done / Close
+Closeout PASS 后将 Status 置为 Done。只有负责人明确允许 close（可以和 merge/closeout 授权一起给出）才关闭 GitHub Issue。
+
+## 9. 证据与检查
+
+- 文档：路径、交叉引用、术语、依赖图、授权一致性。
+- 普通代码：lint/typecheck、目标包测试、关键消费者 smoke；以实际 package.json/Issue 为准。
+- 高风险/阶段：指定负例、实际 effect、同一基线回归和独立 Verify。
+- Mock、离线、浏览器 live、模型、真实外部写分别记账，不互相替代。
+- calibration/pilot 数据不计入正式 acceptance。
+
+报告必须列 exact SHA、环境/版本、实际命令、结果、原始证据位置、未运行项及原因。未测/skip/环境失败不是 PASS。
+
+## 10. 当前停止点
+
+准备基线 PR #15 已 merge。#8/#13 已拆成真正子 Issue。#4 当前仍 `NOT_GRANTED`，没有任何实现 Issue Ready；因此不启动实现 Agent、依赖安装、CI、浏览器 live 或模型调用。

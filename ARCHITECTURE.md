@@ -15,6 +15,29 @@ Agent → protocol → capability ┘
 
 图中的连线表示调用/绑定关系，不表示所有包都必须互相依赖。UI-only 和 Agent-only 都是一级使用模式。
 
+### Contract 的三类并列消费者
+
+公共 Contract / Schema 不是只为组件实现服务，也不是先完成 UI 后再给 AI/Agent 包装。它从早期开始同时服务：
+
+```text
+                     Contract / Schema
+                     /      |       \
+                    /       |        \
+          UI / provider   Dev AI   Capability runtime
+              |             |             |
+       framework/theme   catalog       protocol adapter
+                        validate            |
+                        diagnostics      Runtime Agent
+                        patch
+                        preview/test
+```
+
+- **UI/provider** 验证组件行为、跨框架语义与可访问性。
+- **Dev AI** 验证契约是否机器可查询、可诊断、可局部修改并能通过确定性 preview/test 闭环。
+- **Capability/Agent** 验证业务能力、授权、effect、reconciliation 与协议映射。
+
+因此 #6 Schema 完成后即可让 AI Contract Core 成为直接消费者；不应等完整 UI/Binding 完成。Ark/React 首批实现只允许作为第一个 provider，必须在批量扩展前用第二实现做 portability checkpoint。
+
 ## 逻辑模块
 
 | 模块 | 负责 | 不负责 / 禁止依赖 |
