@@ -1,26 +1,23 @@
 {
-  "name": "@future-ui/react-provider",
+  "name": "future-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "React framework adapter/provider — first public UI surface, Button as first contract consumer (M1-01A)",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "AI-first, contract-driven modular Web UI framework (M0-01 toolchain baseline)",
+  "packageManager": "pnpm@11.28.4",
+  "engines": {
+    "node": ">=24.21.0"
   },
-  "dependencies": {
-    "@future-ui/contracts": "workspace:*"
-  },
-  "peerDependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.0",
-    "@testing-library/react": "^16.1.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "jsdom": "^26.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.3"
   }
 }
