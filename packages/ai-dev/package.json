@@ -1,0 +1,24 @@
+{
+  "name": "@future-ui/ai-dev",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Preview/Test deterministic development host (#25, M1-06A2): ui.preview renders controlled fixtures (jsdom + conformance dom-provider, host whitelist 'dom') and ui.test runs deterministic structure/interaction checks with exact baselines. Dev-time only — never part of the UI-only production dependency graph, never in the website agent tool directory; no model calls.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/conformance": "workspace:*",
+    "@future-ui/contracts": "workspace:*",
+    "@future-ui/react-provider": "workspace:*"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vitest": "^5.0.3"
+  }
+}
