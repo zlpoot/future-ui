@@ -53,6 +53,15 @@ JIT Contract/Decision Freeze
 - 若 merge 后 closeout 失败，Issue 不得标 Done；回到 Blocked/Coding 并建立新的修复 PR。
 - 不 force-push，不 reset/clean/discard，不覆盖未知修改。
 
+## 产品方向防偏
+
+Contract / Schema 有三类**并列的一等消费者**：
+1. UI / framework / provider；
+2. 开发 AI（catalog / validate / diagnostics / patch / preview / test）；
+3. 运行期 Capability / Agent。
+
+不得把开发 AI 变成“UI 与 Agent 全部完成后再补的工具层”。#6 之后即可让确定性 AI Contract Core (#22) 直接消费 Contract/Schema；首批代表组件具备后补 #25 preview/test。Ark/React 批量扩展前必须经过早期 portability checkpoint (#26)，避免公共 Contract 被首个 provider 反向锁死。
+
 ## 架构底线
 
 future-ui 是 AI 优先开发、跨框架、无样式且可访问的模块化 Web UI 框架。

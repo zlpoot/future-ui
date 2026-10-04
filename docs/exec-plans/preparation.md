@@ -28,15 +28,21 @@ DoR → Ready → 实现流程
 ## 主要依赖链（不是工期 critical path）
 
 ```text
-#5 → #6 → #7
-            ├→ #8(parent) → #16 → #17/#18/#19 → #20 → #21 ─┐
-            │                                                 ├→ #10
-            └→ #9 ────────────────────────────────────────────┘
-                                                              ├→ #11
-                                            ├→ #12
-                                            └→ #13(parent) → #22 → #23
-                                                           ↓
-                                                          #14
+#5 → #6 ───────────────→ #22 AI Contract Core
+      │                         │
+      └→ #7 ─→ #16 → #18 ─────┼→ #26 portability checkpoint
+             │                 │          │
+             │                 └→ #25 preview/test
+             │                            │
+             └→ #9                        ├→ #17/#19 → #20 → #21 → #8(parent complete)
+                                          │                         │
+                                          └─────────────────────────┤
+                                                                    ├→ #10
+                                                                    │   ├→ #12
+                                                                    │   └→ #13(parent) → #23
+                                                                    └→ #11 full comparison
+                                                                            ↓
+                                                                           #14
 ```
 
 实际并行取决于依赖、Current Grant 和可用执行资源；没有任务时长数据前不称为“关键路径”。
@@ -51,22 +57,24 @@ DoR → Ready → 实现流程
 | #5 | M0 工具链 | D01 + D12 |
 | #6 | M0 Schema | D02 + D05(Schema) + D06(M0) + #2 最小契约 |
 | #7 | M0 Plugin Kernel | D07(M0) |
-| #8 | M1-01 父工作包 | 不直接执行；跟踪 #16–#21 |
+| #22 | AI Contract Core | **#6 后即可**；catalog/validate/diagnostics/patch 语义；无模型预算 |
+| #8 | M1-01 父工作包 | 不直接执行；跟踪 #16–#21，并要求 #26 早期 portability |
 | #16 | React/provider + Button | D03/D04 + 对应 D07(M1) |
-| #17 | TextInput | #16 + Component Contract |
-| #18 | Select | #16 + D04 Select feature subset |
-| #19 | Dialog | #16 + accessibility subset |
-| #20 | Theme | #16–#19 + D08 |
-| #21 | Conformance/UI-only | #16–#20 + 测量范围 |
+| #18 | Select（有状态代表） | #16 + D04 Select feature subset |
+| #26 | Early portability checkpoint | #16/#18 + 最小第二 framework/provider 对照范围 |
+| #17 | TextInput | #16 + **#26 通过/问题收敛** |
+| #19 | Dialog | #16 + **#26 通过/问题收敛** |
+| #20 | Theme | #17/#19 + #26 + D08 |
+| #21 | Conformance/UI-only | #16–#20 + #26 + 测量范围 |
+| #25 | AI preview/test | #22 + 代表 UI 消费者；确定性 fixture，不调用模型 |
 | #9 | Capability runtime | D06(M1) + Capability Contract |
 | #10 | Binding vertical slice | #8/#9 + Binding Contract |
-| #11 | Vue/alternate provider | #8 + 对照范围 |
+| #11 | Full Vue/alternate provider | #26 + #8 + 完整对照范围 |
 | #12 | WebMCP adapter | #9/#10 + D09 |
-| #13 | M1-06 父工作包 | 不直接执行；跟踪 #22/#23 |
-| #22 | Deterministic AI tooling | #6/#10 + tooling contract |
-| #23 | Real model evaluation | #22 + D10 + model/budget grant |
+| #13 | AI-first 父工作包 | 跟踪 #22/#25/#23；不直接执行 |
+| #23 | Real model evaluation | #22/#25 + #10 + D10 + model/budget grant |
 | #14 | Stage acceptance | #10–#13 必需交付 + 冻结验收协议 |
 
 ## 当前停止点
 
-仅允许继续做准备期文档、JIT 契约/决策和负责人明确授权的管理动作。#4 没有 Current Grant，因此 #5–#23 中不存在可开始的实现任务。
+仅允许继续做准备期文档、JIT 契约/决策和负责人明确授权的管理动作。#4 没有 Current Grant，因此 #5–#26 中不存在可开始的实现任务。

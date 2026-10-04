@@ -33,11 +33,15 @@ Notion 只保存方法、解释、提示词和 GitHub 链接，不维护动态�
 典型 Ready Gate：
 - #5：D01 + D12。
 - #6：D02 + D05(Schema 子集) + D06(M0) + #2 的 Schema 最小契约。
+- **#22：#6 后即可进入；冻结 machine-readable catalog / diagnostics / stable node+version / patch primitives；不需要 #10 或模型预算。**
 - #7：D07(M0)。
-- #16–#21：D03/D04/D08 + 对应 D07(M1) 支持子集。
+- #16/#18：D03/D04 + 对应 D07(M1) 最小支持子集。
+- **#26：#16 + #18 后，冻结最小第二 framework/provider 与 conformance 范围；通过/修订后再批量扩展。**
+- #17/#19/#20/#21：#26 已通过或其 Contract 问题已收敛，再冻结 D04/D08 与对应支持子集。
+- **#25：#22 + 代表 UI 消费者后，冻结 deterministic preview/test 宿主、fixture、结构化结果和生产隔离。**
 - #9/#10：D06(M1) 与完整 Capability/Binding 执行语义。
+- #11：#26 后的完整 Vue/alternate provider 对照范围。
 - #12：D09。
-- #22：确定性 AI tooling 契约；不需要模型预算。
 - #23/#14：D10、相应 D11 与模型/预算授权。
 - D13 只在公开发布前冻结。
 
@@ -63,8 +67,9 @@ Current Grant 必须记录：
 一个实现 Issue 对应一个可独立证明的变化和一个可独立审阅 PR。父 Issue 只做范围/依赖/阶段验收跟踪，不直接 Ready/Coding。
 
 当前：
-- #8 是父工作包；实现拆为 #16–#21。
-- #13 是父工作包；确定性工具 #22 与真实模型评估 #23 分开。
+- #8 是父工作包；实现拆为 #16–#21，并由 #26 在批量扩展前做早期 portability checkpoint。
+- #13 是 AI-first 父工作包；#22 Contract Core 提前到 #6 后，#25 补确定性 preview/test，#23 单独做真实模型评估。
+- #11 保留为 #26 之后更完整的 Vue/alternate provider 对照。
 - #7 若 DoR 评估发现无法用一个清晰 PR 同时证明兼容注册与生命周期清理，则在 Ready 前再拆子 Issue。
 
 ## 6. 状态机

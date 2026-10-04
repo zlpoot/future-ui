@@ -23,10 +23,10 @@ Ready → Coding → Review → [Verify] → Merge → Closeout → Done → Clo
 #4 是持续授权账本，不关闭成“G0 PASS”。推荐批次：
 
 - **Batch 0 / 文档**：#1 closeout；#2/#3 按下一个目标 Issue 做 JIT freeze。
-- **Batch 1 / M0**：先 grant #5；完成 closeout 后再 grant #6；再 grant #7。
-- **Batch 2 / M1 UI + Capability**：#16 先建立 React/provider 基础；之后可按 grant 并行 #17/#18/#19 与 #9；随后 #20/#21 和 #10。
-- **Batch 3 / 扩展**：#11、#12、#22 按依赖并行。
-- **Batch 4 / 实验与验收**：单独预算 grant #23；最后 #14 独立 Verify + 阶段回归。
+- **Batch 1 / 基础**：先 grant #5；完成后 #6。#6 closeout 后，#7 与 **#22 AI Contract Core** 可在 grant 明确时并行，尽早让机器消费者挑战 Contract/Schema。
+- **Batch 2 / 代表 UI + 早期反向验证**：#16 → #18；随后 #26 portability checkpoint。#25 preview/test 可在 #22 + 代表 UI 消费者具备后与 #26 前后并行。#9 Capability runtime 也可在 #7 后独立推进。
+- **Batch 3 / UI 扩展与纵向闭环**：只有 #26 通过/Contract 问题收敛后，才批量推进 #17/#19 → #20/#21；#8 收敛后与 #9 汇入 #10。
+- **Batch 4 / 扩展与评估**：#11（完整跨框架/provider 对照）、#12（WebMCP）按依赖推进；单独预算 grant #23；最后 #14 独立 Verify + 阶段回归。
 
 一次 grant 可以覆盖真正独立且可并行的多个子 Issue，但必须逐项列出，不以父工作包编号代替。
 
@@ -47,32 +47,44 @@ Ready：#6 接受；D07(M0) 冻结。
 交付：app/request scope、manifest、provides/requires、compatibility、init/dispose、冲突/失败清理。
 若 DoR 时无法一个 PR 清晰证明，则先拆“注册/兼容”和“生命周期/隔离”子 Issue。
 
-## 4. M1-01：父 #8 → 子 #16–#21
+### #22 AI Contract Core（#6 后立即可进入 JIT 流程）
+Ready：#6 接受；machine-readable catalog / diagnostics / stable node+version / patch primitive 语义冻结；G0 grant 足够。
+交付：catalog → validate/diagnostics → patch primitives。
+目的：把 Dev AI 作为 Contract/Schema 的早期一等消费者，尽早发现机器可用性问题。
+不依赖 #10，不调用模型。
+
+## 4. M1-01：代表实现 → 早期 Portability → 批量扩展
 
 #8 不直接执行。
 
-- #16：React provider 基础 + Button。
-- #17：TextInput。
-- #18：Select。
-- #19：Dialog。
-- #20：Theme token/parts/variants 与视觉可访问性。
-- #21：Component conformance + UI-only bundle 验收。
+1. #16：React provider 基础 + Button。
+2. #18：Select，作为首个有状态/复合代表。
+3. **#26：Early Contract Portability Checkpoint**。使用 Vue adapter 或真正不同 provider，以 Button + Select/等价代表挑战公共 Contract。
+4. 只有 #26 通过，或其发现的 Contract 问题已回到 #2 修订并重新接受，才批量推进：
+   - #17 TextInput
+   - #19 Dialog
+   - #20 Theme
+   - #21 Component conformance + UI-only bundle
 
-#16 后 #17/#18/#19 可在 grant 明确时并行；#20 依赖目标组件稳定；#21 最终收敛工作包证据。每个子 Issue 一个 PR。
+这不是为了提前“完成 Vue”，而是为了防止 Ark/React 在第一批实现中反向塑造公共 Contract。每个子 Issue 一个 PR。
 
 ## 5. M1 Capability / Binding / Adapter
 
-- #9：独立 Capability runtime + legacy page；进入前冻结 D06(M1)。
-- #10：UI/Agent 共用业务动作的本地纵向 Binding；依赖 UI 与 Capability 所需交付。
-- #11：Vue + alternate provider 对照；不泛化为“所有框架”。
+- #9：独立 Capability runtime + legacy page；进入前冻结 D06(M1)，可与代表 UI/AI core 并行。
+- #10：UI/Agent 共用业务动作的本地纵向 Binding；依赖 #8 父项收敛与 #9。
+- #11：#26 后的**完整** Vue / alternate provider 对照；#26 负责早发现，#11 负责更完整证据。
 - #12：WebMCP adapter；D09 在执行前冻结，mock/真实浏览器分别记账。
 
-## 6. M1-06：父 #13 → #22/#23
+## 6. AI-first 开发闭环：#22 → #25 → #23
 
-- #22：确定性 catalog/validate/patch 与权限隔离；**不需要模型预算，不调用模型**。
-- #23：真实模型公平对照；只有 D10 冻结且 G0 grant 明确模型/预算后才能开始。
+#13 是跨阶段父工作包，不要求等 UI/Agent 全部完成再开始。
 
-calibration/pilot 与正式 acceptance 分离；失败/未完成样本保留。
+- **#22 AI Contract Core**：#6 后即可执行，catalog / validate / diagnostics / patch；不调用模型。
+- **#25 Preview/Test**：当 #22 与至少一个简单 + 一个有状态代表 UI 消费者可用后，提供受控 fixture/render target 与确定性交互测试，形成：
+  `catalog → validate → patch → preview → test`
+- **#23 真实模型公平对照**：只有 #22/#25、#10、D10 与模型/预算 grant 全部具备后才能开始。
+
+preview/test 第一版调用确定性测试，而不是让模型通过视觉主观判断正确性。calibration/pilot 与正式 acceptance 分离；失败/未完成样本保留。
 
 ## 7. #14 阶段验收
 
@@ -108,4 +120,4 @@ calibration/pilot 与正式 acceptance 分离；失败/未完成样本保留。
 
 ## 10. 当前状态
 
-准备基线已合并；#16–#23 已建立为真正子 Issue；#4 Current Grant 仍为 NONE。**因此当前无任何实现任务 Ready，开发尚未开始。**
+准备基线已合并；#16–#23 已建立，AI preview/test #25 与 early portability #26 也已建立。#4 Current Grant 仍为 NONE。**因此当前无任何实现任务 Ready，开发尚未开始。**
