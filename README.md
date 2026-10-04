@@ -15,6 +15,7 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 - [组件、能力、Binding 与插件契约草案](docs/contracts/README.md)
 - [基础边界 ADR](docs/adrs/0001-foundation-boundaries.md)
 - [开发工作流与事实源](docs/management/workflow.md)
+- [自主工程工作流 v0.1](docs/management/autonomous-engineering-workflow.md)
 - [待决策登记](docs/management/decision-register.md)
 - [准备基线 Closeout 与开发依赖图](docs/exec-plans/preparation.md)
 - [开发执行计划](docs/exec-plans/development.md)
