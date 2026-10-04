@@ -1,20 +1,19 @@
-/**
- * Public type definitions for the future-ui contracts package (M0-02, D05).
- *
- * These interfaces mirror the authoritative JSON Schemas in ./schemas: the
- * schemas are the single source of truth and the types are generated/mapped
- * from them. Diagnostics reuse the frozen M0 error code structure.
- */
-
 import type { Diagnostic } from './diagnostics.js';
 
-export type { Diagnostic };
+/** semver string, e.g. "1.0.0" */
+export type SemVer = string;
 
-/** Machine-readable component/contract description consumed by the AI Contract Core (D14). */
-export interface ContractMetadata {
+export interface ComponentContract {
   componentType: string;
-  contractVersion: string;
+  contractVersion: SemVer;
   features: Record<string, boolean>;
+  props: Record<string, ComponentProp>;
+  events: Record<string, ComponentEvent>;
+  state: ComponentState;
+  parts: Record<string, ComponentPart>;
+  control: Record<string, ControlMethod>;
+  accessibility: AccessibilityObligations;
+  lifecycle: Lifecycle;
 }
 
 export interface ComponentProp {
@@ -48,7 +47,7 @@ export interface ControlMethod {
   description?: string;
 }
 
-export interface ComponentAccessibility {
+export interface AccessibilityObligations {
   role: string;
   keyboard?: boolean;
   focus?: boolean;
@@ -56,48 +55,69 @@ export interface ComponentAccessibility {
   description?: string;
 }
 
-export interface ComponentLifecycle {
+export interface Lifecycle {
   requiresCleanup: boolean;
+  description?: string;
 }
 
-/**
- * Component M0 minimal field families (D05): identity/version, features,
- * props, events, state, parts, control, accessibility, lifecycle.
- */
-export interface ComponentContract extends ContractMetadata {
-  props: Record<string, ComponentProp>;
-  events: Record<string, ComponentEvent>;
-  state: ComponentState;
-  parts: Record<string, ComponentPart>;
-  control: Record<string, ControlMethod>;
-  accessibility: ComponentAccessibility;
-  lifecycle: ComponentLifecycle;
+export interface CapabilityContract {
+  id: string;
+  contractVersion: SemVer;
+  description: string;
+  input: DataShape;
+  output: DataShape;
+  availability: { preconditions: string[]; unavailableReason?: string };
+  effects: { local: string[]; remote: string[]; irreversible?: string[] };
+  authorization: { hooks: string[]; description?: string };
+  concurrency: { expectedVersion?: boolean; conflictPolicy: 'reject' | 'no-op' | 'none' };
+  idempotency: { scope: 'none' | 'request' | 'operation'; retrySafe?: boolean };
+  invocation: {
+    invocationId: boolean;
+    receipt: boolean;
+    reconciliation: boolean;
+    idempotencyKeyDistinct?: boolean;
+  };
+  execution: {
+    states: Array<'pending' | 'executing' | 'completed' | 'rejected' | 'failed' | 'unknown' | 'cancelled'>;
+    cancelImpliesRollback?: boolean;
+  };
+  failureModes: Record<string, { retrySafe: boolean; recovery?: string }>;
+  visibility: { agentAllowlist: string[]; redaction?: string[] };
+}
+
+export interface DataShape {
+  type: 'object';
+  properties?: Record<string, unknown>;
+  requiredFields?: string[];
+  description?: string;
 }
 
 export interface BindingContract {
   componentInstanceId: string;
   capabilityId: string;
-  params?: Record<string, unknown>;
-  projection?: Record<string, unknown>;
-  'invocation-only'?: boolean;
-  subscription?: boolean;
+  contractVersion: SemVer;
+  params: { source: 'userEvent' | 'agent' | 'discovery'; mapping: Record<string, string | number | boolean | null> };
+  projection: {
+    source: string;
+    direction: 'read' | 'write' | 'read-write';
+    agentVisibility: string[];
+    mutability: 'readonly' | 'mutable';
+    redaction: string[];
+  };
+  invocationOnly: string[];
+  subscription: { onChange: boolean; unmountUnbinds?: boolean };
+  lifecycle: Lifecycle;
 }
 
-export interface CapabilityContract {
+export interface PluginContract {
+  kind: 'protocol' | 'component' | 'theme' | 'capability';
   id: string;
-  contractVersion: string;
-  description: string;
-  input: { type: 'object'; properties?: Record<string, unknown>; requiredFields?: string[] };
-  output: { type: 'object'; properties?: Record<string, unknown>; requiredFields?: string[] };
-  availability: { preconditions: string[] };
-  effects: { local: string[]; remote: string[]; irreversible?: string[] };
-  authorization: { hooks: string[]; description: string };
-  concurrency: { expectedVersion: boolean; conflictPolicy: 'reject' | 'queue' };
-  idempotency: { scope: 'none' | 'request' | 'operation'; retrySafe: boolean };
-  invocation: { invocationId: boolean; receipt: boolean; reconciliation: boolean; idempotencyKeyDistinct: boolean };
-  execution: { states: string[]; cancelImpliesRollback: boolean };
-  failureModes: Record<string, { retrySafe: boolean; recovery?: string }>;
-  visibility: { agentAllowlist: string[]; redaction: string[] };
+  contractVersion: SemVer;
+  provides: string[];
+  requires: string[];
+  compatibility: { platform: string; engines?: Record<string, string> };
+  scope: { app: boolean; request: boolean; description?: string };
+  lifecycle: { init: boolean; dispose: boolean; cleanupOnFailure?: boolean };
 }
 
 export type { Diagnostic };
