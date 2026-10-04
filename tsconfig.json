@@ -1,16 +1,28 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx"
   },
-  "include": ["tests/**/*.ts", "vitest.config.ts", "packages/**/*.ts"]
+  "include": [
+    "tests/**/*.ts",
+    "vitest.config.ts",
+    "packages/**/*.ts",
+    "packages/**/*.tsx"
+  ]
 }
