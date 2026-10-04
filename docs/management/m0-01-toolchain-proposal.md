@@ -12,7 +12,7 @@
 | 项目 | 建议冻结版本 / 规则 | 理由 |
 | --- | --- | --- |
 | Node.js | `24.21.0` LTS | 选择 LTS 而非 Node 26 Current；作为本地/CI 的统一开发运行时 |
-| pnpm | `11.28.2` | 使用 pnpm 11 的稳定线；满足 Node 22+，不为 M0 引入 pnpm 12 的额外多生态能力 |
+| pnpm | `11.28.4` | 使用 pnpm 11 的稳定线；满足 Node 22+，不为 M0 引入 pnpm 12 的额外多生态能力。初始冻结 11.28.2，因 11.28.2 在 `--frozen-lockfile` 下存在 supply-chain 校验 bug（校验和一致仍误报 `ERR_PNPM_TARBALL_INTEGRITY`，见下方修订记录），升到 11.28.4 |
 | TypeScript | `6.0.3` | 虽然最新 TypeScript 已到 7.0.x，但当前 typescript-eslint 官方支持范围仍为 `<6.1.0`；先选择双方正式支持的组合 |
 | @types/node | `24.19.1` | 与 Node 24 开发目标对齐，不使用当前默认 latest 的 Node 26 类型 |
 | ESLint | `10.12.0` | 当前 ESLint 10 稳定线；采用 flat config |
@@ -25,7 +25,7 @@
 ### 建议 package / workspace 规则
 
 - root `package.json`: `"private": true`。
-- `packageManager` 精确记录 `pnpm@11.28.2`；lockfile 提交。
+- `packageManager` 精确记录 `pnpm@11.28.4`；lockfile 提交。
 - Node 本地与 CI 固定 `24.21.0`；允许使用 `.node-version` 或等价仓库事实固定。
 - devDependencies 使用精确版本，由 lockfile 保证 transitive reproducibility。
 - workspace 采用 `packages/*`，但 **#5 不为未来所有逻辑模块预建空包**；具体包在对应 Issue 第一次真实消费时创建。
@@ -38,7 +38,7 @@
 
 1. checkout；
 2. 安装 Node 24.21.0；
-3. 安装 pnpm 11.28.2；
+3. 安装 pnpm 11.28.4；
 4. `pnpm install --frozen-lockfile`；
 5. `pnpm lint`；
 6. `pnpm typecheck`；
@@ -113,7 +113,7 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 负责人于 2026-10-04 明确接受以下决定：
 
 1. Node 24.21.0。
-2. pnpm 11.28.2。
+2. pnpm 11.28.4（初始 11.28.2，修订原因见 D01 表）。
 3. TypeScript 6.0.3（暂不采用 TS 7）。
 4. ESLint 10.12.0 + typescript-eslint 8.71.0。
 5. Vitest 5.0.3。
@@ -121,3 +121,7 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 7. #5 允许创建单 job GitHub Actions CI，并允许 install/lint/typecheck/test。
 
 以上决定只解决 #5 的 D01/D12 前置，不等于授权 #5 开发。D01/D12 已在 main 生效；仍需 #4 Current Grant 明确列出 #5 与允许动作，#5 才可能通过 DoR 进入 Ready。
+
+## 修订记录
+
+- 2026-10-04（#5 实现 PR 阶段）：pnpm 11.28.2 → 11.28.4。CI 在 `pnpm install --frozen-lockfile` 下对 `@typescript-eslint/typescript-estree@8.71.0` 与 `@typescript-eslint/scope-manager@8.71.0` 误报 `ERR_PNPM_TARBALL_INTEGRITY`（Wanted 与 Got 校验和一致仍失败，本地/registry tarball 三方核对无差异）；pnpm 11.28.4 发布说明明确修复了 frozen-lockfile 拒绝若干本应接受的 lockfile 的问题，故升级。属 D01 工具链小版本修订，不改变 Node/TS/ESLint/Vitest 与边界决策。

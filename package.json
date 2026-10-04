@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "AI-first, contract-driven modular Web UI framework (M0-01 toolchain baseline)",
-  "packageManager": "pnpm@11.28.2",
+  "packageManager": "pnpm@11.28.4",
   "engines": {
     "node": ">=24.21.0"
   },

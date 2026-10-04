@@ -20,7 +20,7 @@ describe('M0-01 toolchain baseline', () => {
   it('pins pnpm and private scope in package.json', () => {
     const pkg = readJson('package.json');
     expect(pkg.private).toBe(true);
-    expect(pkg.packageManager).toBe('pnpm@11.28.2');
+    expect(pkg.packageManager).toBe('pnpm@11.28.4');
   });
 
   it('pins Node via .node-version', () => {
