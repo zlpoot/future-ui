@@ -1,7 +1,7 @@
 # M0-01 工具链与私有包边界决策
 
 日期：2026-10-04  
-状态：**Owner accepted for #5 / pending main merge**。负责人于 2026-10-04 明确接受本文件的 D01 / D12 方案。该接受只冻结 #5 的工具链与私有包边界；在包含本文件的 PR #24 合并到 main 前，工程事实仍以 main 为准，#5 不因此变为 Ready。即使合并后，仍必须由 #4 Current Grant 单独授权 #5 才能开发。
+状态：**Accepted for #5 / active on main**。负责人于 2026-10-04 明确接受本文件的 D01 / D12 方案，并已随 PR #24 合并进入 main（baseline `93ae277199faa18b5a8415228e7c244d37ba7673`）。这只冻结 #5 的工具链与私有包边界，不等于开发授权；#5 仍必须由 #4 Current Grant 单独授权后才可能进入 Ready。
 
 ## 目标
 
@@ -120,4 +120,4 @@ TypeScript 官方当前最新稳定版已经是 7.0.2，但 TypeScript 7 是新�
 6. root private + workspace-local `@future-ui/*`；公共 npm naming 留到 D13。
 7. #5 允许创建单 job GitHub Actions CI，并允许 install/lint/typecheck/test。
 
-以上决定只解决 #5 的 D01/D12 前置，不等于授权 #5 开发。PR #24 合并进入 main 后，仍需 #4 Current Grant 明确列出 #5 与允许动作，#5 才可能通过 DoR 进入 Ready。
+以上决定只解决 #5 的 D01/D12 前置，不等于授权 #5 开发。D01/D12 已在 main 生效；仍需 #4 Current Grant 明确列出 #5 与允许动作，#5 才可能通过 DoR 进入 Ready。
