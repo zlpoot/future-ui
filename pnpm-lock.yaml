@@ -172,6 +172,37 @@ importers:
         specifier: ^19.2.0
         version: 19.3.0(react@19.3.0)
 
+  packages/webmcp-adapter:
+    dependencies:
+      '@future-ui/capability-runtime':
+        specifier: workspace:*
+        version: link:../capability-runtime
+      '@future-ui/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@testing-library/jest-dom':
+        specifier: ^6.6.0
+        version: 6.9.1
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.3.0(@types/react@19.3.0)
+      jsdom:
+        specifier: ^26.0.0
+        version: 26.1.0
+      react:
+        specifier: ^19.2.0
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.3.0(react@19.3.0)
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@24.19.1)(jsdom@26.1.0)(vite@8.3.2(@types/node@24.19.1))
+
 packages:
 
   '@adobe/css-tools@4.5.0':

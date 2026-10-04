@@ -1,0 +1,23 @@
+{
+  "name": "@future-ui/webmcp-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Experimental WebMCP adapter (#12): maps the capability catalog and controlled invocations to a WebMCP backend through an independent adapter, proving the protocol is replaceable without writing an external protocol into core contracts. Local mock-tested only; real browser integration and real model calls require separate authorization (documented as not-tested).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/capability-runtime": "workspace:*",
+    "@future-ui/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vitest": "^5.0.3"
+  }
+}
