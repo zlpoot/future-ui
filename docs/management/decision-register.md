@@ -4,7 +4,7 @@
 
 | ID | 问题 | 候选方向 | 解除什么阻塞 |
 | --- | --- | --- | --- |
-| D01 | 工具链、语言、包管理与测试框架 | **Proposed for #5:** Node 24.21.0 LTS + pnpm 11.28.2 + TypeScript 6.0.3 + ESLint 10.12.0/typescript-eslint 8.71.0 + Vitest 5.0.3；详见 `m0-01-toolchain-proposal.md`，尚未负责人接受 | M0-01 |
+| D01 | 工具链、语言、包管理与测试框架 | **Accepted for #5 (2026-10-04), pending PR #24 merge:** Node 24.21.0 LTS + pnpm 11.28.2 + TypeScript 6.0.3 + ESLint 10.12.0/typescript-eslint 8.71.0 + Vitest 5.0.3；详见 `m0-01-toolchain-proposal.md` | M0-01 |
 | D02 | Schema 方言、生成方向、未知字段与兼容规则 | 单一权威定义生成目录/校验，技术 TBD | M0-02 |
 | D03 | 首个 provider 与框架 | Ark UI + React 优先，Vue 小范围对照；版本/许可待核验 | M1-01/04 |
 | D04 | 首批组件与公共特性 | Button/TextInput/Select/Dialog 候选；替代 provider 的共同范围待定 | M1-01/04 |
@@ -15,7 +15,7 @@
 | D09 | WebMCP API、浏览器环境和能力降级规则 | 独立实验 adapter；mock/真机分开 | M1-05 |
 | D10 | AI 任务集、模型、样本量、预算、比较方法 | 直接 Ark UI 工具资料 vs future-ui，同任务/预算；数值 TBD | M1-06/07 |
 | D11 | bundle/初始化/订阅清理等性能指标与阈值 | 先做明确标记且不计入验收的 calibration；随后冻结测量法/阈值，再用独立 acceptance 样本验收 | 对应性能验收 |
-| D12 | 私有 workspace/package 命名与依赖许可兼容 | **Proposed for #5:** root/private workspace + `@future-ui/*` 内部命名；直接工具依赖为 MIT / Apache-2.0 permissive 组合；公共 npm 命名仍由 D13 决定，详见 `m0-01-toolchain-proposal.md` | M0-01 |
+| D12 | 私有 workspace/package 命名与依赖许可兼容 | **Accepted for #5 (2026-10-04), pending PR #24 merge:** root/private workspace + `@future-ui/*` 内部命名；直接工具依赖为 MIT / Apache-2.0 permissive 组合；公共 npm 命名仍由 D13 决定，详见 `m0-01-toolchain-proposal.md` | M0-01 |
 | D13 | 公开许可、npm 发布范围与发布供应链策略 | 是否开源、公开 npm scope/包名、签名/来源证明/发布权限等在真正发布前另行决策 | 发布前；不阻塞仅本地/私有的 M0/M1 |
 
 ## 决策记录最小结构
