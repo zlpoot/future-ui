@@ -1,6 +1,6 @@
 # 开发工作流与事实源
 
-状态：准备基线已进入 main；当前仍为 PREPARATION_ONLY，#4 无有效开发 grant。本文定义未来获授权后的统一流程，不自行产生开发权限。
+状态：本文定义统一开发流程，不自行产生授权。动态授权状态只以 #4 Current Grant 为准；AGENTS 仅同步当前可执行边界。
 
 ## 1. 事实源
 
@@ -71,6 +71,16 @@ Current Grant 必须记录：
 - #13 是 AI-first 父工作包；#22 Contract Core 提前到 #6 后，#25 补确定性 preview/test，#23 单独做真实模型评估。
 - #11 保留为 #26 之后更完整的 Vue/alternate provider 对照。
 - #7 若 DoR 评估发现无法用一个清晰 PR 同时证明兼容注册与生命周期清理，则在 Ready 前再拆子 Issue。
+
+## 5.1 长时间 Autonomous Engineering
+
+单 Issue 流程之外，可以由负责人建立一个 Engineering Window。Window 一次定义 work graph、allowed agent pool、role bindings、concurrency、repair、merge/close policy、forbidden actions 与 stop conditions。
+
+Supervisor 在 Window 内循环：恢复 GitHub 状态 → 选择下一个可执行 Issue → DoR → 分配 Worker → checks/CI → Reviewer → repair/换 Agent → 必要 Verify → merge gate → main closeout → 下一 Issue。
+
+Role 与 Agent 分离；当前可用 Agent Pool 为 `doubao-work` 和 `codex`。允许在不扩大 Grant 的情况下切换角色绑定。详细 schema、handoff、恢复、自动切换与 escalation 见 `docs/management/autonomous-engineering-workflow.md`。
+
+当前 G0-001 仍是 #5-only bootstrap，并未授予 autonomous auto-merge/close 或 #6 权限。
 
 ## 6. 状态机
 
@@ -152,6 +162,8 @@ Closeout PASS 后将 Status 置为 Done。只有负责人明确允许 close（�
 
 报告必须列 exact SHA、环境/版本、实际命令、结果、原始证据位置、未运行项及原因。未测/skip/环境失败不是 PASS。
 
-## 10. 当前停止点
+## 10. 动态授权与停止点
 
-准备基线 PR #15 已 merge。#8/#13 已拆成真正子 Issue。#4 当前仍 `NOT_GRANTED`，没有任何实现 Issue Ready；因此不启动实现 Agent、依赖安装、CI、浏览器 live 或模型调用。
+本文不维护 Current Grant 的动态副本。每次开始任务前必须读取 #4 与目标 Issue。
+
+即使某个 Issue 获得 grant，也必须先满足 JIT Freeze 与 Definition of Ready；未列入 Current Grant 的任务不得进入 Coding。browser/provider live、模型、外部账号写入、部署与发布只有在 #4 明确授权时才能执行。

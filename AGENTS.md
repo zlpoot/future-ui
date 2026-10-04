@@ -1,10 +1,12 @@
 # future-ui · Agent 工作入口
 
-## 当前授权边界：PREPARATION_ONLY
+## 当前授权边界：SCOPED_DEVELOPMENT · G0-001 · #5 ONLY
 
-准备基线已由 PR #15 合并进入 main；**这不等于开始开发**。当前 #4 没有有效开发 grant，所有实现任务继续保持 Blocked / NOT_AUTHORIZED。
+负责人已于 2026-10-04 通过 #4 建立 Current Grant `G0-001`。该 grant **只允许 #5 M0-01** 在通过 Definition of Ready 后进入实现；其他实现 Issue 仍保持 Blocked / NOT_AUTHORIZED。
 
-当前只允许：文档、Issue、契约/决策整理、依赖梳理、Review，以及用户明确授权的其他准备动作。不得创建产品源码、测试实现、package.json、锁文件、构建/CI 工作流；不得安装依赖、启动实现 Agent、执行 live/付费调用、部署或发布。
+G0-001 允许 #5：代码修改、依赖安装/更新、本地 build/test、CI 配置修改与 CI 运行。明确禁止：browser/provider live、模型/API 付费调用、外部账号/数据写入、部署、发布。Merge 与 Close 权限仍由负责人保留。
+
+本文件只同步可执行边界；Current Grant 的唯一动态事实源是 [#4](https://github.com/zlpoot/future-ui/issues/4)。若本文件与 #4 冲突，以当前用户授权与 #4 为准。
 
 ## 事实源与协作边界
 
@@ -23,7 +25,15 @@ future-ui 不要求在 M0 前一次性冻结全部 M1 方案。
 - #4 是持续开发授权账本，不是一次性全局开关。只有 Current Grant 明确列出的**具体可执行 Issue**与动作才获得授权。
 - 父工作包不自动授权子 Issue；大任务必须在 Ready 前拆成真正子 Issue，一个实现 Issue 对应一个可独立审阅 PR。
 
-依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。
+依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。G0-001 也不自动授权 #6 或其他 Issue。
+
+## Role / Agent 解耦
+
+工程角色与具体 Agent 产品分离。当前开发 Agent Pool 为 `doubao-work` 与 `codex`；Supervisor / Planner / Worker / Reviewer / Verifier 等角色可以在 Repository default、Engineering Window、Issue、Attempt 四个层级重新绑定。角色切换不能扩大 Current Grant。
+
+普通 Review 至少使用不同 execution/session；高风险 Verify 默认使用不同于 Worker 的 Agent Profile。Reviewer/Verifier 一旦修改代码，该执行身份即视为 Worker，旧 Review/Verify 对新 head 失效。
+
+长时间工程的恢复状态必须落到 GitHub；不得依赖单个 Agent session 记忆。详见 [Autonomous Engineering Workflow](docs/management/autonomous-engineering-workflow.md)。
 
 ## 实现工作方式
 

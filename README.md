@@ -1,6 +1,6 @@
 # future-ui
 
-> **PREPARATION_ONLY · 开发前准备。** 本仓库目前不提供可运行组件、npm 包、Agent 服务或产品测试结果。文档是候选工程基线，具体实现尚未启动。
+> **SCOPED DEVELOPMENT · G0-001。** 当前仅 #5 M0-01 获得范围受限的开发授权；其余实现任务仍未授权。仓库当前尚无已验收产品组件、npm 发布物或 Agent 服务。
 
 一套 **AI 优先开发、契约驱动的模块化 Web UI 框架**：提供跨框架、无样式且可访问的组件体系；通过独立、可插拔的能力模块连接 WebMCP 等 Agent 生态；以元数据、校验、局部修改和测试工具链支持 AI 稳定开发界面。
 
@@ -15,6 +15,7 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 - [组件、能力、Binding 与插件契约草案](docs/contracts/README.md)
 - [基础边界 ADR](docs/adrs/0001-foundation-boundaries.md)
 - [开发工作流与事实源](docs/management/workflow.md)
+- [自主工程工作流 v0.1](docs/management/autonomous-engineering-workflow.md)
 - [待决策登记](docs/management/decision-register.md)
 - [准备基线 Closeout 与开发依赖图](docs/exec-plans/preparation.md)
 - [开发执行计划](docs/exec-plans/development.md)
@@ -29,7 +30,7 @@ UI 与 Agent 能力系统独立，通过可选 Binding 连接。Ark UI 是首个
 
 ## 状态与当前边界
 
-准备基线已进入 main；当前仍无 package.json、源码、依赖安装、CI 工作流、部署或模型/浏览器调用。#4 Current Grant 为 NONE，因此开发尚未开始。
+准备基线与 D01/D12 已进入 main。动态开发授权只以 #4 Current Grant 为准；当前 G0-001 仅允许 #5，在 #5 通过 Ready 后实施最小工程工具链。browser/model/external write/deploy/publish 仍未授权。
 
 准备基线、具体契约成熟度和开发授权是三个独立状态：准备基线是否已进入 main 以 #1、PR #15 和 main 当前内容为准；Component / Capability / Binding / Plugin 等具体契约是否冻结以 #2、#3 与对应 ADR 的状态为准；开发授权只以 #4 为准。任一状态变化都不能推断另外两项。
 

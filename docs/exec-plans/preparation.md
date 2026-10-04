@@ -7,7 +7,7 @@
 - PR #15 已合并到 main，基线 commit：`b47a4b9fdfa002f3bb232a9002e326c2ee080009`。
 - 架构、契约草案、decision register、benchmark 策略、Issue/PR 模板已经进入 main。
 - #1 已完成独立复审与基线合并，剩流程优化文档 closeout；关闭仍需明确授权。
-- #4 仍无开发 grant；当前没有 Ready 实现任务。
+- 动态开发授权不在本文件维护；以 #4 Current Grant 与目标 Issue 状态为准。
 
 ## PREP 不再是“全量冻结所有未来方案”
 
@@ -77,4 +77,4 @@ DoR → Ready → 实现流程
 
 ## 当前停止点
 
-仅允许继续做准备期文档、JIT 契约/决策和负责人明确授权的管理动作。#4 没有 Current Grant，因此 #5–#26 中不存在可开始的实现任务。
+本文件不维护动态授权状态。准备阶段完成后的任何实现都必须读取 #4 Current Grant，并逐项通过 JIT Freeze 与 Definition of Ready；未授权 Issue 不得开始。
