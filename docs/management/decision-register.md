@@ -4,7 +4,7 @@
 
 | ID | 问题 | 候选方向 | 解除什么阻塞 |
 | --- | --- | --- | --- |
-| D01 | 工具链、语言、包管理与测试框架 | **Accepted for #5 (2026-10-04), active on main @ `93ae277`:** Node 24.21.0 LTS + pnpm 11.28.4 + TypeScript 6.0.3 + ESLint 10.12.0/typescript-eslint 8.71.0 + Vitest 5.0.3；详见 `m0-01-toolchain-proposal.md`。pnpm 由 11.28.2 修订为 11.28.4（frozen-lockfile 误报 ERR_PNPM_TARBALL_INTEGRITY，见 proposal 修订记录） | M0-01 |
+| D01 | 工具链、语言、包管理与测试框架 | **Accepted for #5 (2026-10-04), active on main @ `93ae277`:** Node 24.21.0 LTS + pnpm 11.28.4 + TypeScript 6.0.3 + ESLint 10.12.0/typescript-eslint 8.71.0 + Vitest 5.0.3；详见 `m0-01-toolchain-proposal.md`。pnpm 由 11.28.2 修订为 11.28.4（frozen-lockfile 误报 ERR_PNPM_TARBALL_INTEGRITY，且 estree@8.71.0 integrity 随 registry republish 更新，见 proposal 修订记录） | M0-01 |
 | D02 | Schema 方言、生成方向、未知字段与兼容规则 | 单一权威定义生成目录/校验，技术 TBD | M0-02 |
 | D03 | 首个 provider 与框架 | Ark UI + React 优先，Vue 小范围对照；版本/许可待核验 | M1-01/04 |
 | D04 | 首批组件与公共特性 | Button/TextInput/Select/Dialog 候选；替代 provider 的共同范围待定 | M1-01/04 |
