@@ -148,30 +148,53 @@ def test_baseline_tool_rejected():
 
 def test_budget_fail_closed():
     from relay import Relay
-    from agent_loop import precall_max_tokens, config_digest, prompt_tokens_ub
+    from agent_loop import precall_max_tokens, config_digest, request_tokens_ub
     r = Relay(CONFIG)
     c = r._cost({"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
                  "prompt_tokens_details": {"cached_tokens": 0}})
     assert c[0] == round((5.0 + 15.0), 6), c  # $5 + $15 per M tokens
     # 预调用 gating：预算充足 → 允许 max_out；预算被占满 → 0（停止）
     ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
-    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, prompt_ub=0)
+    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, request_ub=0)
     assert full == int(CONFIG["api"]["maxOutputTokens"]), full
-    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0, prompt_ub=0)
+    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0, request_ub=0)
     assert stopped == 0, stopped
-    # 最坏情况单次调用不超剩余预算：输入预留用**实测 prompt 上界**（tokens ≤ utf8 bytes）
-    msgs = [{"role": "user", "content": "x" * 4096}]
-    ub = prompt_tokens_ub(msgs)
-    assert ub == 4096, ub  # ASCII 字节数 = 长度
+    # 请求级上界负例：多 message / 空 content / 短 content / CJK / emoji
+    cases = [
+        [{"role": "user", "content": "x" * 4096}],
+        [{"role": "system", "content": ""}, {"role": "user", "content": "短"}, {"role": "assistant", "content": ""}],
+        [{"role": "user", "content": ""}],
+        [{"role": "user", "content": "中文内容中文内容"}],
+        [{"role": "user", "content": "👨‍👩‍👧 emoji 🎉"}],
+    ]
+    overhead = int(CONFIG.get("providerOverheadTokens", 512))
+    for i, msgs in enumerate(cases):
+        ub = request_tokens_ub(msgs, "gpt-6.1-sol", CONFIG)
+        # 1) 上界 = 真实序列化 bytes（role/framing/转义/顶层包装）+ provider 预留，确定性可审计
+        body = {"model": "gpt-6.1-sol", "messages": msgs, "max_tokens": 999999, "stream": False}
+        expected = len(json.dumps(body, ensure_ascii=False).encode("utf-8")) + overhead
+        assert ub == expected, (i, ub, expected)
+        # 2) 上界覆盖所有 content bytes 之和（含空/短 content 的 framing 开销）
+        content_bytes = sum(len(m.get("content", "").encode("utf-8")) for m in msgs)
+        assert ub >= content_bytes, (i, ub, content_bytes)
+        # 3) 空 content 仍计入 framing（不能退化为 0）
+        if i == 2:
+            assert ub > overhead, ub
+    # 4) 上界随 message 数单调增长（多 message 负例）
+    mono = [request_tokens_ub([{"role": "user", "content": "a"}], "m", CONFIG),
+            request_tokens_ub([{"role": "user", "content": "a"}, {"role": "user", "content": "b"}], "m", CONFIG)]
+    assert mono[1] > mono[0], mono
+    # 5) pre-call 预留用请求级上界：剩余预算内允许输出，最坏情况成本 ≤ 剩余
+    ub = request_tokens_ub([{"role": "user", "content": "x" * 4096}], "gpt-6.1-sol", CONFIG)
     assert ub <= int(CONFIG["maxInputTokensPerCall"])
-    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0, prompt_ub=ub)
+    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0, request_ub=ub)
     worst = (ub * r.price_in + allowed * r.price_out) / 1e6
     assert worst <= float(CONFIG["usdHardCap"]) - 1.0 + 1e-9, (worst, allowed)
-    # prompt 上界超配置上限 → 调用前拒绝（fail-closed）
-    big = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, prompt_ub=int(CONFIG["maxInputTokensPerCall"]) + 1)
+    # 6) 请求级上界超配置上限 → 调用前拒绝（fail-closed）
+    big = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, request_ub=int(CONFIG["maxInputTokensPerCall"]) + 1)
     assert big == 0, big
     assert len(config_digest(CONFIG)) == 16
-    print("budget fail-closed math: PASS (measured prompt UB reservation; never overshoots; digest present)")
+    print("budget fail-closed math: PASS (request-level UB incl. framing+provider overhead; negative cases; never overshoots)")
 
 
 class _FakeRelay:

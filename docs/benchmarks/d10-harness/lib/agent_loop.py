@@ -132,23 +132,34 @@ def run_evaluator(task, workspace, runs_dir):
 def config_digest(config):
     """config.json 的 API/单价/上限/护栏段 digest（Review P2：ledger 需记录配置指纹）。"""
     keys = ["api", "pricesPerMToken", "usdHardCap", "attemptsPerTask", "maxTokensPerRun",
-            "maxInputTokensPerCall", "minOutputTokens"]
+            "maxInputTokensPerCall", "minOutputTokens", "providerOverheadTokens"]
     payload = {k: config.get(k) for k in keys}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
-def prompt_tokens_ub(messages):
-    """prompt token 的**可证明**上界：tokens ≤ UTF-8 字节数（任何 tokenizer 的 token 至少 1 字节）。
-    用于 pre-call gating 的输入预留——不用假设值（Review P1：30000 只是配置上限，必须实测证明）。"""
-    return sum(len(m.get("content", "").encode("utf-8")) for m in messages)
+def request_tokens_ub(messages, model, config):
+    """请求级 prompt token 上界（Review P1：content bytes 不足以覆盖 role/framing/template）。
+
+    可证明方向 = tokens ≤ UTF-8 bytes（任何 tokenizer 的 token 至少 1 字节）：
+    1) 我们**完全控制**的请求体（role、message framing、JSON 转义、顶层包装、model/max_tokens 字段）
+       按与 relay.chat 一致的序列化 bytes 计（max_tokens 用固定大值占位，确保 ≥ 实际发送值）；
+    2) provider 侧**不可见**注入（chat template / 追加 system prompt / tokenizer 差异）用配置
+       `providerOverheadTokens` 显式预留；
+    上界 = 序列化 bytes + 预留。含义：provider prompt_tokens ≤ 上界 ⇔ provider 注入 ≤ 预留；
+    超出预留则 pre-call fail-closed 拒绝（见 precall_max_tokens / prompt_too_large）。
+    """
+    body = {"model": model, "messages": messages, "max_tokens": 999999, "stream": False}
+    ub = len(json.dumps(body, ensure_ascii=False).encode("utf-8"))
+    ub += int(config.get("providerOverheadTokens", 512))
+    return ub
 
 
-def precall_max_tokens(relay, config, ledger, run_cost, usage_total, prompt_ub):
+def precall_max_tokens(relay, config, ledger, run_cost, usage_total, request_ub):
     """预调用 fail-closed：返回本次调用允许的 max_tokens；0 = 应停止。
 
-    输入预留 = 实测 prompt 上界 prompt_ub（调用方已强制 ≤ maxInputTokensPerCall），
+    输入预留 = 请求级上界 request_ub（调用方已强制 ≤ maxInputTokensPerCall），
     输出 = max_tokens；两者最坏情况都必须落在剩余 $ 预算与剩余 aggregate token（150K）内，
-    才能发请求——本次调用**不可能**超过 (prompt_ub + max_tokens) tokens 与对应美元成本。
+    才能发请求——本次调用**不可能**超过 (request_ub + max_tokens) tokens 与对应美元成本。
     """
     cost_max = float(config["usdHardCap"])
     tokens_max = int(config["maxTokensPerRun"])
@@ -159,10 +170,10 @@ def precall_max_tokens(relay, config, ledger, run_cost, usage_total, prompt_ub):
     remaining_tokens = tokens_max - usage_total
     if remaining_cost <= 0 or remaining_tokens <= 0:
         return 0
-    # 实测 prompt 上界超过配置的输入上限 → 拒绝（fail-closed；agent_loop 会标 status=prompt_too_large）
-    if prompt_ub > max_in_call:
+    # 请求级上界超过配置的输入上限 → 拒绝（fail-closed；agent_loop 会标 status=prompt_too_large）
+    if request_ub > max_in_call:
         return 0
-    in_wc = min(prompt_ub, remaining_tokens)
+    in_wc = min(request_ub, remaining_tokens)
     if remaining_cost <= in_wc * relay.price_in / 1e6:
         return 0
     out_by_cost = int((remaining_cost - in_wc * relay.price_in / 1e6) // (relay.price_out / 1e6))
@@ -221,12 +232,12 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
             if fake_model is not None:
                 resp = fake_model(messages, group, attempts)
             else:
-                prompt_ub = prompt_tokens_ub(messages)
-                if prompt_ub > int(config.get("maxInputTokensPerCall", 30000)):
+                request_ub = request_tokens_ub(messages, relay.model, config)
+                if request_ub > int(config.get("maxInputTokensPerCall", 30000)):
                     status = "prompt_too_large"
-                    feedback_log.append({"attempt": attempts, "note": "prompt token UB {0} exceeds maxInputTokensPerCall".format(prompt_ub)})
+                    feedback_log.append({"attempt": attempts, "note": "request token UB {0} exceeds maxInputTokensPerCall".format(request_ub)})
                     break
-                allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"], prompt_ub)
+                allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"], request_ub)
                 if allowed <= 0:
                     status = "budget_stop" if (cost_max - ledger.total_cost() - cost) <= 0 else "token_stop"
                     feedback_log.append({"attempt": attempts, "note": "pre-call fail-closed: no budget/token headroom ({0})".format(status)})

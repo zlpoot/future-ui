@@ -17,6 +17,7 @@
   "attemptsPerTask": 5,
   "maxTokensPerRun": 150000,
   "maxInputTokensPerCall": 30000,
+  "providerOverheadTokens": 512,
   "minOutputTokens": 256,
   "runTimeoutSec": 1800,
   "runsDir": "runs"
