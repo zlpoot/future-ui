@@ -58,7 +58,7 @@ JIT Contract/Decision Freeze
 
 - Review 后 PR head 有实质变化，原 Review / merge authorization 失效，必须重新 Review。
 - PR 使用 `Refs #N`，不得用自动关闭语句掩盖尚未完成的 closeout。
-- Merge、Close、live、费用、发布、下一 Issue 授权互相独立；除非负责人明确把它们一起授权。
+- Merge、Close、live、费用、发布、下一 Issue 授权互相独立；除非负责人明确把它们一起授权（CAL-001 已明确授权 #23 calibration PR 的创建与合并；其余 Merge/Close 仍按负责人逐项确认）。
 - Closeout 只验证已合并内容在 main 上满足该 Issue 的冻结 Acceptance，不借 closeout 扩大实现范围。
 - 若 merge 后 closeout 失败，Issue 不得标 Done；回到 Blocked/Coding 并建立新的修复 PR。
 - 不 force-push，不 reset/clean/discard，不覆盖未知修改。
