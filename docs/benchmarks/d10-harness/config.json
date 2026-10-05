@@ -8,17 +8,17 @@
     "maxOutputTokens": 8192
   },
   "pricesPerMToken": {
-    "input": 5.0,
-    "output": 15.0,
+    "input": 5,
+    "output": 15,
     "cachedInput": 2.5
   },
-  "billingNote": "占位单价：中转站 billing rule 未确认，不能声称一定保守；仅保证 fail-closed 方向（宁停勿超）。确认实际单价后更新，方向不变。",
-  "usdHardCap": 50.0,
+  "billingNote": "价格仅作非权威观测，不参与 CAL-001 授权、停止或验收；预算硬门只看 token。",
   "attemptsPerTask": 5,
   "maxTokensPerRun": 150000,
   "maxInputTokensPerCall": 30000,
   "providerOverheadTokens": 512,
   "minOutputTokens": 256,
   "runTimeoutSec": 1800,
-  "runsDir": "runs"
+  "runsDir": "runs",
+  "globalMaxTokens": 5000000
 }
