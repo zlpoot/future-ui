@@ -71,7 +71,7 @@ describe('bridge', () => {
       result = { components: out };
     } else if (tool === 'patch') {
       const store = new NodeStore(
-        spec.components.map((comp, i) => ({
+        spec.components.map((comp) => ({
           nodeId: `component:${comp.id}`,
           version: 0,
           value: { type: comp.type, props: comp.props ?? {} },
