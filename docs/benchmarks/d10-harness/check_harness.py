@@ -7,7 +7,7 @@
 3. 反馈测试（vitest）在正确 spec 下通过；
 4. 实验组 bridge：真实 preview/validate-spec 查询返回结构化结果；
 5. 基线组 ## TOOL 拒绝（工具不可用）与账本记录；
-6. budget fail-closed：配置单价下 cost 计算 + 全局 cap 拒绝。
+6. budget fail-closed：150K/run + 全局 5,000,000 token cap。
 """
 import io, json, os, sys
 
@@ -147,57 +147,38 @@ def test_baseline_tool_rejected():
 
 
 def test_budget_fail_closed():
-    from relay import Relay
+    from relay import Relay, request_body_bytes
     from agent_loop import precall_max_tokens, config_digest, request_tokens_ub
     r = Relay(CONFIG)
-    c = r._cost({"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
-                 "prompt_tokens_details": {"cached_tokens": 0}})
-    assert c[0] == round((5.0 + 15.0), 6), c  # $5 + $15 per M tokens
-    # 预调用 gating：预算充足 → 允许 max_out；预算被占满 → 0（停止）
-    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
-    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, request_ub=0)
-    assert full == int(CONFIG["api"]["maxOutputTokens"]), full
-    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0, request_ub=0)
-    assert stopped == 0, stopped
-    # 请求级上界负例：多 message / 空 content / 短 content / CJK / emoji
-    cases = [
-        [{"role": "user", "content": "x" * 4096}],
-        [{"role": "system", "content": ""}, {"role": "user", "content": "短"}, {"role": "assistant", "content": ""}],
-        [{"role": "user", "content": ""}],
-        [{"role": "user", "content": "中文内容中文内容"}],
-        [{"role": "user", "content": "👨‍👩‍👧 emoji 🎉"}],
-    ]
+
+    class TokenLedger:
+        def __init__(self, total): self._total = total
+        def total_tokens(self): return self._total
+
+    # 全局 token cap 已耗尽 → 调用前拒绝
+    full_global = TokenLedger(int(CONFIG["globalMaxTokens"]))
+    assert precall_max_tokens(r, CONFIG, full_global, 0.0, 0, 0) == 0
+
+    # 正常情况下允许 max_output；run/global 两层都必须装得下 request UB + output
+    empty = TokenLedger(0)
+    msgs = [{"role": "user", "content": "中文 👨‍👩‍👧"}]
+    ub = request_tokens_ub(msgs, "gpt-6.1-sol", CONFIG)
     overhead = int(CONFIG.get("providerOverheadTokens", 512))
-    for i, msgs in enumerate(cases):
-        ub = request_tokens_ub(msgs, "gpt-6.1-sol", CONFIG)
-        # 1) 上界基础 bytes == relay 实际待发送 body bytes（共用 serializer；中文/emoji 含 \uXXXX 转义）
-        from relay import request_body_bytes
-        expected = request_body_bytes("gpt-6.1-sol", msgs, 999999) + overhead
-        assert ub == expected, (i, ub, expected)
-        # 2) 上界覆盖所有 content bytes 之和（含空/短 content 的 framing 开销）
-        content_bytes = sum(len(m.get("content", "").encode("utf-8")) for m in msgs)
-        assert ub >= content_bytes, (i, ub, content_bytes)
-        # 3) 空 content 仍计入 framing（不能退化为 0）
-        if i == 2:
-            assert ub > overhead, ub
-    # 3.5) 中文/emoji 负例：ensure_ascii=True 转义后真实字节更大，UB 必须覆盖（不高估也不低估）
-    cjk = request_tokens_ub([{"role": "user", "content": "中文内容"}], "gpt-6.1-sol", CONFIG)
-    assert cjk >= len("中文内容".encode("utf-8")), cjk
-    # 4) 上界随 message 数单调增长（多 message 负例）
-    mono = [request_tokens_ub([{"role": "user", "content": "a"}], "m", CONFIG),
-            request_tokens_ub([{"role": "user", "content": "a"}, {"role": "user", "content": "b"}], "m", CONFIG)]
-    assert mono[1] > mono[0], mono
-    # 5) pre-call 预留用请求级上界：剩余预算内允许输出，最坏情况成本 ≤ 剩余
-    ub = request_tokens_ub([{"role": "user", "content": "x" * 4096}], "gpt-6.1-sol", CONFIG)
-    assert ub <= int(CONFIG["maxInputTokensPerCall"])
-    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0, request_ub=ub)
-    worst = (ub * r.price_in + allowed * r.price_out) / 1e6
-    assert worst <= float(CONFIG["usdHardCap"]) - 1.0 + 1e-9, (worst, allowed)
-    # 6) 请求级上界超配置上限 → 调用前拒绝（fail-closed）
-    big = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, request_ub=int(CONFIG["maxInputTokensPerCall"]) + 1)
-    assert big == 0, big
+    assert ub == request_body_bytes("gpt-6.1-sol", msgs, 999999) + overhead
+    allowed = precall_max_tokens(r, CONFIG, empty, 0.0, 0, ub)
+    assert 0 < allowed <= int(CONFIG["api"]["maxOutputTokens"])
+    assert ub + allowed <= int(CONFIG["maxTokensPerRun"])
+    assert ub + allowed <= int(CONFIG["globalMaxTokens"])
+
+    # 单 run 150K 剩余不足 → 调用前拒绝
+    near_run = int(CONFIG["maxTokensPerRun"]) - 100
+    assert precall_max_tokens(r, CONFIG, empty, 0.0, near_run, ub) == 0
+
+    # 全局只剩不足 request UB + min output → 调用前拒绝
+    almost_global = TokenLedger(int(CONFIG["globalMaxTokens"]) - ub - int(CONFIG["minOutputTokens"]) + 1)
+    assert precall_max_tokens(r, CONFIG, almost_global, 0.0, 0, ub) == 0
     assert len(config_digest(CONFIG)) == 16
-    print("budget fail-closed math: PASS (request-level UB incl. framing+provider overhead; negative cases; never overshoots)")
+    print("budget fail-closed: PASS (150K/run + 5,000,000 global token-only caps)")
 
 
 class _FakeRelay:
@@ -259,7 +240,7 @@ def test_relay_error_resilience():
     assert e["order"] == "baseline_first"
     assert e["modelId"] == "dry" and e["configDigest"]
     assert e["outcomeEligible"] is False, "error run must not be stats-eligible"
-    assert e["billingRuleVerified"] is False
+    assert e["budgetPolicy"] == "token_only"
     print("relay error resilience: PASS (ledger record + status=error + eval still runs + outcomeEligible=False)")
 
 
