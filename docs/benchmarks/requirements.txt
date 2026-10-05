@@ -1,0 +1,3 @@
+# D10 / #23 统计侧 venv（FROZEN PROTOCOL v1 · 段 A）
+# 运行环境：Python 3.12.x；scipy==1.14.1（beta.ppf / binom.cdf / binom.pmf）
+scipy==1.14.1
