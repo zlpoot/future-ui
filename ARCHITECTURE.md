@@ -1,102 +1,92 @@
-# 架构与模块边界 · 候选基线
+# 架构与模块边界 · 现有 UI 库语义适配
 
-状态：开发前架构基线。核心方向已确认；具体公开契约和技术细节仍由 #2/#3 冻结。所有模块名均为逻辑边界，不表示仓库已经存在对应包；本文进入 main 也不授予工程实现，开发仍必须先通过 [G0](https://github.com/zlpoot/future-ui/issues/4)。
+方向确认：2026-10-05。本文描述目标结构与迁移约束；不是“下面所有能力已经实现”的声明，也不冻结新的公开 API。基线源码为 `453567d875e8a144cb5a59179bd28b64b5970f72`，后续任务见 [#66](https://github.com/zlpoot/future-ui/issues/66)。
 
-## 总体结构
-
-UI 组件系统与结构化能力系统各自独立，通过可选 Binding 连接；两种入口调用同一组应用业务动作。
+## 1. 最小心智模型
 
 ```text
-人 → UI / renderer / provider ──┐
-                              ├→ 应用业务动作 → 权威业务服务 / 状态
-Agent → protocol → capability ┘
-          可选 Binding：关联组件实例、能力与必要状态投影
+现有组件库（shadcn / Ark / MUI / 企业库等）
+       ↓ 库适配：来源、版本、props/parts/state/events、差异
+Component Contract + Project Profile + 已接入实例描述
+       ├→ Dev AI View：组件目录、import、示例、规范、诊断
+       └→ Runtime UI View：关系、允许可见状态、交互语义
+
+应用注册 Capability + 实际业务 handler
+       ↕ 可选 Binding：实例关联、参数映射、状态订阅、清理
+协议中立工具描述 → 可选 WebMCP adapter → Runtime Agent
 ```
 
-图中的连线表示调用/绑定关系，不表示所有包都必须互相依赖。UI-only 和 Agent-only 都是一级使用模式。
+图中是逻辑边界，不要求每框一个 npm 包。UI View 不自动等于工具，也不包含授权；可执行业务工具必须有显式能力和真实 handler。
 
-### Contract 的三类并列消费者
+## 2. 四类核心数据
 
-公共 Contract / Schema 不是只为组件实现服务，也不是先完成 UI 后再给 AI/Agent 包装。它从早期开始同时服务：
-
-```text
-                     Contract / Schema
-                     /      |       \
-                    /       |        \
-          UI / provider   Dev AI   Capability runtime
-              |             |             |
-       framework/theme   catalog       protocol adapter
-                        validate            |
-                        diagnostics      Runtime Agent
-                        patch
-                        preview/test
-```
-
-- **UI/provider** 验证组件行为、跨框架语义与可访问性。
-- **Dev AI** 验证契约是否机器可查询、可诊断、可局部修改并能通过确定性 preview/test 闭环。
-- **Capability/Agent** 验证业务能力、授权、effect、reconciliation 与协议映射。
-
-因此 #6 Schema 完成后即可让 AI Contract Core 成为直接消费者；不应等完整 UI/Binding 完成。Ark/React 首批实现只允许作为第一个 provider，必须在批量扩展前用第二实现做 portability checkpoint。
-
-## 逻辑模块
-
-| 模块 | 负责 | 不负责 / 禁止依赖 |
+| 数据 | 权威内容 | 不应包含 |
 | --- | --- | --- |
-| 组件契约 | props/events/state/parts、组合、特性、可访问性义务 | React、Ark UI、业务、Agent 协议 |
-| 组件 provider | 交互行为与公开控制接口，可复用 Ark/Zag 或其他实现 | 购物车等业务与协议注册 |
-| 前端框架 adapter | 渲染、响应式、生命周期、SSR/hydration 对接 | 业务授权与 effect 定义 |
-| 视觉插件 | token、变体、密度、焦点外观、布局约束 | 业务语义、权限和状态真值 |
-| 能力契约/运行时 | 发现、可见状态、受控调用、错误与结果 | 强制依赖 UI 或特定外部协议 |
-| Binding | 实例关联、参数/结果映射、状态订阅和清理 | 拷贝业务逻辑、读取 provider 私有字段 |
-| 协议 adapter | 能力到 WebMCP 等协议的兼容映射 | 改写核心契约、降低权限边界 |
-| AI 开发工具 | 版本目录、校验、局部 patch、预览、测试 | 默认进入生产 runtime 或网站工具目录 |
-| 应用业务层 | 身份、业务校验、实际 effect、幂等、权威结果 | 被隐藏在通用组件实现中 |
+| Component Contract | 稳定组件语义、状态/事件/parts、支持特性、基础可访问性义务 | 特定库私有类型、项目业务处理 |
+| Library Adapter 描述 | 上游库/版本或源码标识、实际 import、props/parts/events/state/token 映射、示例、支持限制 | 为凑统一接口而伪造支持 |
+| Project Profile | 本组工程的 token 实值/映射、变体、界面组合与交互规则、例外 | 再实现一套组件库或后端权限 |
+| 受支持实例描述 | instanceId、组件引用、关系、Profile、必要状态与明确能力引用 | 未经允许的表单值、凭据、私有运行时对象 |
 
-## 依赖规则
+后三项是待设计/接入的最小增量，不表示当前 Schema 已具备这些字段。复用现有 Component/Capability/Binding/Plugin 契约体系；“IR”是同源数据视图，不是另起一套全页面编程语言。
 
-- 公共契约最底层，可共享最小的版本/诊断约定；不强制 UI 消费者加载能力契约或相反。
-- renderer/provider/主题消费组件契约；能力运行时消费能力契约；协议 adapter 消费能力运行时的公开接口。
-- Binding 可以同时消费两侧公开接口，但两侧不反向依赖 Binding。
-- 业务 handler 由应用注册/注入，不从通用 UI 包里导入 demo 业务。
-- 同一 provider 可内部复用状态机，但不把上游私有类型、DOM 结构和事件细节变成项目公共契约。
-- 开发工具依赖契约和显式受信开发宿主，不进入普通组件运行路径。
+## 3. Adapter 与 framework provider 的区别
 
-## 三类状态与单一权威
+Library Adapter 解决组件库语义怎么对应，例如某库的 Dialog close part 如何映射到统一的关闭入口。Framework provider 解决 React/Vue/DOM 的渲染、响应式、生命周期与 SSR 等适用问题。两者可在一个初期实现中组合，但公共语义不得反向依赖 JSX、特定库私有状态或 DOM 内部结构。
 
-局部 UI 状态（焦点、悬停、动画）归组件；业务草稿（输入字段）归应用；权威业务状态（购物车实际条目）以业务执行结果为准。受控组件的值只能有一个权威来源，不通过双向订阅形成循环和重复动作。
+适配器声明 supported / partial / unsupported。额外特性用命名空间扩展或明确排除，不静默丢弃。上游升级或源码副本变化，需要重新检查适配边界。跨库共享语义不承诺源码原样运行，也不把原生 Select 等同于所有复杂可搜索选择器。
 
-Agent 修改业务后通过正常订阅/数据刷新反映到 UI，不偷偷写 DOM。页面卸载、取消或客户端超时不等于服务端动作回滚；返回未知结果时需要查询/对账，而非盲重试。
+## 4. 稳定性如何落实
 
-## 组件可访问性与样式
+以普通编辑弹窗为例：Project Profile 定义需要标题、可见关闭入口、取消/提交角色和 pending 策略；Adapter 把这些映射到真实库的 composition/props/token；AI View 提供相应示例；验证检查真实适配结果。
 
-无样式不等于无结构、无键盘或无焦点语义。可访问性分两层记录：
-- **结构/行为可访问性**：HTML/ARIA 语义、键盘交互、焦点管理、可访问名称与状态关系，主要由 component contract、provider 和 renderer 负责。
-- **视觉可访问性**：焦点可见性、对比度、视觉错误/状态提示等，由主题或消费者样式与 provider 的组合负责。
+规则按场景生效，特殊 blocking 流程需要显式模式/例外。样式规则有共享实值；不能只把两个库不同的 md 当成同一视觉标准。
 
-因此 headless provider 只能在其实际验证范围内声明结构/行为契约符合；完整“可访问”结论必须对 provider + theme/consumer style 的组合验证。替换 provider 或主题不能自动继承原组合的验收结论。
+校验边界必须写清：契约数据校验、受支持渲染的结构校验、实际交互验证三者独立。第一版只覆盖显式接入实例，不承诺扫描任意 React/Vue/DOM 即可完整恢复语义。
 
-跨框架共享的是契约和 conformance 用例，不强制 JSX/Vue 模板使用相同语法。原生 Select 与复杂可搜索 Select 只能在双方声明的公共特性范围内替换。
+## 5. 给 AI 的三种输出
 
-## 能力与业务执行
+### 开发期目录
 
-组件操作如展开面板、修改值，不等同于业务能力如 cart.add。多个组件可以共同服务一个能力，一个能力可以被按钮、快捷键或 Agent 触发；默认不把所有组件事件暴露为工具。
+提供当前项目实际安装的组件、来源/版本、import、props/parts、示例、Profile 规则和结构化诊断。现有 ai-contract-core 的 Schema 类型目录可以复用，但需要扩展为项目组件目录。开发期 MCP 只是这些公开查询/校验能力的薄适配，不新增通用 shell/文件编辑服务。
 
-能力发现和读取应无业务写副作用；effect 必须区分本地 UI 变化、远端业务写和不可逆后果。业务层真正落实授权、状态版本、幂等与最终校验，不能靠元数据标签或客户端 disabled 保证安全。
+### 页面实例结构
 
-## 插件化范围
+对已接入组件输出稳定标识、层级/关系、允许可见的状态、交互语义、诊断和明确的能力引用。运行态通过公开受控接口接入，页面卸载后释放订阅；业务草稿默认不全部可见。此结构即使没有 WebMCP 也有意义，但不冒充 WebMCP 标准 UI Schema。
 
-第一版支持安装时可选、启动时可配置。主题运行时切换可在定义清理和兼容规则后做；行为 provider 的状态迁移式热替换延期。
+### 可调用业务工具
 
-M0 的 Plugin 工作只建立**最小 Kernel**：应用实例作用域、manifest、provides/requires、契约兼容检查、init/dispose、冲突检测和失败清理。不会在尚无真实消费者时先设计通用 component/theme/capability/protocol 万能 hook；具体 extension point 由后续首个 provider、capability runtime 和 protocol adapter 反向验证后再进入契约。
+由 Capability 的描述/输入输出契约、实际 handler 及可选 Binding 投影。组件事件只表达局部 UI 行为；“保存按钮”不自动给出 model.save 的参数、授权或最终 effect。没有显式绑定时只输出可读结构，不虚构工具。
 
-插件声明 kind/version/provides/requires/兼容范围。冲突、缺依赖或能力缺失在启动/开发期明确失败。插件生命周期属于应用实例；SSR 请求隔离、卸载释放订阅、初始化失败清理和重复注册处理必须有规则。只支持受信任构建内插件；声明权限不是恶意代码沙箱。
+## 6. 依赖与状态规则（保留既有底线）
 
-## 安全与协议演进
+- contracts 位于底层。UI/provider/主题与 capability runtime 各自独立；Binding 消费双方公开接口，双方不反向依赖 Binding。
+- 业务 handler 由应用注入。人和 Agent 调同一 action，不各写一份业务逻辑。
+- 局部 UI 状态归组件，业务草稿归应用，权威业务状态归实际业务执行结果；受控状态不产生双向循环或重复动作。
+- capability discover/read 不执行业务写。disabled、可发现性、描述和 Schema-valid 均不是执行权限。
+- 服务端负责真实身份、权限、业务校验、幂等与结果；timeout/取消/卸载不表示服务端回滚；unknown write 走对账，不盲重试。
+- 开发期目录/源码工具不进入生产 Agent 工具目录；不接模型/协议时 UI-only 仍工作。
+- Binding 的 visibility、mutability、redaction 明示，invocation-only 数据不自动进入可读上下文。
 
-能力目录按需暴露；页面文本、工具说明、Agent 输入均不能提升权限。敏感字段默认不进入 Agent 可见投影或审计日志。保持身份、策略、确认、效果执行的责任清晰。传输协议不具备某项语义时，显式拒绝、缩小范围或标记扩展，不静默丢弃保证。
+## 7. 生命周期、可访问性与替换边界
 
-不支持 WebMCP 的浏览器仍可使用 UI。Mock 测试不能证明真实浏览器支持；开发时必须核验版本和环境。future-ui 不是通用安全沙箱或完整 Agent 平台。
+复用 plugin-kernel 的实例作用域、兼容检查、init/dispose、冲突和失败清理。不新增无消费者的万能 hook；只支持受信任构建内插件，权限声明不是恶意代码沙箱。主题切换可按已有能力使用；有状态行为 provider 的运行时热迁移不在近期范围。
 
-## 性能和分发边界
+无样式不等于无结构、键盘或焦点语义。结构/行为可访问性由契约与真实适配实现验证；视觉焦点、对比度等由 provider + Profile/theme 组合验证。更换组合不能自动继承原验收结论。SSR/hydration、跨框架与性能只声明实际验证的子集。
 
-按需依赖、tree-shaking、UI-only 构建、初始化成本与订阅清理纳入验收。具体包拆分和体积阈值在决策 Issue 中冻结；不为了图上的每个框创建一个 npm 包。当前没有包发布、CI 或性能实测。
+## 8. 当前资产的处置
+
+| 当前包/内容 | 保留与调整 |
+| --- | --- |
+| contracts、plugin-kernel | 保留；新增字段按真实消费者做最小兼容演进 |
+| react-provider、conformance | 保留参考实现与回归；不继续扩为独立全量 UI 库 |
+| theme | 复用主题能力；Project Profile 的映射和政策层另按最小需求定义 |
+| ai-contract-core | 优先补项目安装组件目录、Profile 和有界诊断；NodeStore 保持可用，不扩通用事务平台 |
+| ai-dev | 复用受控 preview/test，仅按选定适配器与用例补覆盖 |
+| capability-runtime、cart-demo、webmcp-adapter | 保留已有能力/Binding/协议边界；可选小范围验证，不抢占 UI 适配主线 |
+| d10-harness / stats | 保留历史实验，不把 dry/模型/浏览器证据互换 |
+
+本轮不删除、不改包名、不改产品源码或公共 Schema。R1 新能力尚未实现；不把当前 package 名称当成已适配 shadcn/Ark/MUI 的证明。
+
+## 9. 外部协议参考
+
+[WebMCP 草案](https://webmachinelearning.github.io/webmcp/)在 2026-10-05 查阅时描述 Web 应用向 Agent 暴露 JavaScript 工具，并标明不是 W3C Standard。它不是本项目的通用组件 Schema。已有本地 WebMCPBackend 与最新浏览器接口是否兼容，需要在 R1-05 按固定规范与真实环境验证；mock 不证明浏览器已支持。
