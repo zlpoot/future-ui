@@ -3,7 +3,7 @@
 **toolchain-isolation pilot**（#23 PROTOCOL AMENDMENT v1 冻结口径）：同一份声明式 `spec.json` 控件配置任务上，
 「基线组 = 手工/config 编辑（无 future-ui 工具链）」vs「实验组 = 同一 baseline 工具之上额外挂载 future-ui
 契约/目录/校验/patch/preview/test 确定性闭环」。**不得**把结果解释为「React/Ark UI 基线对照」（不在本
-calibration 范围）。本 harness 只覆盖 **calibration preparation**（CAL-001，$50 hard cap，`gpt-6.1-sol`）；acceptance 未授权。
+calibration 范围）。本 harness 只覆盖 **calibration preparation**（CAL-001，全局 5,000,000 tokens hard cap，`gpt-6.1-sol`）；acceptance 未授权。
 
 ## 设计要点（对应负责人 Review 关注面）
 
@@ -26,13 +26,13 @@ calibration 范围）。本 harness 只覆盖 **calibration preparation**（CAL-
 - **#23 冻结协议已同步修订**：最终判定 = 组中立 hidden evaluator（原冻结的 ui.test 判定改为开发反馈工具），且 calibration 定义重新冻结为 **toolchain-isolation pilot**（同一 spec.json 声明式任务：baseline = 手工/config 编辑，experiment = future-ui 工具辅助）——不再解释为「React/Ark UI 基线对照」；
 - 反馈脚手架（`app.test.js` / runner 生成的 feedback 测试）两组相同，判定弱于 golden（模型只能靠自己的信号迭代）。
 
-### 4. 预算 fail-closed（预调用判定）
-- 中转站**不返回 cost 字段** → 成本 = usage × `config.json pricesPerMToken`；
-- **单价为占位值**：中转站 billing rule 未确认，**不声称一定保守**；fail-closed 方向不变（宁停勿超），确认实际单价后更新（`config.json billingNote`）；
-- **预调用硬上限（请求级上界）**：每次模型调用**前**按「请求级 prompt 上界 + 本次允许输出」计算：
-  - 请求级上界 = **relay 实际待发送 body 的真实序列化 bytes**（与 `relay.chat` 共用同一 `build_request_body`/`serialize_request_body`——json.dumps 默认 `ensure_ascii=True`，中文/emoji 按转义字节计入，不低估；恒有 tokens ≤ bytes）+ **`providerOverheadTokens` client-side reservation**（对 provider 不可见注入的显式预留；**是预留，不是已证明的 provider token 上界**——$50 hard cap / provider token 口径在 merge 后的最终运行门解决；超出预留即 fail-closed 拒绝）；
-  - 剩余 $ 预算与剩余 150K token 都装得下才发请求；装不下即 `budget_stop/token_stop`，**不会事后超限**；
-- 护栏：attempt ≤ 5 / run；aggregate tokens ≤ 150K / run（覆盖该 run 全部 attempts）；全局累计 cost ≤ $50（预调用 gating + 事后复核双保险）。
+### 4. 预算 fail-closed（token-only）
+- **预算唯一硬门 = token**：全局累计最多 **5,000,000 tokens**；实际价格/美元成本不参与授权、停止或验收。
+- 每次模型调用前按「请求级 prompt 上界 + 本次允许输出」预留 token：
+  - 请求级上界 = relay 实际待发送 body 的真实序列化 bytes + `providerOverheadTokens` client-side reservation；
+  - 同时满足单 task-run 剩余 token 与全局剩余 token 才允许调用。
+- 护栏：attempt ≤ 5 / run；aggregate tokens ≤ 150K / run；全局 aggregate tokens ≤ 5,000,000。
+- cost 仍可写入 ledger 作为非权威观测，但不参与 stop/go。
 
 ### 5. 协议（两组相同，仅工具集不同）
 - 模型只编辑 `spec.json`；交付 = 输出 `## SPEC` 块（完整 JSON）；
@@ -67,7 +67,7 @@ d10-harness/
 # 干跑自检（无模型调用）
 python check_harness.py
 
-# 真实 calibration（gpt-6.1-sol，OpenAI-compatible 中转站，.env 配置；$50 fail-closed）
+# 真实 calibration（gpt-6.1-sol，OpenAI-compatible 中转站，.env 配置；5,000,000 tokens global hard cap）
 python run_calibration.py --all
 
 # 局部
@@ -78,9 +78,9 @@ python run_calibration.py --tasks cal-t1-001,cal-t4-002 --groups both
 - result ledger：`runs/ledger.jsonl`（runs/ 已 gitignore）。
 - 工具调用 transport：本版使用「输出完整文件 + runner 执行」协议（无 function-calling transport 依赖）；若后续需要模型直接驱动文件/shell，将单独做 tool-call transport 连通性探测（计入 preparation/connectivity probe，不计 24 runs）。
 
-## 已知留待负责人确认
+## 已知边界
 
-1. **中转站 token 单价**：`config.json pricesPerMToken` 为**占位单价**（$5/$15/$2.5 per M；billing rule 未确认，不声称一定保守）。确认实际单价后更新；fail-closed 方向不变。
-2. **任务文本/语义措辞**：12 个任务公共措辞（tasks.py `taskText`）与 golden 断言请重点 Review 泄题/偏置。
-3. **runner A/B 隔离**：capsule/workspace/顺序请重点 Review（见 §2）。
-4. **#23 冻结协议修订**：最终判定 = hidden evaluator、calibration = toolchain-isolation pilot（已在 #23 正文同步，见 PR Review 记录）。
+1. **预算口径**：CAL-001 只以 token 为硬门；价格仅可作为非权威观测。
+2. **任务文本/语义措辞**：12 个任务公共措辞与 golden 已按 Review 冻结。
+3. **runner A/B 隔离**：fresh workspace + seed-derived 顺序已按 Review 冻结。
+4. **#23 冻结协议**：最终判定 = hidden evaluator、calibration = toolchain-isolation pilot。
