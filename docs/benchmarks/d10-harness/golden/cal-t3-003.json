@@ -1,0 +1,90 @@
+{
+  "taskId": "cal-t3-003",
+  "family": "t3",
+  "checks": [
+    {
+      "id": "/select[0]/option[0]:选择筛选条件",
+      "type": "structure",
+      "path": "/select[0]/option[0]",
+      "expect": {
+        "tag": "option",
+        "text": "选择筛选条件",
+        "attrs": {
+          "value": ""
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[1]:已启用",
+      "type": "structure",
+      "path": "/select[0]/option[1]",
+      "expect": {
+        "tag": "option",
+        "text": "已启用",
+        "attrs": {
+          "value": "enabled"
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[2]:已禁用",
+      "type": "structure",
+      "path": "/select[0]/option[2]",
+      "expect": {
+        "tag": "option",
+        "text": "已禁用",
+        "attrs": {
+          "value": "disabled"
+        }
+      }
+    },
+    {
+      "id": "default-unchanged",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "enabled"
+      }
+    },
+    {
+      "id": "i-sel",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "disabled"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "disabled"
+        }
+      }
+    },
+    {
+      "id": "/button[0]:提交",
+      "type": "structure",
+      "path": "/button[0]",
+      "expect": {
+        "tag": "button",
+        "part": "root",
+        "text": "提交",
+        "attrs": {
+          "type": "button",
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "i-btn",
+      "type": "interaction",
+      "action": {
+        "kind": "click",
+        "target": "/button[0]"
+      },
+      "expect": {
+        "event": "click"
+      }
+    }
+  ]
+}

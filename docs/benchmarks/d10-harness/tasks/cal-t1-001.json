@@ -1,0 +1,10 @@
+{
+  "taskId": "cal-t1-001",
+  "family": "t1",
+  "seed": 1001,
+  "taskText": "根据以下需求实现一个页面（编辑 spec.json，components 描述控件）：\n1. 渲染一个「提交」按钮（type=button）；\n2. 渲染一个筛选下拉框：选项「已启用/已禁用」（值分别为 enabled/disabled），占位文案「请选择」，默认不选中任何值。\n交互语义：按钮可点击（点击产生 click 事件）；下拉框切换选项产生 change 事件。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": []
+  },
+  "feedbackBody": "it('renders button and select per requirements', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn).toBeTruthy(); expect(btn.textContent).toBe('提交');\n  expect(btn.disabled).toBe(false);\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy();\n  const opts = Array.from(sel.options).map(o => o.value + ':' + o.textContent);\n  expect(opts).toContain(':请选择'); expect(opts).toContain('enabled:已启用'); expect(opts).toContain('disabled:已禁用');\n});\nit('button click fires and select change fires', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(true);\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'disabled'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('disabled');\n});"
+}

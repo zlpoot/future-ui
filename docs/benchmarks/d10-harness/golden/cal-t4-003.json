@@ -1,0 +1,53 @@
+{
+  "taskId": "cal-t4-003",
+  "family": "t4",
+  "checks": [
+    {
+      "id": "/select[0]:select",
+      "type": "structure",
+      "path": "/select[0]",
+      "expect": {
+        "tag": "select",
+        "part": "root",
+        "attrs": {
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[2]:B",
+      "type": "structure",
+      "path": "/select[0]/option[2]",
+      "expect": {
+        "tag": "option",
+        "text": "B",
+        "attrs": {
+          "value": "b"
+        }
+      }
+    },
+    {
+      "id": "default-a",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "a"
+      }
+    },
+    {
+      "id": "i-sel",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "b"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "b"
+        }
+      }
+    }
+  ]
+}

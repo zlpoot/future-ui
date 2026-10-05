@@ -1,0 +1,99 @@
+{
+  "taskId": "cal-t3-002",
+  "family": "t3",
+  "checks": [
+    {
+      "id": "/button[0]:保存",
+      "type": "structure",
+      "path": "/button[0]",
+      "expect": {
+        "tag": "button",
+        "part": "root",
+        "text": "保存",
+        "attrs": {
+          "type": "button",
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "i-btn",
+      "type": "interaction",
+      "action": {
+        "kind": "click",
+        "target": "/button[0]"
+      },
+      "expect": {
+        "event": "click"
+      }
+    },
+    {
+      "id": "/select[0]:select",
+      "type": "structure",
+      "path": "/select[0]",
+      "expect": {
+        "tag": "select",
+        "part": "root"
+      }
+    },
+    {
+      "id": "default-unchanged",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "enabled"
+      }
+    },
+    {
+      "id": "/select[0]/option[0]:全部",
+      "type": "structure",
+      "path": "/select[0]/option[0]",
+      "expect": {
+        "tag": "option",
+        "text": "全部",
+        "attrs": {
+          "value": ""
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[1]:已启用",
+      "type": "structure",
+      "path": "/select[0]/option[1]",
+      "expect": {
+        "tag": "option",
+        "text": "已启用",
+        "attrs": {
+          "value": "enabled"
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[2]:已禁用",
+      "type": "structure",
+      "path": "/select[0]/option[2]",
+      "expect": {
+        "tag": "option",
+        "text": "已禁用",
+        "attrs": {
+          "value": "disabled"
+        }
+      }
+    },
+    {
+      "id": "i-sel",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "disabled"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "disabled"
+        }
+      }
+    }
+  ]
+}

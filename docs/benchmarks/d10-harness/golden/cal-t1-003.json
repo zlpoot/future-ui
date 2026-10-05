@@ -1,0 +1,96 @@
+{
+  "taskId": "cal-t1-003",
+  "family": "t1",
+  "checks": [
+    {
+      "id": "/input[0]:input",
+      "type": "structure",
+      "path": "/input[0]",
+      "expect": {
+        "tag": "input",
+        "part": "root",
+        "attrs": {
+          "placeholder": "请输入名称",
+          "aria-label": "名称",
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "input-value",
+      "type": "state",
+      "path": "/input[0]",
+      "state": {
+        "value": "张三"
+      }
+    },
+    {
+      "id": "/button[0]:提交",
+      "type": "structure",
+      "path": "/button[0]",
+      "expect": {
+        "tag": "button",
+        "part": "root",
+        "text": "提交",
+        "attrs": {
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "i-btn",
+      "type": "interaction",
+      "action": {
+        "kind": "click",
+        "target": "/button[0]"
+      },
+      "expect": {
+        "event": "click"
+      }
+    },
+    {
+      "id": "/select[0]:select",
+      "type": "structure",
+      "path": "/select[0]",
+      "expect": {
+        "tag": "select",
+        "part": "root"
+      }
+    },
+    {
+      "id": "select-default",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "b"
+      }
+    },
+    {
+      "id": "/select[0]/option[1]:B",
+      "type": "structure",
+      "path": "/select[0]/option[1]",
+      "expect": {
+        "tag": "option",
+        "text": "B",
+        "attrs": {
+          "value": "b"
+        }
+      }
+    },
+    {
+      "id": "i-sel",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "a"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "a"
+        }
+      }
+    }
+  ]
+}

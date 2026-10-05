@@ -1,0 +1,40 @@
+{
+  "taskId": "cal-t3-002",
+  "family": "t3",
+  "seed": 1008,
+  "taskText": "页面已正常工作。现要求：把按钮文案从「提交」改为「保存」。\n除此之外，下拉框选项/默认值/占位、按钮 type 与交互行为都必须保持原样。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "submit",
+        "type": "button",
+        "label": "提交",
+        "props": {
+          "type": "button"
+        }
+      },
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "全部",
+              "value": ""
+            },
+            {
+              "label": "已启用",
+              "value": "enabled"
+            },
+            {
+              "label": "已禁用",
+              "value": "disabled"
+            }
+          ],
+          "defaultValue": "enabled"
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('button text changed to save', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn.textContent).toBe('保存'); expect(btn.type).toBe('button');\n});\nit('regression: select unchanged and interactions work', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel.value).toBe('enabled');\n  expect(Array.from(sel.options).length).toBe(3);\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'disabled'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('disabled');\n});"
+}

@@ -1,0 +1,37 @@
+{
+  "taskId": "cal-t3-003",
+  "family": "t3",
+  "seed": 1009,
+  "taskText": "页面已正常工作。现要求：把下拉框占位文案从「请选择」改为「选择筛选条件」。\n除此之外，选项集合、默认选中值、按钮与交互行为都必须保持原样。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "submit",
+        "type": "button",
+        "label": "提交",
+        "props": {
+          "type": "button"
+        }
+      },
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "已启用",
+              "value": "enabled"
+            },
+            {
+              "label": "已禁用",
+              "value": "disabled"
+            }
+          ],
+          "placeholder": "请选择",
+          "defaultValue": "enabled"
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('placeholder changed', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel.options[0].textContent).toBe('选择筛选条件');\n});\nit('regression: options/default/interactions unchanged', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel.value).toBe('enabled');\n  expect(Array.from(sel.options).length).toBe(3);\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'disabled'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('disabled');\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn.textContent).toBe('提交');\n});"
+}

@@ -1,0 +1,29 @@
+{
+  "taskId": "cal-t4-002",
+  "family": "t4",
+  "seed": 1011,
+  "taskText": "定位并修复这个交互 bug：页面加载时应默认选中「B」，但现在下拉框显示为空白占位。\n修复后其余行为不变。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "B"
+            }
+          ],
+          "defaultValue": "b",
+          "placeholder": "请选择"
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('default B applies after fix', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy(); expect(sel.value).toBe('b');\n});\nit('change still works', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'a'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('a');\n});"
+}

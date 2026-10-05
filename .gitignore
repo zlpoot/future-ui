@@ -12,3 +12,6 @@ coverage/
 
 # python venv (local)
 .venv*/
+
+# d10 calibration runs (local)
+docs/benchmarks/d10-harness/runs/

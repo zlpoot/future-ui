@@ -1,0 +1,24 @@
+{
+  "api": {
+    "baseUrlEnv": "D10_API_BASE_URL",
+    "apiKeyEnv": "D10_API_KEY",
+    "modelEnv": "D10_MODEL",
+    "formatEnv": "D10_API_FORMAT",
+    "endpoint": "/chat/completions",
+    "maxOutputTokens": 8192
+  },
+  "pricesPerMToken": {
+    "input": 5.0,
+    "output": 15.0,
+    "cachedInput": 2.5
+  },
+  "billingNote": "占位单价：中转站 billing rule 未确认，不能声称一定保守；仅保证 fail-closed 方向（宁停勿超）。确认实际单价后更新，方向不变。",
+  "usdHardCap": 50.0,
+  "attemptsPerTask": 5,
+  "maxTokensPerRun": 150000,
+  "maxInputTokensPerCall": 30000,
+  "providerOverheadTokens": 512,
+  "minOutputTokens": 256,
+  "runTimeoutSec": 1800,
+  "runsDir": "runs"
+}

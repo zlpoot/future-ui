@@ -1,0 +1,21 @@
+{
+  "taskId": "cal-t2-002",
+  "family": "t2",
+  "seed": 1005,
+  "taskText": "页面应渲染一个「提交」按钮：type=submit、可点击（点击产生 click 事件）、无 loading、无禁用。\n当前 spec.json 渲染不正确（按钮不可点击、状态异常），请修复 spec.json 使页面完全符合描述。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "submit",
+        "type": "button",
+        "label": "提交",
+        "props": {
+          "type": "bogus",
+          "disabled": true,
+          "loading": true
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('button is submit-typed and clickable', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn).toBeTruthy(); expect(btn.type).toBe('submit');\n  expect(btn.disabled).toBe(false); expect(btn.getAttribute('aria-busy')).toBeNull();\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(true);\n});"
+}
