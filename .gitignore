@@ -9,3 +9,6 @@ coverage/
 .env.local
 .env.*
 !.env.example
+
+# python venv (local)
+.venv*/

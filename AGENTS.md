@@ -1,10 +1,10 @@
 # future-ui · Agent 工作入口
 
-## 当前授权边界：SCOPED_DEVELOPMENT · G0-001 · #5 ONLY
+## 当前授权边界：SCOPED_DEVELOPMENT · CAL-001 · #23 calibration ONLY（preparation + execution）
 
-负责人已于 2026-10-04 通过 #4 建立 Current Grant `G0-001`。该 grant **只允许 #5 M0-01** 在通过 Definition of Ready 后进入实现；其他实现 Issue 仍保持 Blocked / NOT_AUTHORIZED。
+负责人已于 2026-10-05 通过 #4 建立 Current Grant `CAL-001`：**仅限 #23「AI 开发对照评估与效果证据（真实模型）」的 calibration preparation + calibration execution**——harness / calibration runner、12 个 paired task fixtures、workspace isolation、budget guard、result ledger 的代码编写，本地 test/build，对应 PR，以及 `gpt-6.1-sol` calibration 模型调用（$50 hard cap 内）。
 
-G0-001 允许 #5：代码修改、依赖安装/更新、本地 build/test、CI 配置修改与 CI 运行。明确禁止：browser/provider live、模型/API 付费调用、外部账号/数据写入、部署、发布。Merge 与 Close 权限仍由负责人保留。
+CAL-001 允许：上述 #23 calibration 相关代码修改、本地 build/test、CI 配置修改与 CI 运行、`gpt-6.1-sol` calibration 模型调用（预算内）、对应 PR 创建与合并。明确禁止：acceptance 运行、acceptance 预算、任何其他 Issue 的实现、部署、发布。Merge/Close 权限按负责人逐项确认。
 
 本文件只同步可执行边界；Current Grant 的唯一动态事实源是 [#4](https://github.com/zlpoot/future-ui/issues/4)。若本文件与 #4 冲突，以当前用户授权与 #4 为准。
 
@@ -25,7 +25,7 @@ future-ui 不要求在 M0 前一次性冻结全部 M1 方案。
 - #4 是持续开发授权账本，不是一次性全局开关。只有 Current Grant 明确列出的**具体可执行 Issue**与动作才获得授权。
 - 父工作包不自动授权子 Issue；大任务必须在 Ready 前拆成真正子 Issue，一个实现 Issue 对应一个可独立审阅 PR。
 
-依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。G0-001 也不自动授权 #6 或其他 Issue。
+依赖完成、文档 merge、Review PASS、父 Issue 获批都不会自动将其他 Issue 转为 Ready。CAL-001 也不自动授权 acceptance、其他 Issue 或任何 #23 之外的工作。
 
 ## Role / Agent 解耦
 
