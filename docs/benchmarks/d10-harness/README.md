@@ -30,7 +30,7 @@ calibration 范围）。本 harness 只覆盖 **calibration preparation**（CAL-
 - 中转站**不返回 cost 字段** → 成本 = usage × `config.json pricesPerMToken`；
 - **单价为占位值**：中转站 billing rule 未确认，**不声称一定保守**；fail-closed 方向不变（宁停勿超），确认实际单价后更新（`config.json billingNote`）；
 - **预调用硬上限（请求级上界）**：每次模型调用**前**按「请求级 prompt 上界 + 本次允许输出」计算：
-  - 请求级上界 = **真实序列化 bytes**（role / message framing / JSON 转义 / 顶层包装，与 relay.chat 发送体一致；恒有 tokens ≤ bytes）+ **providerOverheadTokens 显式预留**（provider 侧 chat template / 注入 prompt 的不可见开销；超出预留即 fail-closed 拒绝）；
+  - 请求级上界 = **relay 实际待发送 body 的真实序列化 bytes**（与 `relay.chat` 共用同一 `build_request_body`/`serialize_request_body`——json.dumps 默认 `ensure_ascii=True`，中文/emoji 按转义字节计入，不低估；恒有 tokens ≤ bytes）+ **`providerOverheadTokens` client-side reservation**（对 provider 不可见注入的显式预留；**是预留，不是已证明的 provider token 上界**——$50 hard cap / provider token 口径在 merge 后的最终运行门解决；超出预留即 fail-closed 拒绝）；
   - 剩余 $ 预算与剩余 150K token 都装得下才发请求；装不下即 `budget_stop/token_stop`，**不会事后超限**；
 - 护栏：attempt ≤ 5 / run；aggregate tokens ≤ 150K / run（覆盖该 run 全部 attempts）；全局累计 cost ≤ $50（预调用 gating + 事后复核双保险）。
 

@@ -12,6 +12,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 
 
+def build_request_body(model, messages, max_tokens):
+    """请求体 single source of truth：relay.chat 实际发送的 body（含 stream:false）。"""
+    return {"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False}
+
+
+def serialize_request_body(body):
+    """请求体序列化 single source of truth：**必须与 relay.chat 实际发送完全一致**
+    （json.dumps 默认 ensure_ascii=True——中文/emoji 会变成反斜杠-u 转义，真实字节更大；
+    UB 计算与预调用预留都要以这里的字节数为准，Review P1）。"""
+    return json.dumps(body)
+
+
+def request_body_bytes(model, messages, max_tokens):
+    """实际待发送 HTTP body 的 UTF-8 字节数（UB 与 relay.chat 共用同一 serializer）。"""
+    return len(serialize_request_body(build_request_body(model, messages, max_tokens)).encode("utf-8"))
+
+
 def load_env():
     cfg = {}
     env_path = os.path.join(REPO_ROOT, ".env")
@@ -60,15 +77,10 @@ class Relay:
         if not self.ready:
             raise RuntimeError("relay not configured (missing .env values)")
         url = self.base + self.config["api"]["endpoint"]
-        body = {
-            "model": self.model,
-            "messages": messages,
-            "max_tokens": max_tokens or self.max_output,
-            "stream": False,
-        }
+        body = build_request_body(self.model, messages, max_tokens or self.max_output)
         req = urllib.request.Request(
             url,
-            data=json.dumps(body).encode("utf-8"),
+            data=serialize_request_body(body).encode("utf-8"),
             headers={"Authorization": "Bearer " + self.key, "Content-Type": "application/json"},
             method="POST",
         )

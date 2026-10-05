@@ -137,19 +137,21 @@ def config_digest(config):
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
-def request_tokens_ub(messages, model, config):
-    """请求级 prompt token 上界（Review P1：content bytes 不足以覆盖 role/framing/template）。
+def request_tokens_ub(messages, model, config, max_tokens_placeholder=999999):
+    """请求级 prompt token 上界（Review P1：与 relay.chat 共用同一 serializer/build body）。
 
     可证明方向 = tokens ≤ UTF-8 bytes（任何 tokenizer 的 token 至少 1 字节）：
     1) 我们**完全控制**的请求体（role、message framing、JSON 转义、顶层包装、model/max_tokens 字段）
-       按与 relay.chat 一致的序列化 bytes 计（max_tokens 用固定大值占位，确保 ≥ 实际发送值）；
+       按 relay.serialize_request_body 的真实字节数计——**与 relay.chat 实际发送一致**
+       （json.dumps 默认 ensure_ascii=True：中文/emoji 按 \\uXXXX 转义字节计入，不低估）；
+       max_tokens 用固定大值占位（≥ 任何实际发送值）；
     2) provider 侧**不可见**注入（chat template / 追加 system prompt / tokenizer 差异）用配置
-       `providerOverheadTokens` 显式预留；
-    上界 = 序列化 bytes + 预留。含义：provider prompt_tokens ≤ 上界 ⇔ provider 注入 ≤ 预留；
-    超出预留则 pre-call fail-closed 拒绝（见 precall_max_tokens / prompt_too_large）。
+       `providerOverheadTokens` 作 **client-side reservation**（接受为预留，不是已证明的 provider 上界；
+       $50 hard cap / provider token 口径在 merge 后的最终运行门解决）。
+    上界 = 真实发送字节 + 预留。
     """
-    body = {"model": model, "messages": messages, "max_tokens": 999999, "stream": False}
-    ub = len(json.dumps(body, ensure_ascii=False).encode("utf-8"))
+    from relay import request_body_bytes
+    ub = request_body_bytes(model, messages, max_tokens_placeholder)
     ub += int(config.get("providerOverheadTokens", 512))
     return ub
 

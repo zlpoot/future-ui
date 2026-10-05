@@ -170,9 +170,9 @@ def test_budget_fail_closed():
     overhead = int(CONFIG.get("providerOverheadTokens", 512))
     for i, msgs in enumerate(cases):
         ub = request_tokens_ub(msgs, "gpt-6.1-sol", CONFIG)
-        # 1) 上界 = 真实序列化 bytes（role/framing/转义/顶层包装）+ provider 预留，确定性可审计
-        body = {"model": "gpt-6.1-sol", "messages": msgs, "max_tokens": 999999, "stream": False}
-        expected = len(json.dumps(body, ensure_ascii=False).encode("utf-8")) + overhead
+        # 1) 上界基础 bytes == relay 实际待发送 body bytes（共用 serializer；中文/emoji 含 \uXXXX 转义）
+        from relay import request_body_bytes
+        expected = request_body_bytes("gpt-6.1-sol", msgs, 999999) + overhead
         assert ub == expected, (i, ub, expected)
         # 2) 上界覆盖所有 content bytes 之和（含空/短 content 的 framing 开销）
         content_bytes = sum(len(m.get("content", "").encode("utf-8")) for m in msgs)
@@ -180,6 +180,9 @@ def test_budget_fail_closed():
         # 3) 空 content 仍计入 framing（不能退化为 0）
         if i == 2:
             assert ub > overhead, ub
+    # 3.5) 中文/emoji 负例：ensure_ascii=True 转义后真实字节更大，UB 必须覆盖（不高估也不低估）
+    cjk = request_tokens_ub([{"role": "user", "content": "中文内容"}], "gpt-6.1-sol", CONFIG)
+    assert cjk >= len("中文内容".encode("utf-8")), cjk
     # 4) 上界随 message 数单调增长（多 message 负例）
     mono = [request_tokens_ub([{"role": "user", "content": "a"}], "m", CONFIG),
             request_tokens_ub([{"role": "user", "content": "a"}, {"role": "user", "content": "b"}], "m", CONFIG)]
