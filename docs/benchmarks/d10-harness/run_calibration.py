@@ -19,6 +19,14 @@ from capsule import load_task, load_golden, build_workspace, ab_order, GROUPS  #
 from ledger import Ledger  # noqa: E402
 
 
+def order_groups(groups, seed):
+    """A/B 顺序由 seed 派生（偶→baseline 先；奇→experiment 先）。Review P1 修复：真实执行必须按此顺序。"""
+    ordered = [g for g in GROUPS if g in groups]
+    if ab_order(seed) == "experiment_first":
+        ordered = list(reversed(ordered))
+    return ordered
+
+
 def current_shas():
     try:
         head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True,
@@ -36,6 +44,7 @@ def main():
     ap.add_argument("--tasks", default="")
     ap.add_argument("--groups", default="both", choices=["both", "baseline", "experiment"])
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--force", action="store_true", help="rerun samples already present in the ledger")
     args = ap.parse_args()
 
     with io.open(os.path.join(HERE, "config.json"), encoding="utf-8") as f:
@@ -67,8 +76,16 @@ def main():
             print("relay not configured (check .env)", file=sys.stderr)
             return 2
 
+    # resume：跳过 ledger 中已完成的 (taskId, group)；--force 重跑
+    done = set()
+    if not args.force:
+        for e in ledger._entries:
+            if e.get("taskId") and e.get("group") and e.get("status") != "error":
+                done.add((e["taskId"], e["group"]))
+
     print("subject/harness sha: {0} ({1})".format(*shas))
-    print("existing ledger entries:", ledger.count(), "total cost: $%.6f" % ledger.total_cost())
+    print("existing ledger entries:", ledger.count(), "total cost: $%.6f" % ledger.total_cost(),
+          "| resume skip:", len(done))
     if ledger.total_cost() > float(config["usdHardCap"]):
         print("FAIL-CLOSED: global budget already exceeded; refusing to run.", file=sys.stderr)
         return 2
@@ -78,9 +95,14 @@ def main():
         task = load_task(task_id)
         seed = task["seed"]
         order = ab_order(seed)
-        print("[{0}] seed={1} order={2}".format(task_id, seed, order))
+        # A/B 顺序必须由 seed 决定（Review P1：不得固定 baseline→experiment）
+        run_groups = order_groups(groups, seed)
+        print("[{0}] seed={1} order={2} groups={3}".format(task_id, seed, order, run_groups))
         workspaces = build_workspace(task, RUNS_DIR)
-        for group in groups:
+        for group in run_groups:
+            if (task_id, group) in done:
+                print("  {0:10s} skip (already in ledger)".format(group))
+                continue
             ws = workspaces[group]
             entry = __import__("agent_loop", fromlist=["run_task_run"]).run_task_run(
                 task, group, ws, RUNS_DIR, relay, config, ledger,

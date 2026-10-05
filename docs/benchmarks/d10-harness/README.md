@@ -14,23 +14,27 @@
 - 每个 paired task 从同一胶囊生成 **两个 fresh workspace**（baseline / experiment），文件完全一致：README.md（公共任务文本）、spec.json（初始状态）、render.js（canonical 副本）、app.test.js（反馈脚手架）、package.json；
 - **workspace 内零 future-ui 痕迹**（无包、无文档、无工具桥）——基线组无法偷读 `packages/*`、`contracts`、`tests` 等实现；
 - 实验组工具桥由 **runner 侧注入**（`lib/bridge.run.ts`，真实调用 `@future-ui/ai-contract-core` + `@future-ui/ai-dev`），不进 workspace；
-- **A/B 顺序由 seed 派生**（seed 偶 → baseline 先跑；奇 → experiment 先跑），预注册口径，逐 run 记录。
+- **A/B 顺序由 seed 派生并真实生效**（seed 偶 → baseline 先跑；奇 → experiment 先跑），预注册口径，逐 run 记录（Review P1 修复）。
 
 ### 3. 最终判定 = 组中立 hidden evaluator
 - golden 断言在 `golden/cal-*.json`，**不进 workspace**；
 - `lib/evaluator.run.ts` 用 harness 自身副本 render.js 渲染最终 spec.json（workspace 内被改动的 render.js 无效），按 golden 断言（structure/state/interaction）；
 - 实验组 `ui.test` 只是**开发反馈工具**，不是最终裁判；两组最终 PASS/FAIL 同一判据；
+- **#23 冻结协议已同步修订**：最终判定 = 组中立 hidden evaluator（原冻结的 ui.test 判定改为开发反馈工具），且 calibration 定义重新冻结为 **toolchain-isolation pilot**（同一 spec.json 声明式任务：baseline = 手工/config 编辑，experiment = future-ui 工具辅助）——不再解释为「React/Ark UI 基线对照」；
 - 反馈脚手架（`app.test.js` / runner 生成的 feedback 测试）两组相同，判定弱于 golden（模型只能靠自己的信号迭代）。
 
-### 4. 预算 fail-closed
-- 中转站**不返回 cost 字段** → 成本 = usage × `config.json pricesPerMToken`（输入/输出/cached 单价，**保守偏高取值**，宁停勿超）；单价待负责人确认中转站实际定价后可下调；
-- 硬护栏：attempt ≤ 5 / run；aggregate tokens ≤ 150K / run（**覆盖该 run 全部 attempts，不是每 attempt**）；全局累计 cost ≤ $50（超过立即停止，`status=budget_stop`）。
+### 4. 预算 fail-closed（预调用判定）
+- 中转站**不返回 cost 字段** → 成本 = usage × `config.json pricesPerMToken`；
+- **单价为占位值**：中转站 billing rule 未确认，**不声称一定保守**；fail-closed 方向不变（宁停勿超），确认实际单价后更新（`config.json billingNote`）；
+- **预调用硬上限**（Review P1 修复）：每次模型调用**前**按「最坏情况 = maxInputTokensPerCall 输入 + 本次允许输出」计算，剩余 $ 预算与剩余 150K token 都装得下才发请求；装不下即 `budget_stop/token_stop`，**不会事后超限**；
+- 护栏：attempt ≤ 5 / run；aggregate tokens ≤ 150K / run（覆盖该 run 全部 attempts）；全局累计 cost ≤ $50（预调用 gating + 事后复核双保险）。
 
 ### 5. 协议（两组相同，仅工具集不同）
 - 模型只编辑 `spec.json`；交付 = 输出 `## SPEC` 块（完整 JSON）；
 - 实验组额外可输出 `## TOOL <json>` 调用工具桥（catalog / validate-spec / patch / preview / test）；
 - 基线组的 `## TOOL` 会被**拒绝并记录**（工具不可用），防止基线假装使用 treatment；
-- 每轮反馈 = runner 运行同一 vitest feedback 测试 + （实验组）工具结果。
+- 每轮反馈 = runner 运行同一 vitest feedback 测试 + （实验组）工具结果；
+- **resume 与容错**（Review P2）：ledger 已有的 (taskId, group) 自动跳过（`--force` 重跑）；relay 调用失败不退出，记录失败继续尝试，全部失败仍写 ledger（status=error）并跑最终判定；每条 ledger 含 modelId / endpoint / configDigest（API+单价+护栏段指纹）/ subjectSha / harnessSha / usage / cost / eval。
 
 ## 目录
 
@@ -71,6 +75,7 @@ python run_calibration.py --tasks cal-t1-001,cal-t4-002 --groups both
 
 ## 已知留待负责人确认
 
-1. **中转站 token 单价**：`config.json pricesPerMToken` 为保守占位（$5/$15/$2.5 per M）。确认实际单价后下调；fail-closed 方向不变。
+1. **中转站 token 单价**：`config.json pricesPerMToken` 为**占位单价**（$5/$15/$2.5 per M；billing rule 未确认，不声称一定保守）。确认实际单价后更新；fail-closed 方向不变。
 2. **任务文本/语义措辞**：12 个任务公共措辞（tasks.py `taskText`）与 golden 断言请重点 Review 泄题/偏置。
 3. **runner A/B 隔离**：capsule/workspace/顺序请重点 Review（见 §2）。
+4. **#23 冻结协议修订**：最终判定 = hidden evaluator、calibration = toolchain-isolation pilot（已在 #23 正文同步，见 PR Review 记录）。

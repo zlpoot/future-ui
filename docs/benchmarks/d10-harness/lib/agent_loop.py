@@ -7,10 +7,13 @@
 - 基线组的 ## TOOL 块会被拒绝并记录（工具不可用），防止基线假装使用 treatment；
 - 反馈 = vitest 运行生成的 feedback 测试（同一断言，两组相同）；
 - 最终判定 = 隐藏 evaluator.run.ts（组中立，workspace 外）；
-- 护栏：attempt ≤ attemptsPerTask；run 内 aggregate tokens ≤ maxTokensPerRun；
-  全局累计 cost ≤ usdHardCap（fail-closed，超过即停）。
+- 护栏（预调用 fail-closed，Review P1）：每次模型调用**前**根据剩余预算/剩余 token 计算
+  本次允许的 max_tokens（含最坏情况输入占用），预算不足即停止——不是事后判断；
+  attempt ≤ attemptsPerTask；run 内 aggregate tokens ≤ maxTokensPerRun；
+  全局累计 cost ≤ usdHardCap；
+- relay 调用失败不退出：记录失败、继续尝试；全部尝试失败仍写 ledger（status=error）。
 """
-import io, json, os, re, subprocess, time
+import io, json, os, re, subprocess, time, hashlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HARNESS = os.path.dirname(HERE)
@@ -126,6 +129,38 @@ def run_evaluator(task, workspace, runs_dir):
     return verdict, dt
 
 
+def config_digest(config):
+    """config.json 的 API/单价/上限/护栏段 digest（Review P2：ledger 需记录配置指纹）。"""
+    keys = ["api", "pricesPerMToken", "usdHardCap", "attemptsPerTask", "maxTokensPerRun",
+            "maxInputTokensPerCall", "minOutputTokens"]
+    payload = {k: config.get(k) for k in keys}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
+
+
+def precall_max_tokens(relay, config, ledger, run_cost, usage_total):
+    """预调用 fail-closed：返回本次调用允许的 max_tokens；0 = 应停止。
+
+    最坏情况 = 本次输入最多 maxInputTokensPerCall token + 输出 max_tokens token，
+    两者都必须落在剩余预算（$）与剩余 aggregate token（150K）内。
+    """
+    cost_max = float(config["usdHardCap"])
+    tokens_max = int(config["maxTokensPerRun"])
+    max_out = int(config["api"].get("maxOutputTokens", 8192))
+    max_in_call = int(config.get("maxInputTokensPerCall", 30000))
+    min_out = int(config.get("minOutputTokens", 256))
+    remaining_cost = cost_max - ledger.total_cost() - run_cost
+    remaining_tokens = tokens_max - usage_total
+    if remaining_cost <= 0 or remaining_tokens <= 0:
+        return 0
+    in_wc = min(max_in_call, remaining_tokens)
+    if remaining_cost <= in_wc * relay.price_in / 1e6:
+        return 0
+    out_by_cost = int((remaining_cost - in_wc * relay.price_in / 1e6) // (relay.price_out / 1e6))
+    out_by_tokens = remaining_tokens - in_wc
+    allowed = min(max_out, out_by_cost, out_by_tokens)
+    return allowed if allowed >= min_out else 0
+
+
 def parse_blocks(content):
     specs = [m.group(1).strip() for m in SPEC_RE.finditer("\n" + content + "\n")]
     tools = []
@@ -143,10 +178,13 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
     task_id = task["taskId"]
     family = task["family"]
     seed = task["seed"]
+    from capsule import ab_order as _ab_order
+    order = _ab_order(seed)
     cfg_api = config["api"]
     attempts_max = int(config["attemptsPerTask"])
     tokens_max = int(config["maxTokensPerRun"])
     cost_max = float(config["usdHardCap"])
+    digest = config_digest(config)
 
     system = SYSTEM_COMMON + (SYSTEM_EXPERIMENT_EXTRA if group == "experiment" else SYSTEM_BASELINE_NOTE)
     spec_now = json.dumps(task["initialSpec"], ensure_ascii=False)
@@ -164,13 +202,26 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
     final_spec = task["initialSpec"]
     spec_delivered = False
     t0 = time.time()
+    model_id = "dry" if fake_model is not None else (relay.model if relay else "unknown")
+    endpoint = "dry" if fake_model is not None else ((relay.base + cfg_api["endpoint"]) if relay else "unknown")
 
     while attempts < attempts_max:
         attempts += 1
-        if fake_model is not None:
-            resp = fake_model(messages, group, attempts)
-        else:
-            resp = relay.chat(messages)
+        try:
+            if fake_model is not None:
+                resp = fake_model(messages, group, attempts)
+            else:
+                allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"])
+                if allowed <= 0:
+                    status = "budget_stop" if (cost_max - ledger.total_cost() - cost) <= 0 else "token_stop"
+                    feedback_log.append({"attempt": attempts, "note": "pre-call fail-closed: no budget/token headroom ({0})".format(status)})
+                    break
+                resp = relay.chat(messages, max_tokens=allowed)
+        except Exception as e:
+            feedback_log.append({"attempt": attempts, "error": str(e)[:300]})
+            messages.append({"role": "assistant", "content": ""})
+            messages.append({"role": "user", "content": "[relay call failed: {0} — continue]".format(str(e)[:200])})
+            continue
         usage["prompt"] += resp["usage"]["prompt"]
         usage["completion"] += resp["usage"]["completion"]
         usage["cached"] += resp["usage"]["cached"]
@@ -181,7 +232,6 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
             status = "token_stop"
             feedback_log.append({"attempt": attempts, "note": "aggregate tokens exceeded cap"})
             break
-        # 全局护栏：累计 cost 超 cap 立即停止（fail-closed）
         if ledger.total_cost() + cost > cost_max:
             status = "budget_stop"
             feedback_log.append({"attempt": attempts, "note": "global budget cap exceeded (fail-closed)"})
@@ -234,12 +284,20 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
         messages.append({"role": "assistant", "content": content})
         messages.append({"role": "user", "content": "\n".join(msgs_feedback)})
 
-    # 最终判定：组中立隐藏 evaluator
-    verdict, ev_dt = run_evaluator(task, workspace, runs_dir)
+    # 最终判定：组中立隐藏 evaluator（即便 relay 失败也留下判定记录）
+    try:
+        verdict, ev_dt = run_evaluator(task, workspace, runs_dir)
+    except Exception as e:
+        verdict = {"pass": False, "error": "evaluator crash: {0}".format(str(e)[:200])}
+        ev_dt = 0.0
+
+    if status == "done" and not spec_delivered and any("error" in f for f in feedback_log):
+        status = "error"
 
     entry = {
         "taskId": task_id, "family": family, "seed": seed, "group": group,
-        "order": "seed-derived",
+        "order": order,
+        "modelId": model_id, "endpoint": endpoint, "configDigest": digest,
         "subjectSha": subject_sha, "harnessSha": harness_sha,
         "attempts": attempts, "specDelivered": spec_delivered,
         "usage": usage, "cost": round(cost, 6),

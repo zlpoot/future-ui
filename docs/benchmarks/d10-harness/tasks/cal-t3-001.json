@@ -13,29 +13,27 @@
           "type": "button"
         }
       },
-      [
-        {
-          "id": "filter",
-          "type": "select",
-          "props": {
-            "options": [
-              {
-                "label": "全部",
-                "value": ""
-              },
-              {
-                "label": "已启用",
-                "value": "enabled"
-              },
-              {
-                "label": "已禁用",
-                "value": "disabled"
-              }
-            ],
-            "defaultValue": "enabled"
-          }
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "全部",
+              "value": ""
+            },
+            {
+              "label": "已启用",
+              "value": "enabled"
+            },
+            {
+              "label": "已禁用",
+              "value": "disabled"
+            }
+          ],
+          "defaultValue": "enabled"
         }
-      ]
+      }
     ]
   },
   "feedbackBody": "it('default selection changed to disabled', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel.value).toBe('disabled');\n});\nit('regression: button and options unchanged, interactions work', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn.textContent).toBe('提交');\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(true);\n  const sel = container.querySelector('select[data-part=root]');\n  expect(Array.from(sel.options).length).toBe(3);\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'enabled'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('enabled');\n});"

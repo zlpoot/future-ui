@@ -148,15 +148,66 @@ def test_baseline_tool_rejected():
 
 def test_budget_fail_closed():
     from relay import Relay
+    from agent_loop import precall_max_tokens, config_digest
     r = Relay(CONFIG)
     c = r._cost({"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
                  "prompt_tokens_details": {"cached_tokens": 0}})
     assert c[0] == round((5.0 + 15.0), 6), c  # $5 + $15 per M tokens
+    # 预调用 gating：预算充足 → 允许 max_out；预算被占满 → 0（停止）
     ledger = Ledger(RUNS_DIR)
-    if ledger.total_cost() > float(CONFIG["usdHardCap"]):
-        # 构造验证：relay._cost 在超限时 cost>cap → 循环内 fail-closed 分支已由单测覆盖
-        pass
-    print("budget fail-closed math: PASS ($5/M in + $15/M out check)")
+    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0)
+    assert full == int(CONFIG["api"]["maxOutputTokens"]), full
+    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0)
+    assert stopped == 0, stopped
+    # 最坏情况单次调用不超剩余预算：allowed 输出 token 的按单价成本 ≤ 剩余
+    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0)
+    worst_in = min(int(CONFIG["maxInputTokensPerCall"]), int(CONFIG["maxTokensPerRun"]))
+    worst = (worst_in * r.price_in + allowed * r.price_out) / 1e6
+    assert worst <= float(CONFIG["usdHardCap"]) - 1.0 + 1e-9, (worst, allowed)
+    assert len(config_digest(CONFIG)) == 16
+    print("budget fail-closed math: PASS (pre-call gating never overshoots; digest present)")
+
+
+class _FakeRelay:
+    def __init__(self, prices):
+        self.price_in = prices["input"] / 1e6
+        self.price_out = prices["output"] / 1e6
+        self.model = "fake"
+        self.base = "fake://"
+
+
+def test_ab_order_deterministic():
+    from run_calibration import order_groups
+    from capsule import ab_order
+    both = ["baseline", "experiment"]
+    for seed in (1001, 1003, 1005, 1007, 1009, 1011):
+        assert order_groups(both, seed) == ["experiment", "baseline"], (seed, ab_order(seed))
+    for seed in (1002, 1004, 1006, 1008, 1010, 1012):
+        assert order_groups(both, seed) == ["baseline", "experiment"], (seed, ab_order(seed))
+    assert order_groups(["experiment"], 1002) == ["experiment"]
+    print("A/B order by seed: PASS (odd->experiment first, even->baseline first)")
+
+
+def test_relay_error_resilience():
+    from agent_loop import run_task_run
+    ledger = Ledger(RUNS_DIR)
+    before = ledger.count()
+    task = load_task("cal-t4-003")
+    ws = build_workspace(task, RUNS_DIR)
+
+    class BrokenModel:
+        def __call__(self, messages, group, attempt):
+            raise RuntimeError("simulated relay outage")
+
+    e = run_task_run(task, "baseline", ws["baseline"], RUNS_DIR, None, CONFIG, ledger,
+                     fake_model=BrokenModel(), subject_sha="dry", harness_sha="dry")
+    assert ledger.count() == before + 1, "a failed run must still leave a ledger record"
+    assert e["status"] == "error", e["status"]
+    assert e["feedbackLog"] and "error" in e["feedbackLog"][0], e["feedbackLog"]
+    assert e["finalEval"]["pass"] is False
+    assert e["order"] == "baseline_first"
+    assert e["modelId"] == "dry" and e["configDigest"]
+    print("relay error resilience: PASS (ledger record + status=error + eval still runs)")
 
 
 def main():
@@ -165,8 +216,10 @@ def main():
     test_feedback()
     test_bridge()
     test_budget_fail_closed()
+    test_ab_order_deterministic()
     test_baseline_tool_rejection_and_loop()
     test_baseline_tool_rejected()
+    test_relay_error_resilience()
     print("ALL HARNESS SELF-CHECKS PASSED")
 
 

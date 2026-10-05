@@ -207,7 +207,7 @@ T3 = {}
 _T3_SELECT = {
     "id": "filter", "type": "select", "props": {
         "options": [{"label": "全部", "value": ""}, {"label": "已启用", "value": "enabled"}, {"label": "已禁用", "value": "disabled"}],
-        "defaultValue": "enabled"}},
+        "defaultValue": "enabled"}}
 _T3_BUTTON = {"id": "submit", "type": "button", "label": "提交", "props": {"type": "button"}}
 
 T3["cal-t3-001"] = {
