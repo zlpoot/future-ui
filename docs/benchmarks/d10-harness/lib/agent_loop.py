@@ -10,7 +10,7 @@
 - 护栏（预调用 fail-closed，Review P1）：每次模型调用**前**根据剩余预算/剩余 token 计算
   本次允许的 max_tokens（含最坏情况输入占用），预算不足即停止——不是事后判断；
   attempt ≤ attemptsPerTask；run 内 aggregate tokens ≤ maxTokensPerRun；
-  全局累计 cost ≤ usdHardCap；
+  全局累计 tokens ≤ globalMaxTokens；价格只记录，不参与停止；
 - relay 调用失败不退出：记录失败、继续尝试；全部尝试失败仍写 ledger（status=error）。
 """
 import io, json, os, re, subprocess, time, hashlib
@@ -131,7 +131,7 @@ def run_evaluator(task, workspace, runs_dir):
 
 def config_digest(config):
     """config.json 的 API/单价/上限/护栏段 digest（Review P2：ledger 需记录配置指纹）。"""
-    keys = ["api", "pricesPerMToken", "usdHardCap", "attemptsPerTask", "maxTokensPerRun",
+    keys = ["api", "pricesPerMToken", "globalMaxTokens", "attemptsPerTask", "maxTokensPerRun",
             "maxInputTokensPerCall", "minOutputTokens", "providerOverheadTokens"]
     payload = {k: config.get(k) for k in keys}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
@@ -159,28 +159,21 @@ def request_tokens_ub(messages, model, config, max_tokens_placeholder=999999):
 def precall_max_tokens(relay, config, ledger, run_cost, usage_total, request_ub):
     """预调用 fail-closed：返回本次调用允许的 max_tokens；0 = 应停止。
 
-    输入预留 = 请求级上界 request_ub（调用方已强制 ≤ maxInputTokensPerCall），
-    输出 = max_tokens；两者最坏情况都必须落在剩余 $ 预算与剩余 aggregate token（150K）内，
-    才能发请求——本次调用**不可能**超过 (request_ub + max_tokens) tokens 与对应美元成本。
+    CAL-001 预算只按 token：单 task-run <= maxTokensPerRun；全部 calibration <= globalMaxTokens。
+    cost/价格仅记录，不参与 stop/go。request_ub + 输出必须同时装进 run/global 剩余 token。
     """
-    cost_max = float(config["usdHardCap"])
     tokens_max = int(config["maxTokensPerRun"])
+    global_tokens_max = int(config["globalMaxTokens"])
     max_out = int(config["api"].get("maxOutputTokens", 8192))
     min_out = int(config.get("minOutputTokens", 256))
     max_in_call = int(config.get("maxInputTokensPerCall", 30000))
-    remaining_cost = cost_max - ledger.total_cost() - run_cost
-    remaining_tokens = tokens_max - usage_total
-    if remaining_cost <= 0 or remaining_tokens <= 0:
+    remaining_run = tokens_max - usage_total
+    remaining_global = global_tokens_max - ledger.total_tokens() - usage_total
+    if remaining_run <= 0 or remaining_global <= 0:
         return 0
-    # 请求级上界超过配置的输入上限 → 拒绝（fail-closed；agent_loop 会标 status=prompt_too_large）
     if request_ub > max_in_call:
         return 0
-    in_wc = min(request_ub, remaining_tokens)
-    if remaining_cost <= in_wc * relay.price_in / 1e6:
-        return 0
-    out_by_cost = int((remaining_cost - in_wc * relay.price_in / 1e6) // (relay.price_out / 1e6))
-    out_by_tokens = remaining_tokens - in_wc
-    allowed = min(max_out, out_by_cost, out_by_tokens)
+    allowed = min(max_out, remaining_run - request_ub, remaining_global - request_ub)
     return allowed if allowed >= min_out else 0
 
 
@@ -206,7 +199,7 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
     cfg_api = config["api"]
     attempts_max = int(config["attemptsPerTask"])
     tokens_max = int(config["maxTokensPerRun"])
-    cost_max = float(config["usdHardCap"])
+    global_tokens_max = int(config["globalMaxTokens"])
     digest = config_digest(config)
 
     system = SYSTEM_COMMON + (SYSTEM_EXPERIMENT_EXTRA if group == "experiment" else SYSTEM_BASELINE_NOTE)
@@ -241,8 +234,8 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
                     break
                 allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"], request_ub)
                 if allowed <= 0:
-                    status = "budget_stop" if (cost_max - ledger.total_cost() - cost) <= 0 else "token_stop"
-                    feedback_log.append({"attempt": attempts, "note": "pre-call fail-closed: no budget/token headroom ({0})".format(status)})
+                    status = "token_stop"
+                    feedback_log.append({"attempt": attempts, "note": "pre-call fail-closed: no run/global token headroom"})
                     break
                 resp = relay.chat(messages, max_tokens=allowed)
         except Exception as e:
@@ -260,9 +253,9 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
             status = "token_stop"
             feedback_log.append({"attempt": attempts, "note": "aggregate tokens exceeded cap"})
             break
-        if ledger.total_cost() + cost > cost_max:
-            status = "budget_stop"
-            feedback_log.append({"attempt": attempts, "note": "global budget cap exceeded (fail-closed)"})
+        if ledger.total_tokens() + usage["total"] > global_tokens_max:
+            status = "token_stop"
+            feedback_log.append({"attempt": attempts, "note": "global 5,000,000 token cap exceeded (fail-closed)"})
             break
 
         content = resp["content"]
@@ -325,7 +318,7 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
     # outcomeEligible（Review P2）：仅 status=done 的结果可进入统计；budget/token/prompt 停止
     # 或 error 视为未完成（finalEval.pass 不得被统计误吃）
     outcome_eligible = status == "done"
-    billing_verified = False  # 中转站 billing rule 未确认，占位单价无法证明真实花费 ≤ $50
+    budget_policy = "token_only"
 
     entry = {
         "taskId": task_id, "family": family, "seed": seed, "group": group,
@@ -339,7 +332,7 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
         "finalEval": {"pass": bool(verdict.get("pass")), "summary": verdict.get("summary"),
                       "elapsed": ev_dt},
         "outcomeEligible": outcome_eligible,
-        "billingRuleVerified": billing_verified,
+        "budgetPolicy": budget_policy,
         "failureCategory": "none" if verdict.get("pass") else status if status != "done" else "task_failed",
         "status": status,
         "evalError": verdict.get("error"),

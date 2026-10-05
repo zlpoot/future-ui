@@ -3,7 +3,7 @@
 
 每 run 一条：taskId/family/seed/group/order/subjectSha/harnessSha/attempts/
 usage/cost/elapsed/feedback/bridge/eval/failureCategory/status。
-全局预算护栏读取累计 cost。
+全局预算护栏读取累计 token；cost 仅作为非权威观测记录。
 """
 import io, json, os, time
 
@@ -38,6 +38,9 @@ class Ledger:
 
     def total_cost(self):
         return sum(float(e.get("cost", 0) or 0) for e in self._entries)
+
+    def total_tokens(self):
+        return sum(int((e.get("usage") or {}).get("total", 0) or 0) for e in self._entries)
 
     def count(self):
         return len(self._entries)

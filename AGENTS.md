@@ -2,7 +2,7 @@
 
 ## 当前授权边界：SCOPED_DEVELOPMENT · CAL-001 · #23 calibration ONLY（preparation + execution）
 
-负责人已于 2026-10-05 通过 #4 建立 Current Grant `CAL-001`：**仅限 #23「AI 开发对照评估与效果证据（真实模型）」的 calibration preparation + calibration execution**——harness / calibration runner、12 个 paired task fixtures、workspace isolation、budget guard、result ledger 的代码编写，本地 test/build，对应 PR，以及 `gpt-6.1-sol` calibration 模型调用（$50 hard cap 内）。
+负责人已于 2026-10-05 通过 #4 建立 Current Grant `CAL-001`：**仅限 #23「AI 开发对照评估与效果证据（真实模型）」的 calibration preparation + calibration execution**——harness / calibration runner、12 个 paired task fixtures、workspace isolation、budget guard、result ledger 的代码编写，本地 test/build，对应 PR，以及 `gpt-6.1-sol` calibration 模型调用（全局 5,000,000 tokens hard cap 内；实际价格不参与停止条件）。
 
 CAL-001 允许：上述 #23 calibration 相关代码修改、本地 build/test、CI 配置修改与 CI 运行、`gpt-6.1-sol` calibration 模型调用（预算内）、对应 PR 创建与合并。明确禁止：acceptance 运行、acceptance 预算、任何其他 Issue 的实现、部署、发布。Merge/Close 权限按负责人逐项确认。
 
