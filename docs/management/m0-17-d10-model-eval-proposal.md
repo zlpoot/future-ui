@@ -1,6 +1,6 @@
 # D10 — AI 开发对照评估方案与模型预算建议（#23 · M1-06B）
 
-状态：**Proposal（待负责人批准；Rev.3 已按 same-head Re-Review 修改）**。批准前不启动 #23、不调用任何付费/真实模型。
+状态：**Proposal（待负责人批准；Rev.4 已按 final Re-Review 修改）**。批准前不启动 #23、不调用任何付费/真实模型。
 目标消费者：#23「AI 开发对照评估与效果证据（真实模型）」；Parent #13。
 对齐：`docs/benchmarks/strategy.md`（V10 验收矩阵、三层正确性、calibration/acceptance 分离）；D10（decision-register，当前「数值 TBD」）；#22/#25/#10（确定性工具链与共享业务动作前提，均已 accepted）。
 基线：main @ `aa48862`（2026-10-05）。
@@ -66,18 +66,21 @@
 
 1. **Calibration（pilot）**：每族 3 个样本 × 2 组（共约 24 runs，独立 task IDs），仅用于：验证任务说明可执行、测量任务难度与通过率基线、校准 attempt/token 上限与 **p95 cost/run**。
 2. calibration 数据**不计入**正式 acceptance；不得用已看过的结果回填门槛。
-3. calibration 结束后**冻结**：测量方法、任务集/样本量、阈值（threshold-setting rule）、停止条件、报告格式、**primary endpoint**（写入 #23 冻结协议段落）。
-4. **Acceptance**：使用与 calibration **互不重叠**的 task IDs/seeds；每族 8–10 个独立样本 × 2 组（首波共约 64–80 runs），按冻结协议执行；修改关键方法/阈值须重新说明并重启受影响 acceptance。
+3. calibration 结束后**冻结**：测量方法、任务集/样本量（含 power/sensitivity 预注册规则）、阈值（threshold-setting rule）、停止条件、报告格式、**primary endpoint**（写入 #23 冻结协议段落）。
+4. **Acceptance**：使用与 calibration **互不重叠**的 task IDs/seeds；首波 4 族 × 8 paired tasks × 2 组 = **32 pairs / 64 runs**（正式样本量按 §6 预注册 power 规则可能上调至 n* pairs），按冻结协议执行；修改关键方法/阈值须重新说明并重启受影响 acceptance。
 
 ## 6. 样本量与统计口径
 
-- 首波 acceptance 样本量：4 族 × 8 任务 × 2 组 = **64 runs**（paired，同任务两组各跑一次）；扩展档 4 族 × 10 任务 × 2 组。
+- 首波 acceptance：4 族 × 8 paired tasks × 2 组 = **32 pairs / 64 runs**（paired，同任务两组各跑一次）；扩展档 4 族 × 10 任务 × 2 组 = 40 pairs / 80 runs。
+- **Power/sensitivity 预注册（Rev.4，写死在 calibration 前）**：calibration 结束后、看 acceptance 数据前，按以下**事先写死**的规则确定正式 acceptance 样本量——选定最小有意义效果 Δ_min（建议 0.15）与双侧 α=0.05、80% power，用 calibration 实测基线通过率代入 **McNemar 精确检验的 power 计算**，得出所需 paired tasks 数 n*；正式 acceptance 样本量 = 4 族 × max(n*_per_family, 8)。若首波 32 pairs 不足以达到 80% power，首波明确定义为**探索/决策支持性** acceptance（报告时注明统计 power 有限），正式 acceptance 按预注册 n* 使用新的 task IDs/seeds 执行。
+- **禁止**：跑完首波后因结果不理想再补样本；样本量只能由上述预注册公式决定，并在 calibration 后、acceptance 数据收集前冻结写入 #23。
 - **Primary endpoint（acceptance 前冻结，建议）**：最终交互正确率（确定性 `ui.test` 通过率）作为主终点；首轮通过率、完成率、平均修复轮数、回归率、token/成本/时延、失败类别为次要指标。
-- **Threshold-setting rule（Rev.3：预注册算法，写死在 calibration 结果出来之前）**：
-  1. **统计量**：primary endpoint 的每任务二元 pass/fail（实验组以冻结 `ui.test` 为准，基线组以同判据的等价检查为准）；aggregate = 4 族合并的 pass rate 差值 Δ = p_exp − p_base。
-  2. **判定算法（先写死，后看数据）**：用 Fisher exact / Clopper-Pearson 双侧 95% CI；**acceptance 成功判据 = Δ > 0 且 p_exp 的 95% exact CI 下界 > p_base**（即实验组显著优于基线组，α=0.05）。同时报告 Δ 与 95% CI 作为效果量。
-  3. **拒绝重调**：无论结果正负，实验均视为完成；**若 Δ 无显著差异，结论即为「future-ui 未带来显著提升」，实验仍然完成并如实报告**；不得为追求正结果调整阈值、补跑样本或事后修改判定算法（任何修改 = 新授权 + 重启 acceptance）。
-  4. **成本阈值**：acceptance 预算 = calibration 实测 p95 cost/run × 计划 runs × 1.2 安全系数（见 §7.2），同样先写死。
+- **Threshold-setting rule（Rev.4：配对预注册算法，写死在 calibration 结果出来之前）**：
+  1. **配对统计量**：每个 paired task（同 task ID/seed，两组各跑一次）生成 2×2 对子表：a = exp PASS/base PASS、b = exp PASS/base FAIL、c = exp FAIL/base PASS、d = exp FAIL/base FAIL；N = a+b+c+d（paired tasks 总数）；**Δ = (b − c) / N = p_exp − p_base**（配对风险差）。
+  2. **主检验（先写死，后看数据）**：**exact two-sided McNemar test（对不一致对子 b vs c 的精确二项检验，H₀: p=0.5），α = 0.05**；acceptance 成功判据 = **Δ > 0 且 McNemar 双侧 p < 0.05**（不一致对子显著偏向实验组）。**不再使用「p_exp 的 CI 下界 > p_base」作为显著性判断**（那是独立样本方法，与配对设计不符）。
+  3. **效果量**：报告 Δ = p_exp − p_base 及其配对 risk-difference 95% CI，方法在 calibration 前冻结（建议 **Newcombe matched-pairs interval**）。
+  4. **拒绝重调**：无论结果正负，实验均视为完成；**若 Δ 无显著差异，结论即为「future-ui 未带来显著提升」，实验仍然完成并如实报告**；不得为追求正结果调整阈值、补跑样本或事后修改判定算法（任何修改 = 新授权 + 重启 acceptance）。
+  5. **成本阈值**：acceptance 预算 = calibration 实测 p95 cost/run × 计划 runs × 1.2 安全系数（见 §7.2），同样先写死。
 - 分层报告（按族/按组），保留所有尝试与失败样本；结果只在冻结任务集与样本量范围内解释。
 
 ## 7. 预算：先 Calibration，后定 Acceptance（Rev.2 修正）
@@ -92,7 +95,7 @@
 - 目标产物：p95 cost/run、任务难度基线、attempt/token 上限校准、threshold-setting 依据
 
 ### 7.2 Acceptance 预算（calibration 后冻结）
-- 按 CAL-001 实测的 **p95 cost/run** × 计划 acceptance runs（64–80）× 安全系数，在 calibration 报告后向负责人申请并冻结；
+- 按 CAL-001 实测的 **p95 cost/run** × 计划 acceptance runs（首波 32 pairs = 64 runs；按预注册 power 规则可能上调至 n* pairs）× 安全系数，在 calibration 报告后向负责人申请并冻结；
 - 参考：若 150K tokens 确为每 run aggregate 上限，按 Sonnet 5 定价（$2/M in、$10/M out）纯 token 成本远低于原 `$250–450` 预估，具体数值以实测为准；
 - 预算规则：单日封顶（建议 $150，calibration 阶段按 $50 总封顶执行）、重试计入预算、用尽即停；追加需重新授权。
 
@@ -127,3 +130,7 @@
 1. **基线工具清单冻结**：「该环境可用的官方资料/工具」收窄为明确清单（React/Ark UI/MDN/TS 官方文档冻结快照 + 仓库已冻结工具链）；实验组 = 同一基线工具 + future-ui，差异仅此一项（§2）。
 2. **Sonnet 5 控制参数修正**：改为「同 exact model ID + 同 effort/thinking 配置 + 同 max-output/tool policy + provider-default sampling」；不写「同 temperature/采样参数」（Sonnet 5 不接受非默认温度参数，adaptive thinking 默认开启）（§2、§4）。
 3. **threshold-setting 算法化**：定义 calibration 统计量 → acceptance 阈值的预注册公式（Fisher exact / Clopper-Pearson 95% CI，Δ > 0 且 p_exp 下界 > p_base 为成功判据）；明确 null result（「future-ui 未提升」）仍是完成实验，禁止为求正结果调阈值（§6）。
+
+### Rev.3 → Rev.4（final Re-Review：1 项 P1 统计 + 1 项 P2 样本量）
+1. **配对统计重写（P1）**：paired 设计改用**配对二元分析**——每个 paired task 生成 2×2 对子表（a/b/c/d），主检验 = **exact two-sided McNemar test**（α=0.05，不一致对子 b vs c 的精确二项检验），成功判据 = Δ > 0 且 McNemar p < 0.05；效果量 Δ = (b − c)/N = p_exp − p_base，配 **Newcombe matched-pairs 95% CI**（calibration 前冻结）；**删除「p_exp CI 下界 > p_base」独立样本判据**（§6）。
+2. **Power/sensitivity 预注册（P2）**：calibration 后、acceptance 数据前按事先写死公式定样本量（Δ_min=0.15、α=0.05、80% power、McNemar power 计算）；首波 32 pairs 若 power 不足则明确定义为探索/决策支持性 acceptance（注明 power 有限），正式 acceptance 按预注册 n* 用新 task IDs/seeds；**禁止跑完再补样本**（§6、§5、§7.2）。
