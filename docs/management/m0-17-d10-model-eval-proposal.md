@@ -1,6 +1,6 @@
 # D10 — AI 开发对照评估方案与模型预算建议（#23 · M1-06B）
 
-状态：**Proposal（待负责人批准；Rev.4 已按 final Re-Review 修改）**。批准前不启动 #23、不调用任何付费/真实模型。
+状态：**Proposal（待负责人批准；Rev.5 已按 final Re-Review 修改）**。批准前不启动 #23、不调用任何付费/真实模型。
 目标消费者：#23「AI 开发对照评估与效果证据（真实模型）」；Parent #13。
 对齐：`docs/benchmarks/strategy.md`（V10 验收矩阵、三层正确性、calibration/acceptance 分离）；D10（decision-register，当前「数值 TBD」）；#22/#25/#10（确定性工具链与共享业务动作前提，均已 accepted）。
 基线：main @ `aa48862`（2026-10-05）。
@@ -72,13 +72,18 @@
 ## 6. 样本量与统计口径
 
 - 首波 acceptance：4 族 × 8 paired tasks × 2 组 = **32 pairs / 64 runs**（paired，同任务两组各跑一次）；扩展档 4 族 × 10 任务 × 2 组 = 40 pairs / 80 runs。
-- **Power/sensitivity 预注册（Rev.4，写死在 calibration 前）**：calibration 结束后、看 acceptance 数据前，按以下**事先写死**的规则确定正式 acceptance 样本量——选定最小有意义效果 Δ_min（建议 0.15）与双侧 α=0.05、80% power，用 calibration 实测基线通过率代入 **McNemar 精确检验的 power 计算**，得出所需 paired tasks 数 n*；正式 acceptance 样本量 = 4 族 × max(n*_per_family, 8)。若首波 32 pairs 不足以达到 80% power，首波明确定义为**探索/决策支持性** acceptance（报告时注明统计 power 有限），正式 acceptance 按预注册 n* 使用新的 task IDs/seeds 执行。
-- **禁止**：跑完首波后因结果不理想再补样本；样本量只能由上述预注册公式决定，并在 calibration 后、acceptance 数据收集前冻结写入 #23。
+- **Power/sensitivity 预注册（Rev.5：可复现参数化，写死在 calibration 前）**：McNemar 配对 power 由**不一致对子率**决定，baseline pass rate 不足唯一确定；故同时冻结 δ 与 q 两个参数，calibration 后无任何人为自由度：
+  1. **参数冻结**：δ_min = 0.15（最小有意义配对风险差）、双侧 α = 0.05、power ≥ 0.80。
+  2. **q\* 取法**：calibration 后计算总不一致率 **q_cal = (b + c) / N_cal（pooled，跨全部族合并——每族 calibration 仅 3 pairs，族级 q 过稀疏，不按族估）**；取保守上界 **q\* = q_cal 的 95% binomial upper confidence bound（Clopper-Pearson）**；若 **q\* < δ_min，则固定 q\* = δ_min**（退化参数防护）。
+  3. **反解对子率**：**p10 = (q\* + δ_min) / 2、p01 = (q\* − δ_min) / 2**（p10 = exp PASS/base FAIL 率，p01 = exp FAIL/base PASS 率；需满足 0 ≤ p01 ≤ p10 ≤ 1 且 δ_min ≤ q\*）。
+  4. **样本量**：求 **exact two-sided McNemar power ≥ 80% 的最小 paired n\***（精确二项/枚举计算）；正式 acceptance 样本量 = 4 族 × max(n\*, 8)/族（pooled 口径下 n\* 全局一致，在 #23 冻结时写死计算口径，禁止两可）。
+  5. **首波定位**：首波 32 pairs 若 power 不足，明确定义为**探索/决策支持性** acceptance（报告注明统计 power 有限），正式 acceptance 按预注册 n\* 用新 task IDs/seeds 执行。
+  6. **禁止**：跑完首波后因结果不理想再补样本；样本量只能由上述预注册公式决定，并在 calibration 后、acceptance 数据收集前冻结写入 #23。
 - **Primary endpoint（acceptance 前冻结，建议）**：最终交互正确率（确定性 `ui.test` 通过率）作为主终点；首轮通过率、完成率、平均修复轮数、回归率、token/成本/时延、失败类别为次要指标。
 - **Threshold-setting rule（Rev.4：配对预注册算法，写死在 calibration 结果出来之前）**：
   1. **配对统计量**：每个 paired task（同 task ID/seed，两组各跑一次）生成 2×2 对子表：a = exp PASS/base PASS、b = exp PASS/base FAIL、c = exp FAIL/base PASS、d = exp FAIL/base FAIL；N = a+b+c+d（paired tasks 总数）；**Δ = (b − c) / N = p_exp − p_base**（配对风险差）。
   2. **主检验（先写死，后看数据）**：**exact two-sided McNemar test（对不一致对子 b vs c 的精确二项检验，H₀: p=0.5），α = 0.05**；acceptance 成功判据 = **Δ > 0 且 McNemar 双侧 p < 0.05**（不一致对子显著偏向实验组）。**不再使用「p_exp 的 CI 下界 > p_base」作为显著性判断**（那是独立样本方法，与配对设计不符）。
-  3. **效果量**：报告 Δ = p_exp − p_base 及其配对 risk-difference 95% CI，方法在 calibration 前冻结（建议 **Newcombe matched-pairs interval**）。
+  3. **效果量**：报告 Δ = p_exp − p_base 及其配对 risk-difference 95% CI，方法冻结为 **Newcombe (1998) matched-pairs method 10**；具体实现（library/function/version）在批准 #23 时一并冻结，确保不同 evaluator 算出同一 interval。
   4. **拒绝重调**：无论结果正负，实验均视为完成；**若 Δ 无显著差异，结论即为「future-ui 未带来显著提升」，实验仍然完成并如实报告**；不得为追求正结果调整阈值、补跑样本或事后修改判定算法（任何修改 = 新授权 + 重启 acceptance）。
   5. **成本阈值**：acceptance 预算 = calibration 实测 p95 cost/run × 计划 runs × 1.2 安全系数（见 §7.2），同样先写死。
 - 分层报告（按族/按组），保留所有尝试与失败样本；结果只在冻结任务集与样本量范围内解释。
@@ -134,3 +139,7 @@
 ### Rev.3 → Rev.4（final Re-Review：1 项 P1 统计 + 1 项 P2 样本量）
 1. **配对统计重写（P1）**：paired 设计改用**配对二元分析**——每个 paired task 生成 2×2 对子表（a/b/c/d），主检验 = **exact two-sided McNemar test**（α=0.05，不一致对子 b vs c 的精确二项检验），成功判据 = Δ > 0 且 McNemar p < 0.05；效果量 Δ = (b − c)/N = p_exp − p_base，配 **Newcombe matched-pairs 95% CI**（calibration 前冻结）；**删除「p_exp CI 下界 > p_base」独立样本判据**（§6）。
 2. **Power/sensitivity 预注册（P2）**：calibration 后、acceptance 数据前按事先写死公式定样本量（Δ_min=0.15、α=0.05、80% power、McNemar power 计算）；首波 32 pairs 若 power 不足则明确定义为探索/决策支持性 acceptance（注明 power 有限），正式 acceptance 按预注册 n* 用新 task IDs/seeds；**禁止跑完再补样本**（§6、§5、§7.2）。
+
+### Rev.4 → Rev.5（final Re-Review：最后 1 项 P1 统计可复现性）
+1. **McNemar power 参数化（P1）**：明确配对 power 由不一致对子率决定，需 **δ 与 q 双参数**——冻结 δ_min=0.15、α=0.05、power≥0.80；calibration 后取 **pooled q_cal = (b+c)/N_cal** 的 95% binomial 上界（Clopper-Pearson）为 **q\***（若 q\* < δ_min 则固定 q\*=δ_min）；由 **p10=(q\*+δ_min)/2、p01=(q\*−δ_min)/2** 反解对子率，求 **exact two-sided McNemar power ≥ 80% 的最小 paired n\***；q 统一 **pooled**（每族 calibration 仅 3 pairs，族级过稀疏），消除校准后人择 q 的自由度（§6）。
+2. **Newcombe CI 精确化**：效果量 CI 冻结为 **Newcombe (1998) matched-pairs method 10**，具体实现（library/function/version）在批准 #23 时一并冻结，保证 evaluator 间同 interval（§6）。
