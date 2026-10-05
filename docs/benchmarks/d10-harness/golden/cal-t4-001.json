@@ -1,0 +1,31 @@
+{
+  "taskId": "cal-t4-001",
+  "family": "t4",
+  "checks": [
+    {
+      "id": "/button[0]:提交",
+      "type": "structure",
+      "path": "/button[0]",
+      "expect": {
+        "tag": "button",
+        "part": "root",
+        "text": "提交",
+        "attrs": {
+          "type": "submit",
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "i-btn",
+      "type": "interaction",
+      "action": {
+        "kind": "click",
+        "target": "/button[0]"
+      },
+      "expect": {
+        "event": "click"
+      }
+    }
+  ]
+}

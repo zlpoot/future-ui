@@ -1,0 +1,10 @@
+{
+  "taskId": "cal-t1-003",
+  "family": "t1",
+  "seed": 1003,
+  "taskText": "根据以下需求实现一个页面（编辑 spec.json）：\n1. 渲染一个名称输入框：占位文案「请输入名称」，默认值「张三」，aria-label 为「名称」；\n2. 渲染一个「提交」按钮（可点击，点击产生 click 事件）；\n3. 渲染一个类别下拉框：选项 A/B（值 a/b），默认选中 B。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": []
+  },
+  "feedbackBody": "it('renders input, button and select', () => {\n  const input = container.querySelector('input[data-part=root]');\n  expect(input).toBeTruthy(); expect(input.placeholder).toBe('请输入名称');\n  expect(input.value).toBe('张三'); expect(input.getAttribute('aria-label')).toBe('名称');\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn).toBeTruthy(); expect(btn.textContent).toBe('提交');\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy(); expect(sel.value).toBe('b');\n});\nit('button click fires and select change fires', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(true);\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'a'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('a');\n});"
+}

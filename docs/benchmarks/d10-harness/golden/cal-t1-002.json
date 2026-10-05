@@ -1,0 +1,103 @@
+{
+  "taskId": "cal-t1-002",
+  "family": "t1",
+  "checks": [
+    {
+      "id": "/button[0]:保存",
+      "type": "structure",
+      "path": "/button[0]",
+      "expect": {
+        "tag": "button",
+        "part": "root",
+        "text": "保存",
+        "attrs": {
+          "type": "button",
+          "disabled": "",
+          "aria-busy": "true"
+        }
+      }
+    },
+    {
+      "id": "i-btn-loading",
+      "type": "interaction",
+      "action": {
+        "kind": "click",
+        "target": "/button[0]"
+      },
+      "expect": {
+        "event": null
+      }
+    },
+    {
+      "id": "/select[0]:select",
+      "type": "structure",
+      "path": "/select[0]",
+      "expect": {
+        "tag": "select",
+        "part": "root",
+        "attrs": {
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[0]:请选择状态",
+      "type": "structure",
+      "path": "/select[0]/option[0]",
+      "expect": {
+        "tag": "option",
+        "text": "请选择状态",
+        "attrs": {
+          "value": ""
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[1]:未保存",
+      "type": "structure",
+      "path": "/select[0]/option[1]",
+      "expect": {
+        "tag": "option",
+        "text": "未保存",
+        "attrs": {
+          "value": "unsaved"
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[2]:已保存",
+      "type": "structure",
+      "path": "/select[0]/option[2]",
+      "expect": {
+        "tag": "option",
+        "text": "已保存",
+        "attrs": {
+          "value": "saved"
+        }
+      }
+    },
+    {
+      "id": "select-default",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "unsaved"
+      }
+    },
+    {
+      "id": "i-sel",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "saved"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "saved"
+        }
+      }
+    }
+  ]
+}

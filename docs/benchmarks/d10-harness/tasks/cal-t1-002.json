@@ -1,0 +1,10 @@
+{
+  "taskId": "cal-t1-002",
+  "family": "t1",
+  "seed": 1002,
+  "taskText": "根据以下需求实现一个页面（编辑 spec.json）：\n1. 渲染一个「保存」按钮；\n2. 渲染一个「状态」下拉框：选项「未保存/已保存」（值 unsaved/saved），占位文案「请选择状态」，默认选中「未保存」。\n按钮要求：处于 loading 状态——应呈现为禁用并带 aria-busy 提示，loading 时点击不产生任何事件。\n下拉框要求：可正常切换选项并产生 change 事件。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": []
+  },
+  "feedbackBody": "it('renders loading button and working select', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn).toBeTruthy(); expect(btn.textContent).toBe('保存');\n  expect(btn.disabled).toBe(true); expect(btn.getAttribute('aria-busy')).toBe('true');\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy(); expect(sel.value).toBe('unsaved');\n});\nit('loading button click does not fire; select change fires', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(false);\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'saved'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('saved');\n});"
+}

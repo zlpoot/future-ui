@@ -1,0 +1,88 @@
+{
+  "taskId": "cal-t2-003",
+  "family": "t2",
+  "checks": [
+    {
+      "id": "/select[0]:select",
+      "type": "structure",
+      "path": "/select[0]",
+      "expect": {
+        "tag": "select",
+        "part": "root",
+        "attrs": {
+          "disabled": null
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[1]:A",
+      "type": "structure",
+      "path": "/select[0]/option[1]",
+      "expect": {
+        "tag": "option",
+        "text": "A",
+        "attrs": {
+          "value": "a"
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[2]:B",
+      "type": "structure",
+      "path": "/select[0]/option[2]",
+      "expect": {
+        "tag": "option",
+        "text": "B",
+        "attrs": {
+          "value": "b"
+        }
+      }
+    },
+    {
+      "id": "/select[0]/option[3]:s",
+      "type": "structure",
+      "path": "/select[0]/option[3]",
+      "expect": {
+        "absent": true
+      }
+    },
+    {
+      "id": "default-a",
+      "type": "state",
+      "path": "/select[0]",
+      "state": {
+        "value": "a"
+      }
+    },
+    {
+      "id": "i-default",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "a"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "a"
+        }
+      }
+    },
+    {
+      "id": "i-switch",
+      "type": "interaction",
+      "action": {
+        "kind": "change",
+        "target": "/select[0]",
+        "value": "b"
+      },
+      "expect": {
+        "event": "change",
+        "state": {
+          "value": "b"
+        }
+      }
+    }
+  ]
+}

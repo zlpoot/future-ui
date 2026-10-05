@@ -1,0 +1,27 @@
+{
+  "taskId": "cal-t2-001",
+  "family": "t2",
+  "seed": 1004,
+  "taskText": "页面应渲染一个筛选下拉框：占位「请选择」，选项「已启用/已禁用」（值分别为 enabled/disabled），且默认选中「已启用」。\n当前 spec.json 渲染不正确（下拉框选项异常、默认值不生效），请修复 spec.json 使页面完全符合描述。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "已启用"
+            },
+            {
+              "label": "已禁用"
+            }
+          ],
+          "placeholder": "请选择",
+          "defaultValue": "enabled"
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('options carry values and default applies', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy();\n  const opts = Array.from(sel.options).map(o => o.value + ':' + o.textContent);\n  expect(opts).toContain('enabled:已启用'); expect(opts).toContain('disabled:已禁用');\n  expect(sel.value).toBe('enabled');\n});\nit('select change fires', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'disabled'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('disabled');\n});"
+}

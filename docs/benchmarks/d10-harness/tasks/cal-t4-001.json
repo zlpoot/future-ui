@@ -1,0 +1,20 @@
+{
+  "taskId": "cal-t4-001",
+  "family": "t4",
+  "seed": 1010,
+  "taskText": "定位并修复这个交互 bug：点击「提交」按钮应该触发提交事件，但现在点击没有任何反应。\n修复后其余行为不变。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "submit",
+        "type": "button",
+        "label": "提交",
+        "props": {
+          "type": "submit",
+          "disabled": true
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('button click fires after fix', () => {\n  const btn = container.querySelector('button[data-part=root]');\n  expect(btn).toBeTruthy(); expect(btn.disabled).toBe(false);\n  let clicked = false; btn.addEventListener('click', () => { clicked = true; });\n  btn.click(); expect(clicked).toBe(true);\n});"
+}

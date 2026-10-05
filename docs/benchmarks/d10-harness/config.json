@@ -1,0 +1,20 @@
+{
+  "api": {
+    "baseUrlEnv": "D10_API_BASE_URL",
+    "apiKeyEnv": "D10_API_KEY",
+    "modelEnv": "D10_MODEL",
+    "formatEnv": "D10_API_FORMAT",
+    "endpoint": "/chat/completions",
+    "maxOutputTokens": 8192
+  },
+  "pricesPerMToken": {
+    "input": 5.0,
+    "output": 15.0,
+    "cachedInput": 2.5
+  },
+  "usdHardCap": 50.0,
+  "attemptsPerTask": 5,
+  "maxTokensPerRun": 150000,
+  "runTimeoutSec": 1800,
+  "runsDir": "runs"
+}

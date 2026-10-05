@@ -1,0 +1,34 @@
+{
+  "taskId": "cal-t2-003",
+  "family": "t2",
+  "seed": 1006,
+  "taskText": "页面应渲染一个类别下拉框：选项 A/B（值 a/b，不得重复），占位「请选择」，默认选中「A」，且可正常切换（切换产生 change 事件）。\n当前 spec.json 渲染不正确（默认值不生效、切换无效果、选项异常），请修复 spec.json 使页面完全符合描述。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "b"
+            },
+            {
+              "label": "B",
+              "value": "b"
+            }
+          ],
+          "defaultValue": "z",
+          "placeholder": "请选择",
+          "disabled": true
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('unique options, default A, select enabled', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel).toBeTruthy(); expect(sel.disabled).toBe(false);\n  expect(sel.value).toBe('a');\n  const bCount = Array.from(sel.options).filter(o => o.value === 'b').length;\n  expect(bCount).toBe(1);\n});\nit('select change fires', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'b'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('b');\n});"
+}

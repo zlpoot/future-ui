@@ -1,0 +1,30 @@
+{
+  "taskId": "cal-t4-003",
+  "family": "t4",
+  "seed": 1012,
+  "taskText": "定位并修复这个交互 bug：切换下拉框选项没有任何效果（选择「B」后应触发变更并选中 B）。\n修复后其余行为不变。\n产物：仅编辑 spec.json。",
+  "initialSpec": {
+    "components": [
+      {
+        "id": "filter",
+        "type": "select",
+        "props": {
+          "options": [
+            {
+              "label": "A",
+              "value": "a"
+            },
+            {
+              "label": "B",
+              "value": "b"
+            }
+          ],
+          "defaultValue": "a",
+          "placeholder": "请选择",
+          "disabled": true
+        }
+      }
+    ]
+  },
+  "feedbackBody": "it('select is enabled after fix', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  expect(sel.disabled).toBe(false); expect(sel.value).toBe('a');\n});\nit('change fires and selects B', () => {\n  const sel = container.querySelector('select[data-part=root]');\n  let changed = null; sel.addEventListener('change', () => { changed = sel.value; });\n  sel.value = 'b'; sel.dispatchEvent(new Event('change', { bubbles: true }));\n  expect(changed).toBe('b');\n});"
+}
