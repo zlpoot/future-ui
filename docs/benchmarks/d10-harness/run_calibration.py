@@ -89,13 +89,14 @@ def main():
     done = resume_skipped(ledger._entries) if not args.force else set()
 
     print("subject/harness sha: {0} ({1})".format(*shas))
-    print("existing ledger entries:", ledger.count(), "total cost: $%.6f" % ledger.total_cost(),
+    print("existing ledger entries:", ledger.count(), "total tokens:", ledger.total_tokens(),
+          "| observed cost(non-authoritative): $%.6f" % ledger.total_cost(),
           "| resume skip:", len(done))
-    if ledger.total_cost() > float(config["usdHardCap"]):
-        print("FAIL-CLOSED: global budget already exceeded; refusing to run.", file=sys.stderr)
+    if ledger.total_tokens() >= int(config["globalMaxTokens"]):
+        print("FAIL-CLOSED: global token cap already reached; refusing to run.", file=sys.stderr)
         return 2
 
-    total_cost = ledger.total_cost()
+    total_tokens = ledger.total_tokens()
     for task_id in task_ids:
         task = load_task(task_id)
         seed = task["seed"]
@@ -112,13 +113,13 @@ def main():
             entry = __import__("agent_loop", fromlist=["run_task_run"]).run_task_run(
                 task, group, ws, RUNS_DIR, relay, config, ledger,
                 fake_model=fake, subject_sha=shas[0], harness_sha=shas[0])
-            total_cost += entry["cost"]
+            total_tokens += int((entry.get("usage") or {}).get("total", 0) or 0)
             ev = entry["finalEval"]
-            print("  {0:10s} attempts={1} cost=${2:.6f} eval_pass={3} status={4}".format(
-                group, entry["attempts"], entry["cost"], ev["pass"], entry["status"]))
-        print("  cumulative cost so far: $%.6f" % total_cost)
-        if total_cost > float(config["usdHardCap"]):
-            print("FAIL-CLOSED: budget cap reached; stopping.", file=sys.stderr)
+            print("  {0:10s} attempts={1} tokens={2} eval_pass={3} status={4}".format(
+                group, entry["attempts"], entry["usage"]["total"], ev["pass"], entry["status"]))
+        print("  cumulative tokens so far:", total_tokens)
+        if total_tokens >= int(config["globalMaxTokens"]):
+            print("FAIL-CLOSED: global token cap reached; stopping.", file=sys.stderr)
             return 0
 
     print("done. ledger:", ledger.path)
