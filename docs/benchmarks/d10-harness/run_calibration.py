@@ -12,7 +12,7 @@ import argparse, io, json, os, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB)
-REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
+REPO_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))  # harness -> benchmarks -> docs -> future-ui
 RUNS_DIR = os.path.join(HERE, "runs")
 
 from capsule import load_task, load_golden, build_workspace, ab_order, GROUPS  # noqa: E402
