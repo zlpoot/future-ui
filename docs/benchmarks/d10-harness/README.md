@@ -1,6 +1,9 @@
 # d10-harness · calibration runner + 12 paired task fixtures（#23 / CAL-001 preparation）
 
-对照评估「基线组（React + Ark UI 对应 primitive + native/platform primitives + 冻结官方资料/工具）」vs「实验组（同一基线工具 + future-ui 契约/目录/校验/patch/preview/test 确定性闭环）」在代表性前端任务上的开发效果。本 harness 只覆盖 **calibration preparation**（CAL-001，$50 hard cap，`gpt-6.1-sol`）；acceptance 未授权。
+**toolchain-isolation pilot**（#23 PROTOCOL AMENDMENT v1 冻结口径）：同一份声明式 `spec.json` 控件配置任务上，
+「基线组 = 手工/config 编辑（无 future-ui 工具链）」vs「实验组 = 同一 baseline 工具之上额外挂载 future-ui
+契约/目录/校验/patch/preview/test 确定性闭环」。**不得**把结果解释为「React/Ark UI 基线对照」（不在本
+calibration 范围）。本 harness 只覆盖 **calibration preparation**（CAL-001，$50 hard cap，`gpt-6.1-sol`）；acceptance 未授权。
 
 ## 设计要点（对应负责人 Review 关注面）
 

@@ -12,9 +12,11 @@ HARNESS = os.path.dirname(HERE)
 
 
 class Ledger:
-    def __init__(self, runs_dir):
+    def __init__(self, runs_dir, name="ledger.jsonl"):
+        """name：正式账本默认 ledger.jsonl；干跑/自检必须用独立账本（ledger-dry.jsonl），
+        防止 modelId=dry 的成功结果污染正式 calibration（Review P1：dry/real 隔离）。"""
         self.runs_dir = runs_dir
-        self.path = os.path.join(runs_dir, "ledger.jsonl")
+        self.path = os.path.join(runs_dir, name)
         os.makedirs(runs_dir, exist_ok=True)
         self._entries = []
         if os.path.exists(self.path):

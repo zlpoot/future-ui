@@ -27,6 +27,14 @@ def order_groups(groups, seed):
     return ordered
 
 
+def resume_skipped(entries):
+    """resume 消费规则：任何已落账的 (taskId, group) 都视为已消费（done/budget_stop/token_stop/error
+    全部不再重跑，除非 --force）——冻结的 attempt 边界不允许同一 sample 在普通 --all 下再次获得 attempts
+    （Review P1：status=error 也必须被消费）。"""
+    return {(e["taskId"], e["group"]) for e in entries
+            if e.get("taskId") and e.get("group")}
+
+
 def current_shas():
     try:
         head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True,
@@ -63,7 +71,8 @@ def main():
     groups = list(GROUPS) if args.groups == "both" else [args.groups]
 
     shas = current_shas()
-    ledger = Ledger(RUNS_DIR)
+    # dry/real ledger 隔离（Review P1）：干跑自检写独立账本，绝不进入正式 ledger.jsonl
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl" if args.dry else "ledger.jsonl")
     relay = None
     fake = None
     if args.dry:
@@ -76,12 +85,8 @@ def main():
             print("relay not configured (check .env)", file=sys.stderr)
             return 2
 
-    # resume：跳过 ledger 中已完成的 (taskId, group)；--force 重跑
-    done = set()
-    if not args.force:
-        for e in ledger._entries:
-            if e.get("taskId") and e.get("group") and e.get("status") != "error":
-                done.add((e["taskId"], e["group"]))
+    # resume：跳过 ledger 中已存在的 (taskId, group)（含 error，见 resume_skipped）；--force 重跑
+    done = resume_skipped(ledger._entries) if not args.force else set()
 
     print("subject/harness sha: {0} ({1})".format(*shas))
     print("existing ledger entries:", ledger.count(), "total cost: $%.6f" % ledger.total_cost(),

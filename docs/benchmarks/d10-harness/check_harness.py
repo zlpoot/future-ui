@@ -108,8 +108,8 @@ def test_bridge():
 
 
 def test_baseline_tool_rejection_and_loop():
-    # 干跑完整 run：实验组（工具+spec 两轮）与基线组（直接 spec）
-    ledger = Ledger(RUNS_DIR)
+    # 干跑完整 run：实验组（工具+spec 两轮）与基线组（直接 spec）——独立 dry 账本
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
     before = ledger.count()
     task = load_task("cal-t1-002")
     ws = build_workspace(task, RUNS_DIR)
@@ -127,7 +127,7 @@ def test_baseline_tool_rejection_and_loop():
 
 
 def test_baseline_tool_rejected():
-    ledger = Ledger(RUNS_DIR)
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
     task = load_task("cal-t4-001")
     ws = build_workspace(task, RUNS_DIR)
 
@@ -148,24 +148,30 @@ def test_baseline_tool_rejected():
 
 def test_budget_fail_closed():
     from relay import Relay
-    from agent_loop import precall_max_tokens, config_digest
+    from agent_loop import precall_max_tokens, config_digest, prompt_tokens_ub
     r = Relay(CONFIG)
     c = r._cost({"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
                  "prompt_tokens_details": {"cached_tokens": 0}})
     assert c[0] == round((5.0 + 15.0), 6), c  # $5 + $15 per M tokens
     # 预调用 gating：预算充足 → 允许 max_out；预算被占满 → 0（停止）
-    ledger = Ledger(RUNS_DIR)
-    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0)
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
+    full = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, prompt_ub=0)
     assert full == int(CONFIG["api"]["maxOutputTokens"]), full
-    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0)
+    stopped = precall_max_tokens(r, CONFIG, ledger, float(CONFIG["usdHardCap"]), 0, prompt_ub=0)
     assert stopped == 0, stopped
-    # 最坏情况单次调用不超剩余预算：allowed 输出 token 的按单价成本 ≤ 剩余
-    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0)
-    worst_in = min(int(CONFIG["maxInputTokensPerCall"]), int(CONFIG["maxTokensPerRun"]))
-    worst = (worst_in * r.price_in + allowed * r.price_out) / 1e6
+    # 最坏情况单次调用不超剩余预算：输入预留用**实测 prompt 上界**（tokens ≤ utf8 bytes）
+    msgs = [{"role": "user", "content": "x" * 4096}]
+    ub = prompt_tokens_ub(msgs)
+    assert ub == 4096, ub  # ASCII 字节数 = 长度
+    assert ub <= int(CONFIG["maxInputTokensPerCall"])
+    allowed = precall_max_tokens(r, CONFIG, ledger, 1.0, 0, prompt_ub=ub)
+    worst = (ub * r.price_in + allowed * r.price_out) / 1e6
     assert worst <= float(CONFIG["usdHardCap"]) - 1.0 + 1e-9, (worst, allowed)
+    # prompt 上界超配置上限 → 调用前拒绝（fail-closed）
+    big = precall_max_tokens(r, CONFIG, ledger, 0.0, 0, prompt_ub=int(CONFIG["maxInputTokensPerCall"]) + 1)
+    assert big == 0, big
     assert len(config_digest(CONFIG)) == 16
-    print("budget fail-closed math: PASS (pre-call gating never overshoots; digest present)")
+    print("budget fail-closed math: PASS (measured prompt UB reservation; never overshoots; digest present)")
 
 
 class _FakeRelay:
@@ -188,9 +194,28 @@ def test_ab_order_deterministic():
     print("A/B order by seed: PASS (odd->experiment first, even->baseline first)")
 
 
+def test_dry_ledger_isolation():
+    """Review P1：干跑/自检绝不写入正式 ledger.jsonl；resume 不会把 dry 结果当已完成。
+    注意：正式账本在测试中**只读**；任何写入走 scratch/dry 账本（本测试自身也不得污染）。"""
+    real = Ledger(RUNS_DIR, "ledger.jsonl")
+    scratch = Ledger(RUNS_DIR, "ledger-test-scratch.jsonl")
+    # 正式账本必须零 dry 样本（历史 dry 污染已被清理）
+    dry_in_real = [e for e in real._entries if e.get("modelId") == "dry"]
+    assert not dry_in_real, dry_in_real
+    # resume 只看正式账本：dry/scratch 账本里的样本不会被跳过
+    from run_calibration import resume_skipped
+    assert ("cal-t1-001", "baseline") not in resume_skipped(real._entries)
+    # resume 消费规则含 error：任何已落账样本（含 error/budget_stop/token_stop）都视为已消费
+    scratch.append({"taskId": "cal-t1-002", "group": "experiment", "status": "error", "cost": 0.0})
+    assert ("cal-t1-002", "experiment") in resume_skipped(scratch._entries)
+    # 清理 scratch 账本
+    os.remove(scratch.path)
+    print("dry/real ledger isolation: PASS (real ledger read-only in tests; error entries consumed by resume)")
+
+
 def test_relay_error_resilience():
     from agent_loop import run_task_run
-    ledger = Ledger(RUNS_DIR)
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
     before = ledger.count()
     task = load_task("cal-t4-003")
     ws = build_workspace(task, RUNS_DIR)
@@ -207,7 +232,22 @@ def test_relay_error_resilience():
     assert e["finalEval"]["pass"] is False
     assert e["order"] == "baseline_first"
     assert e["modelId"] == "dry" and e["configDigest"]
-    print("relay error resilience: PASS (ledger record + status=error + eval still runs)")
+    assert e["outcomeEligible"] is False, "error run must not be stats-eligible"
+    assert e["billingRuleVerified"] is False
+    print("relay error resilience: PASS (ledger record + status=error + eval still runs + outcomeEligible=False)")
+
+
+def test_outcome_eligible_done():
+    """正常完成的 dry run：outcomeEligible=True（可供统计）。"""
+    from agent_loop import run_task_run
+    from dry_model import DryModel
+    ledger = Ledger(RUNS_DIR, "ledger-dry.jsonl")
+    task = load_task("cal-t1-001")
+    ws = build_workspace(task, RUNS_DIR)
+    e = run_task_run(task, "baseline", ws["baseline"], RUNS_DIR, None, CONFIG, ledger,
+                     fake_model=DryModel(), subject_sha="dry", harness_sha="dry")
+    assert e["status"] == "done" and e["outcomeEligible"] is True, e["status"]
+    print("outcomeEligible on done: PASS")
 
 
 def main():
@@ -217,9 +257,11 @@ def main():
     test_bridge()
     test_budget_fail_closed()
     test_ab_order_deterministic()
+    test_dry_ledger_isolation()
     test_baseline_tool_rejection_and_loop()
     test_baseline_tool_rejected()
     test_relay_error_resilience()
+    test_outcome_eligible_done()
     print("ALL HARNESS SELF-CHECKS PASSED")
 
 

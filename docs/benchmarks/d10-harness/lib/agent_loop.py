@@ -137,22 +137,32 @@ def config_digest(config):
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
-def precall_max_tokens(relay, config, ledger, run_cost, usage_total):
+def prompt_tokens_ub(messages):
+    """prompt token 的**可证明**上界：tokens ≤ UTF-8 字节数（任何 tokenizer 的 token 至少 1 字节）。
+    用于 pre-call gating 的输入预留——不用假设值（Review P1：30000 只是配置上限，必须实测证明）。"""
+    return sum(len(m.get("content", "").encode("utf-8")) for m in messages)
+
+
+def precall_max_tokens(relay, config, ledger, run_cost, usage_total, prompt_ub):
     """预调用 fail-closed：返回本次调用允许的 max_tokens；0 = 应停止。
 
-    最坏情况 = 本次输入最多 maxInputTokensPerCall token + 输出 max_tokens token，
-    两者都必须落在剩余预算（$）与剩余 aggregate token（150K）内。
+    输入预留 = 实测 prompt 上界 prompt_ub（调用方已强制 ≤ maxInputTokensPerCall），
+    输出 = max_tokens；两者最坏情况都必须落在剩余 $ 预算与剩余 aggregate token（150K）内，
+    才能发请求——本次调用**不可能**超过 (prompt_ub + max_tokens) tokens 与对应美元成本。
     """
     cost_max = float(config["usdHardCap"])
     tokens_max = int(config["maxTokensPerRun"])
     max_out = int(config["api"].get("maxOutputTokens", 8192))
-    max_in_call = int(config.get("maxInputTokensPerCall", 30000))
     min_out = int(config.get("minOutputTokens", 256))
+    max_in_call = int(config.get("maxInputTokensPerCall", 30000))
     remaining_cost = cost_max - ledger.total_cost() - run_cost
     remaining_tokens = tokens_max - usage_total
     if remaining_cost <= 0 or remaining_tokens <= 0:
         return 0
-    in_wc = min(max_in_call, remaining_tokens)
+    # 实测 prompt 上界超过配置的输入上限 → 拒绝（fail-closed；agent_loop 会标 status=prompt_too_large）
+    if prompt_ub > max_in_call:
+        return 0
+    in_wc = min(prompt_ub, remaining_tokens)
     if remaining_cost <= in_wc * relay.price_in / 1e6:
         return 0
     out_by_cost = int((remaining_cost - in_wc * relay.price_in / 1e6) // (relay.price_out / 1e6))
@@ -211,7 +221,12 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
             if fake_model is not None:
                 resp = fake_model(messages, group, attempts)
             else:
-                allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"])
+                prompt_ub = prompt_tokens_ub(messages)
+                if prompt_ub > int(config.get("maxInputTokensPerCall", 30000)):
+                    status = "prompt_too_large"
+                    feedback_log.append({"attempt": attempts, "note": "prompt token UB {0} exceeds maxInputTokensPerCall".format(prompt_ub)})
+                    break
+                allowed = precall_max_tokens(relay, config, ledger, cost, usage["total"], prompt_ub)
                 if allowed <= 0:
                     status = "budget_stop" if (cost_max - ledger.total_cost() - cost) <= 0 else "token_stop"
                     feedback_log.append({"attempt": attempts, "note": "pre-call fail-closed: no budget/token headroom ({0})".format(status)})
@@ -294,6 +309,11 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
     if status == "done" and not spec_delivered and any("error" in f for f in feedback_log):
         status = "error"
 
+    # outcomeEligible（Review P2）：仅 status=done 的结果可进入统计；budget/token/prompt 停止
+    # 或 error 视为未完成（finalEval.pass 不得被统计误吃）
+    outcome_eligible = status == "done"
+    billing_verified = False  # 中转站 billing rule 未确认，占位单价无法证明真实花费 ≤ $50
+
     entry = {
         "taskId": task_id, "family": family, "seed": seed, "group": group,
         "order": order,
@@ -305,6 +325,8 @@ def run_task_run(task, group, workspace, runs_dir, relay, config, ledger, fake_m
         "feedbackLog": feedback_log, "bridgeCalls": bridge_log,
         "finalEval": {"pass": bool(verdict.get("pass")), "summary": verdict.get("summary"),
                       "elapsed": ev_dt},
+        "outcomeEligible": outcome_eligible,
+        "billingRuleVerified": billing_verified,
         "failureCategory": "none" if verdict.get("pass") else status if status != "done" else "task_failed",
         "status": status,
         "evalError": verdict.get("error"),
