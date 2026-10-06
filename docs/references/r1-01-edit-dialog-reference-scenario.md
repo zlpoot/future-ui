@@ -44,7 +44,7 @@ componentInstanceId: "component:edit-dialog"      # 既有 stable node id 语义
 componentType:       "future-ui.dialog"
 profileRef:          "project-profile@1.x"        # D16：项目约定唯一事实源
 adapterRef:          "shadcn-react@TBD"           # D15：库映射来源（版本标识 TBD）
-tokens:              { surface, title, danger }   # Profile 内为 literal 或 alias，必须区分
+tokens:              { surface, title, danger }   # Profile 内为 literal / alias / ratio；必须能解析到唯一实值，否则 fail-closed 报错
 conventions:
   - R1-DLG-01 title 来自 label
   - R1-DLG-02 操作区含"取消"
@@ -61,12 +61,15 @@ componentType:       "future-ui.dialog"
 profileRef:          "project-profile@1.x"
 blocking:
   declared:    true                              # R1-DLG-08：必须显式
-  reason:      "存在必须在关闭前处理的未保存变更"
+  reason:      "存在必须在关闭前处理的未保存变更"    # 与 resolutionPath 必须一致（不变量 8）
   closePolicy: "仅允许通过 resolutionPath 中的动作关闭；Esc 被显式禁用并已声明"
-  resolutionPath:                                # R1-DLG-08 operability：必须可见、可达、可执行
+  resolutionPath:                                # 必须可见、可达、可执行，且有限步内可达终止状态（不变量 1、5）
     - "保存并关闭"                                # 主路径
     - "放弃变更并关闭"                            # 备选路径（显式登记，不得隐式存在）
-  exceptionId: "EX-BLK-001"                      # D16 例外登记
+  failureFallback:                               # 不变量 5：路径动作失败时必须有兜底出口
+    retryLimit: 2
+    then:       "放弃变更并关闭"
+  exceptionId: "EX-BLK-001"                      # 仅放宽 R1-DLG-02 的普通关闭入口；不得豁免 operability（不变量 9）
 agentVisible:        []                          # R1-DLG-07
 ```
 
@@ -75,6 +78,9 @@ agentVisible:        []                          # R1-DLG-07
 1. `blocking: true` 但没有任何声明，靠移除取消按钮或吞掉 Esc 来让用户无法离开——违反 `R1-DLG-02` 与 `R1-DLG-08`，且阻塞原因对人和 Agent 都不可见。
 2. **声明齐备但没有结束路径**：`declared: true`、`reason` 已写、`closePolicy: "不可关闭"`，却没有任何可见、可达、可执行的 resolution path。它不算「伪装 blocking」，但仍会把用户**永久困在 modal** 中——违反 `R1-DLG-08` 的 operability 不变量。
 3. 业务确实要求不可退出时，只写「不可关闭」而不声明系统侧终止/跳转条件——同样违反 `R1-DLG-08`。
+4. **路径存在但永远失败**：resolution path 齐备、按钮可见可达可点，但该动作恒定失败（例如服务端固定 403），且没有失败兜底或重试上限。逐条看像「路径存在且可达」，实际仍是永久困住——违反 operability 不变量 5。
+5. **跨实例循环死锁**：blocking 实例 A 的唯一路径动作打开 blocking 实例 B，B 的唯一路径动作又回到 A。两个实例各自「合规」，组合起来没有任何终止路径——违反不变量 6。
+6. **路径与 reason 不一致**：`reason` 要求「必须先完成同步」，而 `resolutionPath` 只有「放弃变更并关闭」——路径并不能解除 `reason` 描述的状态；违反不变量 8。
 
 ## 4. 正反例（逐规则）
 
@@ -87,7 +93,7 @@ agentVisible:        []                          # R1-DLG-07
 | `R1-DLG-05` | 提交中关闭会给出明确提示；文案不暗示「取消 = 回滚」 | 提交中静默关闭并丢弃；或提示「已取消，改动已撤销」而业务并未回滚 |
 | `R1-DLG-06` | 打开后焦点进入弹窗，关闭后回到触发按钮 | 打开后焦点仍在背后的页面；关闭后焦点丢失到 `body` |
 | `R1-DLG-07` | 草稿字段默认不在 Agent 可读上下文；只有显式 allowlist 的字段可读 | 把整个表单状态（含敏感草稿）暴露给 Agent 可发现上下文 |
-| `R1-DLG-08` | blocking 变体显式声明原因、关闭策略与 exceptionId，**且存在可见、可达、可执行的 resolution path**（`closePolicy` 指向它） | 隐藏 / 禁用所有关闭入口以「实现」blocking 且无声明；**或**声明齐备但没有任何结束路径（永久 focus trap） |
+| `R1-DLG-08` | blocking 变体显式声明原因、关闭策略与 exceptionId，**且存在可见、可达、可执行、有限步内可达终止状态的 resolution path**（`closePolicy` 指向它；失败有兜底） | 隐藏 / 禁用所有关闭入口以「实现」blocking 且无声明；**或**声明齐备但无结束路径；**或**路径恒定失败无兜底；**或**两个 blocking 实例互为唯一出口的循环死锁 |
 
 ## 5. 与 Capability / Binding 的边界
 
@@ -107,9 +113,10 @@ agentVisible:        []                          # R1-DLG-07
 | 机器可校验结构 | 上述实例形态的字段、`$id`、校验器 | #69（并需单独的 Schema 授权与 #2 流程） |
 | 规则 → 诊断码 | `R1-DLG-0x` severity 到具体诊断码的映射（独立命名空间） | #68 / #69 |
 | 操作区 part 化 | 是否把 actions 提升为契约级 part | 需回 #2 契约流程；不在 R1-01 |
-| shadcn 侧实际映射与身份取值 | `libraryIdentity` 取值（registry/source + commit/content digest）、逐域映射表（含 features / control / accessibility / lifecycle） | #68 |
+| shadcn 侧实际映射与身份取值 | `libraryIdentity` 取值（registry/source URL + commit/content digest，含算法与覆盖范围）、**逐域 + 逐成员**映射表 | #68 |
 | blocking 视觉与文案细则 | 具体文案、颜色、图标；resolution path 的动作命名与顺序 | Profile 落地时（R1-02 之后） |
-| 系统侧终止条件细则 | `R1-DLG-08` 第 4 条（不可退出场景的系统终止/跳转条件）的具体形式 | Profile 落地时（R1-02 之后） |
+| 系统侧终止条件细则 | operability 不变量 7（不可退出场景的系统终止/跳转条件）的可判定触发形式 | Profile 落地时（R1-02 之后） |
+| digest 算法与覆盖范围、patch provenance 承载位置 | 具体算法选择与文件范围口径 | #68（Adapter 结构落地时） |
 
 ## 7. 检查方式的可执行化（延后）
 
