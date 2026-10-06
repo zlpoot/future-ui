@@ -17,7 +17,12 @@ import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..', '..');
 
-const UI_PACKAGES = ['packages/react-provider', 'packages/theme', 'packages/conformance'];
+const UI_PACKAGES = [
+  'packages/react-provider',
+  'packages/theme',
+  'packages/conformance',
+  'packages/shadcn-adapter',
+];
 
 const FORBIDDEN_DEPENDENCIES = [
   '@future-ui/capability-runtime',

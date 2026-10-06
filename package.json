@@ -10,7 +10,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
