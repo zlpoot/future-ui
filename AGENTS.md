@@ -1,14 +1,14 @@
 # future-ui · Agent 工作入口
 
-## 本轮边界：方向重整与后续计划（PREPARATION_ONLY）
+## 当前执行边界：R1-002 · #68 ONLY
 
 负责人 2026-10-05 确认：future-ui 适配现有 UI 库，在统一语义与项目约定下让 AI 稳定开发界面，并输出 AI 可理解的结构；不重新做组件库，不以复杂任务能力或模型优效作为近期主线。
 
-本轮只整理 Markdown、GitHub Issue 与 Notion 参考。产品源码、公共 Schema、依赖、模型调用、真实工程写入、部署和发布不在本轮范围。后续实现必须读取 [#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) 和具体目标 Issue；[#66 R1 计划](https://github.com/zlpoot/future-ui/issues/66)不是实现授权。
+当前唯一活动实现范围是 [#68 R1-02](https://github.com/zlpoot/future-ui/issues/68)：首个 shadcn/React Library Adapter。允许在 #68 内核验官方 shadcn 来源、安装必要依赖、修改代码/lockfile、运行定向测试与 CI、创建 PR；公共 Schema、模型调用、真实工程写入、#69+、MCP/WebMCP、部署与发布均不在授权内。任何扩大都必须先回 [#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4)。
 
 CAL-001 的 5,000,000 token/24-run 范围及历史授权仍见 #4/#23，不得把历史剩余额度推导成新阶段授权。该实验已有 closeout 报告；本次不改原始结果、不重跑、不自动关闭历史 Issue。Merge/Close 按当前明确授权，不由旧 grant 或本页推导。
 
-当前**无活动实现/开发 grant**。`R1-001` 已完成 #67 preparation 与 closeout 授权链；#68 及后续 Issue 仍为 **NOT_AUTHORIZED**，必须先在 [#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) 登记新的明确授权。历史 R1-001 仅用于追溯，不得继续扩权。
+当前活动 grant：[#4 `R1-002`](https://github.com/zlpoot/future-ui/issues/4)，**仅覆盖 #68**；Worker profile = `doubao-work` primary。允许官方 shadcn registry/CLI/API 只读来源核验、#68 产品代码与必要依赖/lockfile、定向 lint/typecheck/test/conformance/smoke、CI 与 PR。禁止修改 `packages/contracts` 公共 Schema / `$id` / `CONTRACT_MAJOR` / core error codes；禁止 #69+、模型、真实工程写入、MCP/WebMCP、部署发布。**merge / close 仍为负责人 gate。**
 
 ## 事实源与协作边界
 
