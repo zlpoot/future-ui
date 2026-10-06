@@ -1,7 +1,9 @@
 # R1-01 最小 UI 语义 / Library Adapter / Project Profile 冻结提案（D15 / D16 / D17）
 
 日期：2026-10-05  
-状态：**Proposed for #67**。本文件冻结 #67（R1-01）所需的三个决策：Library Adapter 描述范围（D15）、Project Profile 范围（D16）、EditDialog 最小 UI 语义规则集（D17）。本项为 preparation：只冻结 Markdown 语义，不改产品源码、不改公共 Schema、不安装依赖。合并须经负责人接受（Contract gate，merge=human）；#68 的 DoR 依赖本文件的接受结果。
+状态：**Proposed for #67（Rev.2）**。本文件冻结 #67（R1-01）所需的三个决策：Library Adapter 描述范围（D15）、Project Profile 范围（D16）、EditDialog 最小 UI 语义规则集（D17）。本项为 preparation：只冻结 Markdown 语义，不改产品源码、不改公共 Schema、不安装依赖。合并须经负责人接受（Contract gate，merge=human）；#68 的 DoR 依赖本文件的接受结果。
+
+Rev.2 依据 PR #73 的独立 Review（id `5416931433`，**CHANGES REQUIRED**，exact head `6c64d5a`）修订，只闭合该 Review 列出的歧义：D15 映射覆盖面与逐域覆盖状态、D15 版本字段收敛为单一字段、`libraryIdentity` 改为不可变来源优先、D16 增加 alias/ratio 解析不变量、`R1-DLG-08` 增加 blocking operability 不变量。方向、范围与兼容边界未变。
 
 ## 目标
 
@@ -38,24 +40,31 @@
 
 ### 冻结规则
 
-1. **身份字段**：Adapter 必须声明稳定 `adapterId`（kebab-case，如 `shadcn-react`）、`targetLibrary`、`libraryIdentity`（版本或源码标识**及其标识方式**）、`adapterVersion`（semver）、`contractMajor`（必须等于 `CONTRACT_MAJOR = 1`，或显式声明不兼容）。
-2. **映射粒度**：按 `componentType` 给出 `mappingStatus ∈ {supported, partial, unsupported}`，并逐项映射 `props / parts / events / state / token`。R1 首批限定 `future-ui.dialog`、`future-ui.button`、`future-ui.text-input`；Select 仅在真实场景需要时加入。
+1. **身份字段**：Adapter 必须声明稳定 `adapterId`（kebab-case，如 `shadcn-react`）、`targetLibrary`、`libraryIdentity`（不可变来源标识，见下「上游标识」），以及**唯一**的契约版本字段 `contractVersion`（semver）。
+   - **版本字段只有一个**：不新增 `adapterVersion`，不新增独立的 `contractMajor` 字段，不引入 `schemaVersion`。
+   - `contractVersion` 的 major 必须等于既有 `CONTRACT_MAJOR = 1`；未知 major 沿用既有 `unknown_major_version` **拒绝**，不降级、不猜测。
+   - 若 #68 之后确实需要区分「Adapter 映射实现版本」与「契约版本」，必须先走 #2 决策流程单独论证，**不得先加同义或并行版本字段**。
+2. **映射覆盖面**：Adapter 必须对**全部公共语义域**给出结论。域清单与既有 Component Contract 一致：`features`、`props`、`events`、`state`、`parts`、`control`、`accessibility`、`lifecycle`，外加视觉层的 `token` 映射。R1 首批限定 `future-ui.dialog`、`future-ui.button`、`future-ui.text-input`；Select 仅在真实场景需要时加入。
+   - **每个域必须带覆盖状态**：`mapped`（已映射）/ `inherited-equivalent`（由目标库原生等价语义直接满足）/ `not-applicable`（该组件契约确实不声明此域）/ `unsupported`（未覆盖）。
+   - 组件级 `mappingStatus = supported` **只有在**该组件声明为 required/relevant 的**全部**公共语义域都有明确覆盖结论（`mapped` / `inherited-equivalent` / `not-applicable`）时才成立。
+   - 任一域为 `unsupported`、**或缺少结论**，组件级状态最高只能是 `partial`（关键域缺失时 `unsupported`）。**缺结论不得被默认为已覆盖。**
+   - Dialog 的具体风险点：`focusTrap` / `focusRestore` / `accessibleName` 位于 `features` 与 `accessibility`，`open` / `close` / `focus` 位于 `control`，`requiresCleanup: true` 位于 `lifecycle`。只映射 `props / parts / events / state` 就标 `supported` 是**明确禁止**的。
 3. **不静默丢特性**：任何未映射或行为不同的上游特性必须显式标为 `partial` / `unsupported` 并给出原因与影响；**禁止**把不支持当作支持、禁止静默退回自研组件。（延续 D04「未支持特性显式声明缺失，不静默降级」）
 4. **禁止编造标识**：上游版本/源码标识未核验时写 `TBD` 并注明核验时机；不得填写未验证的版本号、commit 或 registry 条目。
 5. **职责分离**：Adapter 只描述**库固有语义与映射**。项目侧规范（关闭入口、操作角色、pending、尺寸档位等）由 Project Profile 承载，不得写死在 Adapter。
 6. **声明式数据**：Adapter 是纯数据描述，不携带可执行 JS、不做 eval（与 `docs/contracts/README.md` 公共约定一致）。
-7. **版本语义复用**：沿用既有 semver 规则（major 破坏性、minor 向后兼容、patch 不改结构；未知 major 拒绝不降级）。**不引入 `schemaVersion`**，避免与 `contractVersion` / `CONTRACT_MAJOR` 形成两套版本概念。
+7. **版本规则单一来源**：Adapter 的版本语义完全沿用既有 D02 规则（major 破坏性、minor 向后兼容、patch 不改结构；未知 major 拒绝不降级），由身份字段中**唯一**的 `contractVersion` 承载并与 `CONTRACT_MAJOR` 比较。**不引入 `schemaVersion`**，也不引入 `adapterVersion` / 独立 `contractMajor` 等同义或并行字段。上游库版本变化由 `libraryIdentity` 表达，不占用契约版本字段。
 8. **首库冻结**：R1 首个 Adapter 的验证对象 = **shadcn/React**。该选择不排除第二库，也不预先承诺全量 MUI / Ark / AntD / Vue 支持。
 
-### 与上游库的标识方式（规则，非取值）
+### 上游标识（不可变来源优先）
 
-shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本」不能只写包版本号。标识必须同时记录：
+shadcn/ui 以**源码分发 + registry/CLI** 为模型：registry 内容会随时间变化，组件复制到工程后还可能被本地修改。因此**组件源码身份不能由 CLI 版本单独证明**。冻结规则：
 
-1. `targetLibrary` 与 React 主版本（仓库既有 peer 约束为 `react/react-dom ^19.2.0`，见 `packages/react-provider/package.json`）；
-2. 组件来源标识：registry 条目名 + 拉取时的来源 commit 或 CLI 版本；
-3. 样式层依赖的版本（如 Tailwind 系列），因为 token 实值与尺寸档位落在这一层。
-
-**具体取值在本文件保持 TBD**（理由：本轮无依赖安装授权、无真实工程可核对）。确认时机：`#68` 获得代码与依赖授权时，或在真实工程可访问后。
+1. `libraryIdentity` **以不可变来源标识优先**：registry / source URL + **commit 或 content digest**（二者至少有其一；两者都有时以 content digest 为准）。
+2. CLI version **只能作为 tooling provenance**，单独登记（如 `toolingProvenance.cliVersion`），**不得**用作 `libraryIdentity` 的主键，也不得用来代表组件源码身份。
+3. 若组件在复制后被本地修改，必须额外记录 **local content digest / patch provenance**，不得让本地改动看起来像上游原样。
+4. 同时记录 React 主版本（仓库既有 peer 约束 `react/react-dom ^19.2.0`，见 `packages/react-provider/package.json`）与样式层依赖版本（token 实值与尺寸档位落在样式层）。
+5. **具体取值在本文件保持 TBD**（理由：本轮无依赖安装授权、无真实工程可核对）。确认时机：`#68` 获得代码与依赖授权时，或在真实工程可访问后。本文件冻结的是**标识规则**，不是取值。
 
 ## D16 · Project Profile（R1 冻结范围）
 
@@ -72,11 +81,19 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本�
 | 字段族 | 语义 |
 | --- | --- |
 | `identity` | `profileId`、`profileVersion`（semver）、`scope`（适用工程；未核验写 `TBD`） |
-| `tokens` | `tokenKey → { kind: literal \| alias, value }`。`literal` = 实值；`alias` 指向另一 token。**必须区分实值与别名**，不得只登记名称 |
-| `sizes` | 尺寸档位必须以**实值或比例**表达（如控件高度、间距档位），并与库自身命名解耦 |
+| `tokens` | `tokenKey → { kind: literal \| alias \| ratio, ... }`。三种 kind 的字段与解析规则见下「token 解析不变量」；**必须区分实值、引用与比例**，不得只登记名称 |
+| `sizes` | 尺寸档位必须以**实值或可解析比例**表达（如控件高度、间距档位），并与库自身命名解耦；使用 `ratio` 时必须声明 `base` 与适用维度 |
 | `variants` | `variantId → token 覆盖`；未知 `variantId` 的行为必须显式声明（报错或忽略），不得默认静默降级 |
 | `dialogConventions` | 标题、关闭入口、操作角色、pending、重复提交、blocking 变体规则（见 D17） |
 | `exceptions` | 显式例外：`exceptionId` + 适用规则 ID + 适用场景 + 理由 + 失效条件 |
+
+### token 解析不变量（冻结）
+
+1. `kind: literal`：带实值 `value`（含单位，或明确的无单位约定）。
+2. `kind: alias`：必须引用**同一 Profile 内存在**的 `tokenKey`；解析链**有限且无环**（深度上限 16），且**最终必须落到 `literal`**。
+3. `kind: ratio`：必须显式声明 `base`（引用的 `tokenKey` 或 Profile 内命名基准）与适用 `dimension` / `unit`；**裸比例值（如 `1.25x`）不合法**。
+4. **解析失败必须报错**：目标不存在、成环、超深、ratio 缺 `base` 或 `dimension` 时，必须返回 error，**不得**静默回退为空值、原样透传或猜测默认值。
+5. 任一 `tokenKey` 与任一 `sizes` 档位必须能解析出**唯一确定的终值**；这是跨库映射可提供稳定实值的前提（对应 `AGENTS.md`「共享视觉必须有实值/映射，不能只统一 token 名称」）。
 
 ### 不变量
 
@@ -107,9 +124,19 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本�
 | `R1-DLG-05` | pending / 提交中不得无提示静默关闭并丢弃；**取消不等于回滚** | 两变体 | error | 无 | 交互检查 + 状态与文案检查 |
 | `R1-DLG-06` | 打开时焦点进入弹窗，关闭后焦点返回触发点 | 两变体 | error | 无 | 交互检查（对应既有 `focusTrap` / `focusRestore` feature） |
 | `R1-DLG-07` | 弹窗内部草稿状态与字段值默认**不**进入 Agent 可读上下文 | 两变体 | error | 显式 allowlist 登记 | 投影检查 |
-| `R1-DLG-08` | `blocking` 变体必须**显式声明**：给出阻塞原因与关闭策略；**不得靠隐藏关闭入口伪装 blocking** | 显式 blocking 变体 | error | 登记 `exceptionId` + 失效条件 | 结构检查 + 声明检查 |
+| `R1-DLG-08` | `blocking` 变体必须**显式声明**（`declared: true` + 阻塞原因 + `closePolicy`），**并且必须存在可见、可达、可执行的 resolution path**（见下「blocking operability 不变量」）；**不得靠隐藏关闭入口伪装 blocking，也不得让用户无终止路径地被困** | 显式 blocking 变体 | error | 登记 `exceptionId` + 失效条件 | 结构检查 + 声明检查 + 可达性检查 |
 
 规则 ID 是稳定标识：新增规则用新 ID；改变既有 ID 的含义属破坏性变更。
+
+### blocking operability 不变量（冻结）
+
+`R1-DLG-02` 与 `R1-DLG-08` 的关系由此说清：**blocking 是「关闭受条件约束」，不是「可以没有任何结束路径」。**
+
+1. `blocking: true` 时，必须存在**可见、可达、可执行**的 resolution path（解除阻塞或完成流程的显式动作）。
+2. `closePolicy` 必须**指出**哪一条动作构成该 resolution path；只写「不可关闭」不满足本规则。
+3. 禁止出现**无终止路径的永久 focus trap**（用户既不能完成，也不能退出）。
+4. 若业务确实要求不可退出，必须声明**系统侧终止/跳转条件**（如会话失效、外部状态变更、返回上一流程），不得仅声明「不可关闭」。
+5. 检查方式：结构检查（resolution path 对应的控件存在）+ 可达性检查（自打开状态起可达该控件，且不被自身条件互锁）。
 
 ### 诊断映射（本轮不实现）
 
@@ -128,15 +155,16 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本�
 - **不改 `componentInstanceId` 的字符串类型**。结构化实例引用必须是新字段或新契约（最大兼容性陷阱）。
 - 不改既有 `componentType` 值与 props / parts / events / control 名称。
 - `additionalProperties: false` 是全局默认：将来任何写入 Schema 的增量都必须显式进入对应 `properties`，并按 D02 rule 3 经显式 extension registry（带版本）声明。本轮不写 Schema。
-- 复用 `contractVersion` + `CONTRACT_MAJOR` 语义，不引入 `schemaVersion`。
+- 复用 `contractVersion` + `CONTRACT_MAJOR` 语义；Adapter 只保留这一个版本字段，不引入 `schemaVersion` / `adapterVersion` / 独立 `contractMajor`。
 
 ## 验收对照（#67）
 
 - [x] 取消项与推迟项显式标注（三工程盘点取消；结构化实例描述 Deferred 到 #69）。
 - [x] 普通编辑弹窗与显式 blocking 变体的正反例；每条规则有稳定 ID、适用范围、severity、例外机制和检查方式（本文件 D17 + [`docs/references/r1-01-edit-dialog-reference-scenario.md`](../references/r1-01-edit-dialog-reference-scenario.md)）。
 - [x] 分清组件定义 / 页面实例快照 / 可调用业务工具，且状态值默认最小暴露（D17 三分类表 + D16 不变量 4）。
-- [x] 上游库差异标为 supported / partial / unsupported，不静默丢特性（D15 规则 2–3）。
-- [x] 首个库 = shadcn/React；具体版本/源码标识保持 `TBD` 并写明确认时机（D15「标识方式」节 + 本文「待冻结」节）。
+- [x] 上游库差异标为 supported / partial / unsupported，且**每个公共语义域**（features / props / events / state / parts / control / accessibility / lifecycle / token）都有覆盖结论（`mapped` / `inherited-equivalent` / `not-applicable` / `unsupported`），不静默丢特性（D15 规则 2–3）。
+- [x] blocking 变体存在可达结束路径（D17 `R1-DLG-08` + operability 不变量）；token 的 alias/ratio 可解析到唯一实值（D16 token 解析不变量）。
+- [x] 首个库 = shadcn/React；其 `libraryIdentity` 的**标识规则**已冻结（不可变来源优先；CLI version 仅 tooling provenance），具体取值保持 `TBD` 并写明确认时机。
 - [ ] 待负责人接受（Contract gate）。
 
 ## 官方/上游依据（2026-10-05 查阅）
@@ -153,7 +181,7 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本�
 | D08 主题机制本体 | 主题机制的完整设计与热替换（本项只处理 Profile 侧的 token 表示：实值/别名 + 尺寸档位） | D08 整体保持 Deferred；本体不在 R1-01 |
 | 结构化实例描述 | 实例字段结构（instanceId / 组件引用 / 关系 / Profile 引用 / 状态） | #69 |
 | 规则 → 诊断码映射 | severity 到具体诊断码，需独立命名空间 | #68 / #69 |
-| shadcn 具体版本/源码标识 | registry 条目、来源 commit、CLI/样式层版本取值 | #68（若届时有依赖授权）或真实工程可访问时 |
+| shadcn 的具体 `libraryIdentity` 取值 | registry / source URL + commit / content digest 的实际取值（**标识规则**已在 D15「上游标识」冻结） | #68（若届时有依赖授权）或真实工程可访问时 |
 | Adapter / Profile 的机器可校验 Schema | JSON Schema 落地与其 `$id` | 需 #2 契约流程 + 单独授权；本轮禁改公共 Schema |
 | 第二 UI 库与被测页面 | 第二 Adapter 选型与对照范围 | #70 |
 | 三工程盘点与真实复用验证 | Model Hub / bilibili docs / MV 制作 | 相关工程可访问后另立范围 |
@@ -161,3 +189,4 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型，因此「冻结版本�
 ## 修订记录
 
 - 2026-10-05：初稿，随 #67 提交（#4 `R1-001` grant；只读基线 `e8e084b`）。
+- 2026-10-05（Rev.2）：依 PR #73 独立 Review `5416931433`（CHANGES REQUIRED @ `6c64d5a`）闭合 4 处歧义——① D15 规则 2 补全公共语义域（features / props / events / state / parts / control / accessibility / lifecycle / token）并定义逐域覆盖状态与 `supported` 成立条件；② D15 身份字段收敛为单一 `contractVersion`，删除 `adapterVersion` / 独立 `contractMajor` 字段表述；③ 「上游标识」改为不可变来源优先（commit / content digest），CLI version 降为 tooling provenance，并要求记录本地改动 digest；④ D16 新增「token 解析不变量」（alias 无环且终值 literal、ratio 必须带 base/dimension、解析失败必须报错）；⑤ `R1-DLG-08` 新增 blocking operability 不变量（必须有可见可达可执行的 resolution path，禁止无终止路径的永久 focus trap）。**范围与兼容边界未变。**
