@@ -8,6 +8,8 @@
 
 CAL-001 的 5,000,000 token/24-run 范围及历史授权仍见 #4/#23，不得把历史剩余额度推导成新阶段授权。该实验已有 closeout 报告；本次不改原始结果、不重跑、不自动关闭历史 Issue。Merge/Close 按当前明确授权，不由旧 grant 或本页推导。
 
+当前活动 grant：[#4 `R1-001`](https://github.com/zlpoot/future-ui/issues/4)（2026-10-05 登记，范围 = #67 preparation only）。#67 只产出 Markdown 契约文档（最小 UI 语义 / Library Adapter / Project Profile / EditDialog 参考场景）；产品源码、公共 Schema、依赖安装、模型调用与真实工程写入均不在授权内。
+
 ## 事实源与协作边界
 
 1. 当前用户授权决定操作范围；不得从历史聊天、旧批准或曾打开过的 gate 推导新权限。
