@@ -1,11 +1,13 @@
 # R1-01 最小 UI 语义 / Library Adapter / Project Profile 冻结提案（D15 / D16 / D17）
 
 日期：2026-10-05  
-状态：**Proposed for #67（Rev.3）**。本文件冻结 #67（R1-01）所需的三个决策：Library Adapter 描述范围（D15）、Project Profile 范围（D16）、EditDialog 最小 UI 语义规则集（D17）。本项为 preparation：只冻结 Markdown 语义，不改产品源码、不改公共 Schema、不安装依赖。合并须经负责人接受（Contract gate，merge=human）；#68 的 DoR 依赖本文件的接受结果。
+状态：**Proposed for #67（Rev.4）**。本文件冻结 #67（R1-01）所需的三个决策：Library Adapter 描述范围（D15）、Project Profile 范围（D16）、EditDialog 最小 UI 语义规则集（D17）。本项为 preparation：只冻结 Markdown 语义，不改产品源码、不改公共 Schema、不安装依赖。合并须经负责人接受（Contract gate，merge=human）；#68 的 DoR 依赖本文件的接受结果。
 
 Rev.2 依据 PR #73 的独立 Review（id `5416931433`，**CHANGES REQUIRED**，exact head `6c64d5a`）修订，只闭合该 Review 列出的歧义：D15 映射覆盖面与逐域覆盖状态、D15 版本字段收敛为单一字段、`libraryIdentity` 改为不可变来源优先、D16 增加 alias/ratio 解析不变量、`R1-DLG-08` 增加 blocking operability 不变量。方向、范围与兼容边界未变。
 
-Rev.3 依一次**补充性对抗审阅**（作者侧独立 session，用于找出「按字面仍可违规」的构造；**不代替**负责人 Review）闭合 Rev.2 的残留：D15 覆盖改为**成员级**并要求契约实例锚点与等价性依据、`not-applicable` 限定为成员级；D16 的 `ratio` 补齐 `base` 存在性、维度/单位可比性与失败报错；`R1-DLG-08` 增加**有限步内可达终止状态**、失败兜底、跨实例循环禁止与例外不可豁免；`toolingProvenance` 与 digest 口径落位；并修复 Rev.2 自身引入的措辞不一致。R3（版本字段）、R5（libraryIdentity 不可变来源）经该审阅独立确认为已闭合。
+Rev.3 依一次**补充性对抗审阅**（作者侧独立 session，用于找出「按字面仍可违规」的构造；**不代替**负责人 Review）闭合 Rev.2 的残留：D15 覆盖改为**成员级**并要求契约实例锚点与等价性依据、`not-applicable` 限定为成员级；D16 的 `ratio` 补齐 `base` 存在性、维度/单位可比性与失败报错；`R1-DLG-08` 增加**有限步内可达终止状态**、失败兜底、跨实例循环禁止与例外不可豁免；`toolingProvenance` 与 digest 口径落位；并修复 Rev.2 自身引入的措辞不一致。该审阅同时确认两项已闭合：**版本字段收敛**（Rev.1 的 `adapterVersion` 与独立 `contractMajor` 已彻底移除，全仓库无残留表述）与 **`libraryIdentity` 不可变来源优先**（不可变来源优先、CLI version 降为工具链来源）。
+
+Rev.4 依对 Rev.3 的**同一次对抗验证**（上一轮 9 个反例全部 NOW BLOCKED）闭合 Rev.3 自身引入的缺陷：统一 operability 不变量编号口径（检查方式移出编号列表；不可豁免集合固定为 **1–8**，第 9 条是不可豁免条款本身）；`R1-DLG-08` 的例外列改为「无」，与第 9 条一致；token 解析不变量删除重复的 `literal` 条目，补 `dimension` / `unit` 的**声明式封闭集合**与 canonical unit、`unitless` ratio 的合法性条件、以及「未解析出唯一终值」的报错项；`inherited-equivalent` 依据补齐核验判据；「有限步」明确为可枚举的有限动作序列；Rev.3 说明中的**审阅项编号（悬空标签）**改为自含表述；`decision-register` 的 D16 任务归属与 D17 编号口径对齐。
 
 ## 目标
 
@@ -49,7 +51,7 @@ Rev.3 依一次**补充性对抗审阅**（作者侧独立 session，用于找�
 2. **映射覆盖面（成员级）**：Adapter 必须对**被映射组件契约实例**的每个域与其中每个成员给出结论，并记录该组件契约的 `componentType` 与 `contractVersion` 作为锚点（缺失锚点的映射表不可判定，视为无效）。
    - **域清单**：以该组件契约实例为准——Component Contract 的 8 个 required 域（`features`、`props`、`events`、`state`、`parts`、`control`、`accessibility`、`lifecycle`，见 `packages/contracts/schemas/component.schema.json:7`）恒在；另加 Profile 侧视觉层 `token`。
    - **成员级完整性**：每个域必须逐一列出该契约实例中**实际声明的成员**（如 `features` 的每个布尔项、`props` 的每个 prop、`parts` 的每个 part、`control` 的每个方法、`accessibility` 的每个布尔项），并对**每个成员**给出结论。**域级结论不能替代成员级结论。**
-   - **覆盖状态**：`mapped`（已映射）/ `inherited-equivalent`（由目标库原生等价语义直接满足，**必须给出可核对的依据**，如上游组件或机制名；无依据不得使用）/ `unsupported`（未覆盖）。`not-applicable` **只允许出现在成员级**，且仅当该成员在该契约实例中确实不存在时，并须能对应到契约实例。
+   - **覆盖状态**：`mapped`（已映射）/ `inherited-equivalent`（由目标库原生等价语义直接满足，**必须给出可核对的依据**——依据须能定位到上游库的具体组件或机制（外部文档位置或源码位置），核验发生在 #68 的映射评审并由评审者按该定位复核；无依据不得使用）/ `unsupported`（未覆盖）。`not-applicable` **只允许出现在成员级**，且仅当该成员在该契约实例中确实不存在时，并须能对应到契约实例。
    - **禁止域级 `not-applicable`**：8 个 required 域均为 schema 强制存在，**不得标 `not-applicable`**；`token` 是 UI 库适配的必需视觉面，**同样不得标 `not-applicable`**（零视觉映射不得因此获得 `supported`）。
    - **不得与契约矛盾**：任何结论不得与该契约实例的声明相反（例如契约声明 `lifecycle.requiresCleanup = true` 时，不得写成 false 或不清理）。
    - **组件级状态**：`mappingStatus = supported` 只有在**全部成员**都有结论且无 `unsupported` 时才成立；出现任一 `unsupported`、或任何**缺结论**（含域内成员未列全）⇒ 最高 `partial`。缺结论不得被默认为已覆盖。
@@ -95,13 +97,14 @@ shadcn/ui 以**源码分发 + registry/CLI** 为模型：registry 内容会随�
 
 ### token 解析不变量（冻结）
 
-1. `kind: literal`：带实值 `value`（含单位，或明确的无单位约定）。
+1. `kind: literal`：带实值 `value`（含单位，或明确的无单位约定）。`dimension` 可省略，省略即表示 **unitless**；无单位 `literal` 只能作为 `dimension: unitless` 的基准。
 2. `kind: alias`：必须引用**同一 Profile 内存在**的 `tokenKey`；解析链**有限且无环**——口径统一为「链上出现的不同 `tokenKey` 数 ≤ 16」（该数值是 fail-closed 上限，不是语义保证），且**最终必须落到 `literal`**。
-3. `kind: literal`：`dimension` 可省略，表示**明确的无单位约定**；其余情形必须带 `dimension` / `unit`。无单位 `literal` 只能作为 `dimension: unitless` 的基准。
-4. `kind: ratio`：必须显式声明 `base`（**引用的 `tokenKey`，且该 token 必须存在**）、无量纲正数 `factor`，以及 `dimension` / `unit`。
+3. `kind: ratio`：必须显式声明 `base`（**引用的 `tokenKey`，且该 token 必须存在**）、无量纲正数 `factor`，以及 `dimension` / `unit`。
    - `base` 必须能解析出**已知且已声明**的 `dimension` / `unit`；ratio 自身的 `dimension` / `unit` **必须与 base 一致**，或在同一 Profile 内给出**显式换算**（不得隐含、不得依赖数值巧合）。
+   - **`unitless` 的 ratio 仅在 base 亦为 `unitless` 时合法**；其余 unitless 组合必须报错。
    - **裸比例值（如 `1.25x`）不合法**；`base` 写成「命名基准」而不指向任何已定义 token 时**不合法**。
-5. **解析失败必须报错**（fail-closed：不得静默回退为空值、原样透传或猜测默认值）。至少覆盖这些条件：目标 token 不存在；`base` 未定义或指向不存在的命名基准；成环；超深（> 16）；缺 `factor` / `dimension` / `unit`；base 与 ratio 的 `dimension` 或 `unit` 不一致且无显式换算；`factor` 非正或带维度。
+4. **`dimension` 与 `unit` 必须在 Profile 内声明一次并作为封闭集合使用**：最小可用集合为 `length` / `duration` / `unitless`（按需扩展必须显式登记，不得就地发明）；每个 `dimension` 必须声明一个 **canonical unit**，其它单位必须给出到 canonical 的**显式换算**。
+5. **解析失败必须报错**（fail-closed：不得静默回退为空值、原样透传或猜测默认值）。至少覆盖这些条件：目标 token 不存在；`base` 未定义或指向不存在的命名基准；成环；超深（> 16）；缺 `factor` / `dimension` / `unit`；base 与 ratio 的 `dimension` 或 `unit` 不一致且无显式换算；`factor` 非正或带维度；**未能解析出唯一确定的终值**。
 6. 任一 `tokenKey` 与任一 `sizes` 档位必须能解析出**唯一确定的终值**；这是跨库映射可提供稳定实值的前提（对应 `AGENTS.md`「共享视觉必须有实值/映射，不能只统一 token 名称」）。
 
 ### 与既有 theme 契约的边界
@@ -137,7 +140,7 @@ D16 的 `tokens` / `variants` 是 **Project 层数据**（`tokenKey → { kind, 
 | `R1-DLG-05` | pending / 提交中不得无提示静默关闭并丢弃；**取消不等于回滚** | 两变体 | error | 无 | 交互检查 + 状态与文案检查 |
 | `R1-DLG-06` | 打开时焦点进入弹窗，关闭后焦点返回触发点 | 两变体 | error | 无 | 交互检查（对应既有 `focusTrap` / `focusRestore` feature） |
 | `R1-DLG-07` | 弹窗内部草稿状态与字段值默认**不**进入 Agent 可读上下文 | 两变体 | error | 显式 allowlist 登记 | 投影检查 |
-| `R1-DLG-08` | `blocking` 变体必须**显式声明**（`declared: true` + 阻塞原因 + `closePolicy`），**并且必须存在可见、可达、可执行、且在有限步内可达终止状态的 resolution path**（见下「blocking operability 不变量」）；**不得靠隐藏关闭入口伪装 blocking，也不得让用户无终止路径地被困** | 显式 blocking 变体 | error | 登记 `exceptionId` + 失效条件（**不得豁免 operability 不变量 1–8**） | 结构检查 + 声明检查 + 可达性检查 + 终止性检查 |
+| `R1-DLG-08` | `blocking` 变体必须**显式声明**（`declared: true` + 阻塞原因 + `closePolicy`），**并且必须存在可见、可达、可执行、且在有限步内可达终止状态的 resolution path**（见下「blocking operability 不变量」）；**不得靠隐藏关闭入口伪装 blocking，也不得让用户无终止路径地被困** | 显式 blocking 变体 | error | **无**——operability 不变量 1–8 不可豁免；`exceptionId` 只能用于放宽 `R1-DLG-02` 的普通关闭入口 | 结构检查 + 声明检查 + 可达性检查 + 终止性检查 |
 
 规则 ID 是稳定标识：新增规则用新 ID；改变既有 ID 的含义属破坏性变更。
 
@@ -149,12 +152,12 @@ D16 的 `tokens` / `variants` 是 **Project 层数据**（`tokenKey → { kind, 
 2. `closePolicy` 必须**指出**哪一条动作构成该 resolution path；只写「不可关闭」不满足本规则。
 3. 禁止出现**无终止路径的永久 focus trap**（用户既不能完成，也不能退出）。
 4. 若业务确实要求不可退出，必须声明**系统侧终止/跳转条件**（如会话失效、外部状态变更、返回上一流程），不得仅声明「不可关闭」。
-5. **有限步内必须可达终止状态**：只保证「路径存在且可点」不够——resolution path 必须在**有限步内**到达终止状态（完成或退出）。若路径动作可能失败，必须声明**失败兜底**（重试上限 + 失败后仍可达的出口）；「动作永远失败」不得成为合规的永久阻塞。
+5. **有限步内必须可达终止状态**：只保证「路径存在且可点」不够——resolution path 必须在**有限步内**到达终止状态（完成或退出）。「有限步」指 Profile 必须写出**可枚举的有限动作序列**（不设数值上界，但序列必须有限且每步可执行）。若路径动作可能失败，必须声明**失败兜底**（`retryLimit` 必须是有限值 + 失败后仍可达的出口）；「动作永远失败」不得成为合规的永久阻塞。
 6. **禁止跨实例循环死锁**：resolution path 的动作不得打开另一个 blocking 实例，除非该实例存在**不回到本实例**的终止路径；两个 blocking 实例互为唯一出口属禁止。
 7. **系统侧终止条件必须可发生**：第 4 条要求的系统侧终止/跳转条件必须给出**可判定的触发条件**（谁、在什么条件下触发），不得只写「最终会结束」。
 8. **`reason` / `closePolicy` / `resolutionPath` 必须互相一致**：路径集合必须真的能解除 `reason` 描述的状态（例：「存在未保存变更」+「放弃变更并关闭」属一致；若 `reason` 是「必须先完成同步」，则「放弃」不构成解除）。
 9. **不可豁免**：本 operability 不变量（1–8）**不因 `exceptionId` 而豁免**。例外只能用于放宽 `R1-DLG-02` 的普通关闭入口要求，不得取消「必须存在有限步内可达的终止状态」。
-10. 检查方式：结构检查（resolution path 控件存在）+ 可达性检查（自打开状态可达且不被自身条件互锁）+ **终止性检查**（有限步内可达终止状态、失败有兜底、无跨实例循环）。
+检查方式（对应上列 1–9）：结构检查（resolution path 控件存在）+ 可达性检查（自打开状态可达且不被自身条件互锁）+ **终止性检查**（有限步内可达终止状态、失败有兜底、无跨实例循环）。
 
 ### 诊断映射（本轮不实现）
 
@@ -181,7 +184,7 @@ D16 的 `tokens` / `variants` 是 **Project 层数据**（`tokenKey → { kind, 
 - [x] 普通编辑弹窗与显式 blocking 变体的正反例；每条规则有稳定 ID、适用范围、severity、例外机制和检查方式（本文件 D17 + [`docs/references/r1-01-edit-dialog-reference-scenario.md`](../references/r1-01-edit-dialog-reference-scenario.md)）。
 - [x] 分清组件定义 / 页面实例快照 / 可调用业务工具，且状态值默认最小暴露（D17 三分类表 + D16 不变量 4）。
 - [x] 上游库差异标为 supported / partial / unsupported；**规则层要求成员级覆盖结论**（每个域 + 域内每个成员；`not-applicable` 仅限成员级，8 个 required 域与 `token` 不得使用），不静默丢特性（D15 规则 2–3）。**逐域/逐成员映射表本体属 #68 产物，本轮不声称已产出。**
-- [x] blocking 变体存在**有限步内可达的终止路径**与失败兜底、无跨实例循环、例外不可豁免（D17 `R1-DLG-08` + operability 不变量 1–10）；token 的 alias/ratio **解析规则**保证唯一终值或 fail-closed 报错（D16 token 解析不变量 1–6）。
+- [x] blocking 变体存在**有限步内可达的终止路径**与失败兜底、无跨实例循环、例外不可豁免（D17 `R1-DLG-08` + operability 不变量 1–8，第 9 条为不可豁免条款）；token 的 alias/ratio **解析规则**保证唯一终值或 fail-closed 报错（D16 token 解析不变量 1–6）。
 - [x] 首个库 = shadcn/React；其 `libraryIdentity` 的**标识规则**已冻结（不可变来源优先；digest 须带算法与覆盖范围；CLI version 仅 tooling provenance），具体取值保持 `TBD` 并写明确认时机。
 - [ ] 待负责人接受（Contract gate）。
 
@@ -209,3 +212,4 @@ D16 的 `tokens` / `variants` 是 **Project 层数据**（`tokenKey → { kind, 
 - 2026-10-05：初稿，随 #67 提交（#4 `R1-001` grant；只读基线 `e8e084b`）。
 - 2026-10-05（Rev.2）：依 PR #73 独立 Review `5416931433`（CHANGES REQUIRED @ `6c64d5a`）闭合 4 处歧义——① D15 规则 2 补全公共语义域（features / props / events / state / parts / control / accessibility / lifecycle / token）并定义逐域覆盖状态与 `supported` 成立条件；② D15 身份字段收敛为单一 `contractVersion`，删除 `adapterVersion` / 独立 `contractMajor` 字段表述；③ 「上游标识」改为不可变来源优先（commit / content digest），CLI version 降为 tooling provenance，并要求记录本地改动 digest；④ D16 新增「token 解析不变量」（alias 无环且终值 literal、ratio 必须带 base/dimension、解析失败必须报错）；⑤ `R1-DLG-08` 新增 blocking operability 不变量（必须有可见可达可执行的 resolution path，禁止无终止路径的永久 focus trap）。**范围与兼容边界未变。**
 - 2026-10-05（Rev.3）：依一次补充性对抗审阅（作者侧独立 session，不代替负责人 Review）闭合 Rev.2 残留——① D15 覆盖改为**成员级**（域级结论不可替代成员级；须记录契约实例 `componentType` + `contractVersion` 锚点；`inherited-equivalent` 须给可核对依据；不得与契约声明矛盾）；② `not-applicable` 限定为成员级，8 个 required 域与 `token` 不得使用（堵住「零视觉映射仍得 supported」）；③ 删除未定义的 `required/relevant` / `关键域` 措辞；④ D16 `ratio` 补 `factor`、`base` 必须存在且维度/单位可比或有显式换算、报错条件枚举补全（含 base 悬空、维度不一致、factor 非正）；alias 深度口径统一为「链上不同 token 数 ≤ 16」；⑤ `R1-DLG-08` 补「有限步内可达终止状态」「失败兜底」「禁止跨实例循环死锁」「系统侧终止条件可发生」「reason/closePolicy/resolutionPath 一致」「例外不可豁免」；⑥ `toolingProvenance` 落位为与 `libraryIdentity` 平级的身份字段，digest 须带算法与覆盖范围；⑦ 增补「与既有 theme 契约的边界」；⑧ 修正 Rev.2 自身引入的措辞不一致与验收对照的过度声明。**范围与兼容边界未变。**
+- 2026-10-05（Rev.4）：依同一次对抗验证（Rev.3 下 9 个旧反例全部 NOW BLOCKED）闭合 **Rev.3 自身引入**的缺陷——① operability 不变量编号口径统一：检查方式移出编号列表，**不可豁免集合固定为 1–8**，第 9 条是不可豁免条款本身（消除此前同一文件内不可豁免集合口径并存的问题）；② `R1-DLG-08` 的例外机制列改为「**无**」，与该第 9 条一致（原「登记 exceptionId + 失效条件」在 R1-DLG-08 名下没有可放宽对象）；③ token 解析不变量删除重复的 `literal` 条目（原第 1、3 条重复），并补 `dimension`/`unit` 的**声明式封闭集合 + canonical unit + 显式换算**、`unitless` ratio 的合法性条件（仅当 base 亦为 unitless）、以及 fail-closed 枚举中的「未解析出唯一终值」；④ `inherited-equivalent` 依据补核验判据（须可定位到上游组件/机制，由 #68 映射评审复核）；⑤ 「有限步」明确为**可枚举的有限动作序列**、`retryLimit` 必须有限；⑥ Rev.3 说明中的审阅项编号悬空标签改为自含表述；⑦ `decision-register` 的 D16 任务归属补齐 R1-02、D17 编号口径对齐。**范围与兼容边界未变。**
