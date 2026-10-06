@@ -1,7 +1,7 @@
 # R1-01 EditDialog 参考场景（普通编辑弹窗 / 显式 blocking 变体）
 
 日期：2026-10-05  
-状态：**Proposed for #67**。本文件是 [`r1-01-minimal-semantics-freeze-proposal.md`](../management/r1-01-minimal-semantics-freeze-proposal.md) 的伴随参考场景，用正反例说明规则 ID（`R1-DLG-01` … `R1-DLG-08`）的实际含义。**本轮只做设计，不含实现**；文中的实例形态是语义示意，不是已冻结结构。
+状态：**Accepted for #67（2026-10-06）**。本文件随 PR #73 squash merge @ `2b884ec791c91960bdf2788ab8119756c647f178` 成为 D17 的已接受参考场景，用正反例说明规则 ID（`R1-DLG-01` … `R1-DLG-08`）的实际含义。**仍只证明语义/文档，不代表 Dialog 自动校验或 shadcn 适配已实现**；文中的实例形态是语义示意，结构化实例描述仍 Deferred 到 #69。
 
 ## 1. 场景定义
 
