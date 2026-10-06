@@ -1,7 +1,7 @@
 # R1-01 最小 UI 语义 / Library Adapter / Project Profile 冻结提案（D15 / D16 / D17）
 
 日期：2026-10-05  
-状态：**Proposed for #67（Rev.4）**。本文件冻结 #67（R1-01）所需的三个决策：Library Adapter 描述范围（D15）、Project Profile 范围（D16）、EditDialog 最小 UI 语义规则集（D17）。本项为 preparation：只冻结 Markdown 语义，不改产品源码、不改公共 Schema、不安装依赖。合并须经负责人接受（Contract gate，merge=human）；#68 的 DoR 依赖本文件的接受结果。
+状态：**Accepted for #67（2026-10-06）**。PR #73 exact head `ba6e51465c8cff342b7375eb8fbbc1e5a05d8836` 经独立增量 Re-Review PASS（review `5427970808`）并获负责人明确授权，已 squash merge 到 main @ `2b884ec791c91960bdf2788ab8119756c647f178`。D15 / D16 / D17 自该 main baseline 起生效。#68 可把这些决策作为 DoR 输入，但 #68 本身仍需新的 Current Grant；本接受不授权产品源码、公共 Schema、依赖、模型调用或真实工程写入。
 
 Rev.2 依据 PR #73 的独立 Review（id `5416931433`，**CHANGES REQUIRED**，exact head `6c64d5a`）修订，只闭合该 Review 列出的歧义：D15 映射覆盖面与逐域覆盖状态、D15 版本字段收敛为单一字段、`libraryIdentity` 改为不可变来源优先、D16 增加 alias/ratio 解析不变量、`R1-DLG-08` 增加 blocking operability 不变量。方向、范围与兼容边界未变。
 
