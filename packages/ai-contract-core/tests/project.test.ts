@@ -338,12 +338,57 @@ describe('bounded validator (Phase C)', () => {
     expect(validateEvidenceShape('nope')[0]?.code).toBe('r1_project_evidence_invalid');
     expect(() => TrustedEvidence.seal({ rendered: { x: { closeAffordances: [1] } } as never })).toThrow(/malformed/);
 
+    // residual B4: rootPath is required and must be a string
+    const badRootPath = validateEvidenceShape(
+      { rendered: { x: { rootPath: 42, closeAffordances: [] } } },
+    );
+    expect(badRootPath.some((d) => d.path === '/evidence/rendered/x/rootPath')).toBe(true);
+    expect(() => TrustedEvidence.seal({ rendered: { x: { closeAffordances: [] } } as never })).toThrow(/rootPath/);
+
+    // residual B4: resolutionAffordances must be a string[] — a bare string
+    // ("fake") has a truthy .length and must NOT be sealable into a pass
+    const badResolution = validateEvidenceShape(
+      { rendered: { x: { rootPath: '/d', closeAffordances: [], resolutionAffordances: 'fake' } } },
+    );
+    expect(badResolution.some((d) => d.path === '/evidence/rendered/x/resolutionAffordances')).toBe(true);
+    expect(() => TrustedEvidence.seal({
+      rendered: { x: { rootPath: '/d', closeAffordances: [], resolutionAffordances: 'fake' } },
+    } as never)).toThrow(/resolutionAffordances/);
+
+    // a well-formed resolution array seals fine
+    expect(TrustedEvidence.seal({
+      rendered: { x: { rootPath: '/d', closeAffordances: [], resolutionAffordances: ['/save'] } },
+    })).toBeDefined();
+
     // a plain object that LOOKS like evidence does not carry the trust brand
     const forged = { interaction: { x: { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } } };
     expect(TrustedEvidence.is(forged)).toBe(false);
     const sealed = TrustedEvidence.seal(forged);
     expect(TrustedEvidence.is(sealed)).toBe(true);
     expect(Object.isFrozen(sealed)).toBe(true);
+  });
+
+  it('B4: validateProject enforces the trust boundary at RUNTIME, not just via types', () => {
+    const view = makeView();
+    const registry = new InstanceRegistry(view);
+    registry.register(registration({ metadata: { path: 'p', blocking: true, declared: { pending: true } } }));
+
+    // A plain object (cast to bypass the compiler) must be refused at runtime
+    // and must NEVER elevate a finding to rendered/interaction — no findings at
+    // all are produced from untrusted evidence.
+    const forged = {
+      rendered: { 'edit-member-dialog': { rootPath: '/d', closeAffordances: [], resolutionAffordances: ['/save'] } },
+      interaction: { 'edit-member-dialog': { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } },
+    } as unknown as Parameters<typeof validateProject>[2];
+
+    const report = validateProject(view, registry, forged);
+    expect(report.diagnostics[0]?.code).toBe('r1_project_evidence_invalid');
+    expect(report.findings).toEqual([]);
+
+    // undefined remains a valid declared-tier input (normal path unaffected)
+    const declared = validateProject(view, registry, undefined);
+    expect(declared.diagnostics).toEqual([]);
+    expect(declared.findings.some((f) => f.ruleId === 'R1-DLG-02' && f.status === 'not-covered')).toBe(true);
   });
 
   it('unbound capability binding fails; bound instance otherwise generates no tool', () => {

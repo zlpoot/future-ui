@@ -113,10 +113,36 @@ export function validateEvidenceShape(input: unknown): ProjectDiagnostic[] {
       out.push({ code: 'r1_project_evidence_invalid', path: '/evidence/rendered', explanation: 'rendered must be a record keyed by instanceId' });
     } else {
       for (const [id, ev] of Object.entries(input['rendered'] as Record<string, unknown>)) {
-        if (!isRecord(ev) || !Array.isArray((ev as { closeAffordances?: unknown }).closeAffordances) ||
-            !((ev as { closeAffordances: unknown[] }).closeAffordances).every((p) => typeof p === 'string')) {
-          out.push({ code: 'r1_project_evidence_invalid', path: `/evidence/rendered/${id}`,
-            explanation: 'rendered evidence needs string[] closeAffordances (+ rootPath)' });
+        const base = `/evidence/rendered/${id}`;
+        if (!isRecord(ev)) {
+          out.push({ code: 'r1_project_evidence_invalid', path: base, explanation: 'rendered evidence must be an object' });
+          continue;
+        }
+        const close = ev['closeAffordances'];
+        if (!Array.isArray(close) || !close.every((p) => typeof p === 'string')) {
+          out.push({ code: 'r1_project_evidence_invalid', path: `${base}/closeAffordances`,
+            explanation: 'closeAffordances must be a string[]' });
+        }
+        // rootPath is required and feeds finding paths; a non-string must not be sealed.
+        if (typeof ev['rootPath'] !== 'string' || ev['rootPath'].trim() === '') {
+          out.push({ code: 'r1_project_evidence_invalid', path: `${base}/rootPath`,
+            explanation: 'rootPath must be a non-empty string' });
+        }
+        // resolutionAffordances is optional, but when present MUST be a string[].
+        // The blocking rule reads .length on it; a string like "fake" must never
+        // be accepted and accidentally satisfy "at least one resolution path".
+        if (ev['resolutionAffordances'] !== undefined) {
+          const res = ev['resolutionAffordances'];
+          if (!Array.isArray(res) || !res.every((p) => typeof p === 'string')) {
+            out.push({ code: 'r1_project_evidence_invalid', path: `${base}/resolutionAffordances`,
+              explanation: 'resolutionAffordances must be a string[] when present' });
+          }
+        }
+        if (ev['role'] !== undefined && typeof ev['role'] !== 'string') {
+          out.push({ code: 'r1_project_evidence_invalid', path: `${base}/role`, explanation: 'role must be a string when present' });
+        }
+        if (ev['ariaModal'] !== undefined && typeof ev['ariaModal'] !== 'boolean') {
+          out.push({ code: 'r1_project_evidence_invalid', path: `${base}/ariaModal`, explanation: 'ariaModal must be a boolean when present' });
         }
       }
     }
@@ -419,6 +445,19 @@ export function validateProject(
   options: ValidateProjectOptions = {},
 ): ValidationReport {
   const diagnostics: ProjectDiagnostic[] = [];
+  // RUNTIME trust boundary (not relying on TypeScript types): only
+  // undefined (declared tier) or a genuinely sealed TrustedEvidence may enter.
+  // A structurally similar plain object is rejected here and can never elevate
+  // a finding to rendered/interaction tiers.
+  if (evidence !== undefined && !TrustedEvidence.is(evidence)) {
+    diagnostics.push({
+      code: 'r1_project_evidence_invalid',
+      path: '/evidence',
+      explanation: 'evidence must be a TrustedEvidence sealed by the controlled driver (TrustedEvidence.seal); a plain object is not trusted',
+      repairHint: 'seal driver output with TrustedEvidence.seal() / sealProjectEvidence(), or pass undefined for declared tier only',
+    });
+    return { findings: [], coverage: [], diagnostics };
+  }
   if (options.ruleId !== undefined && !isKnownRule(options.ruleId)) {
     diagnostics.push({
       code: 'r1_project_rule_unknown',
