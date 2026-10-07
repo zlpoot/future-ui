@@ -1,20 +1,66 @@
 # future-ui · Agent 工作入口
 
-## 当前执行边界：R1-003 · #69 ONLY
+## 当前执行边界：R1-004 · #70 ONLY
 
-负责人已确认的产品方向不变：future-ui 适配现有 UI 库，在统一语义与项目约定下让 AI 稳定开发界面，并输出 AI 可理解的结构；不重新做组件库，不以复杂任务能力或模型优效作为近期主线。
+负责人已明确授权 **R1-004 implementation**。当前唯一活动实现范围是 [#70 R1-04](https://github.com/zlpoot/future-ui/issues/70)：**MV-Auto-Editor 双真实场景验收 + Ark UI 小范围对照**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-004`，仅覆盖 #70。
 
-R1-02 [#68](https://github.com/zlpoot/future-ui/issues/68) 已 Done/Closed；final closeout main = `dfd65d7d3e6476106e85f5834b057885536e1a2c`。
+当前 future-ui 基线：main `d79cdfb4969b343581368f47d03c24ae3f40a536`。#67 / #68 / #69 已 Done/Closed。
 
-当前唯一活动实现范围是 [#69 R1-03](https://github.com/zlpoot/future-ui/issues/69)：**Project AI View、显式实例结构与有界一致性校验**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-003`，仅覆盖 #69。
+### 冻结目标
 
-允许：扩展 `ai-contract-core` / `ai-dev`、必要的 shadcn-adapter integration surface、显式 project catalog / instance registry / visible-state allowlist / scope cleanup、bounded validator、开发期只读 MCP thin projection、必要 dev dependency、定向测试/CI/PR。
+- Real project：本地 `E:/projects/MV-Auto-Editor`
+- Pilot A：人物 / 场景 / 道具卡片编辑与确认
+- Pilot B：分镜 / 关键帧审核、选择/重试、局部返工
+- Library B：`@ark-ui/react@5.39.3`
+- Ark 首轮范围：Dialog / Button / TextInput
+- Worker：Codex primary
+- 模型/API：未授权
+- #71：未授权
 
-禁止：公共 contracts Schema/$id/CONTRACT_MAJOR/core errors 修改；任意 JSX/DOM/source 自动识别；生产 runtime MCP、file/shell/arbitrary execution；从 UI 自动推导业务工具；#70/#71、第二 UI 库、真实工程写入、browser live、模型/API、部署发布。**merge / close #69 仍为负责人 gate。**
+### Mandatory local preflight
 
-MCP 在 #69 中只是结构化 API 之后的开发期只读投影，不能成为 Project AI View 的核心数据模型；现有 runtime `webmcp-adapter` 的业务 Capability invocation 与本项保持分层。
+在对 MV-Auto-Editor 做任何产品写入前，Codex 必须在 `E:/projects/MV-Auto-Editor` 只读执行并回报：
 
-CAL-001 历史预算不构成本阶段额度。角色切换不扩权；Worker 默认 `codex` primary，Reviewer 优先 `doubao-work` / fresh independent session。
+1. `git rev-parse --show-toplevel`
+2. `git branch --show-current`
+3. `git rev-parse HEAD`
+4. `git status --short`
+5. 当前 package manager、关键 scripts、React/UI stack
+
+把 exact root / branch / HEAD / worktree 登记到 #70 后，才允许 Phase A 产品写入。
+
+如果路径不是预期 repo、不是 Git repo、存在无法解释的未提交修改，或需要 reset/clean/discard 才能继续：**立即停止并报告**。禁止覆盖、清理或丢弃用户现有修改。
+
+### R1-004 允许
+
+- Phase A：MV-Auto-Editor Asset Edit / Approval 最小真实接入
+- Phase B：Storyboard / Keyframe Review 复用同一版本 Project Profile
+- Phase C：future-ui 内 Ark UI 隔离消费者 / 最小 Adapter 对照，仅 Dialog / Button / TextInput
+- #70 必需的依赖 / lockfile 变更
+- 本地 dev-server / jsdom / browser-like interaction，仅限本地工程
+- future-ui 与 MV-Auto-Editor #70 范围内代码、测试、lint/typecheck/build、future-ui GitHub CI
+- 创建 #70 PR 与同范围 review fixes
+- 记录人工纠正次数、validator 捕获遗漏、人工发现但 not-covered 的遗漏
+
+### R1-004 禁止
+
+- 修改 public contracts Schema / `$id` / `CONTRACT_MAJOR` / core error codes
+- 任意 JSX / DOM / source 通用扫描或通用源码编译器
+- 从 UI 自动推导业务 Capability / 权限
+- 大规模迁移 MV-Auto-Editor UI 框架
+- #71 / WebMCP-like runtime implementation
+- 模型/API 付费调用或真实模型 smoke
+- 外部网站/browser live、外部账号或数据写入
+- deploy / publish / npm publish
+- merge / close #70；仍是 Human gate
+
+### 阶段门
+
+- Preflight Gate：登记 MV exact root / branch / HEAD / worktree 后才允许 A 写入。
+- A Gate：Pilot A 真实页面 + negative cases + evidence 可复核后才进 B。
+- B Gate：A/B 共用同一 Profile 且核心语义通过后才进 C。
+- C Gate：Ark exact package/provenance + Dialog/Button/TextInput mapping / real render 通过后进入 Independent Review。
+- 实现完成后停在 **AWAITING_HUMAN_MERGE**。
 
 ## 事实源与协作边界
 
