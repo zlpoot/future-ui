@@ -38,6 +38,41 @@ export const MV_UPSTREAM = {
 };
 
 /**
+ * R1-04 (#70) Phase B — review controls (button / text-input) are implemented
+ * by the SAME inline, non-module style across THREE real documents. The
+ * multi-artifact provenance pins each page independently: any of canvas /
+ * keyframes / shots changing is upstream identity drift. Only the locators a
+ * component REALLY uses are listed (text-input has no member on keyframes.html:
+ * that page's only input is a non-text file picker).
+ */
+const MV_ARTIFACTS_ALL = [
+  { locator: 'web/canvas.html', contentHash: '52aa42c8ad7dc5217bafb7653dcc0e47ee175131' },
+  { locator: 'web/keyframes.html', contentHash: 'c8522aaca047e9fd8c2b08c3584d35a61ced9bc9' },
+  { locator: 'web/shots.html', contentHash: '64f8cd2864d3f7addc17531b24788a352b9d7823' },
+] as const;
+
+const MV_ARTIFACTS_TEXT_INPUT = [
+  { locator: 'web/canvas.html', contentHash: '52aa42c8ad7dc5217bafb7653dcc0e47ee175131' },
+  { locator: 'web/shots.html', contentHash: '64f8cd2864d3f7addc17531b24788a352b9d7823' },
+] as const;
+
+export const MV_REVIEW_BUTTON_UPSTREAM = {
+  library: 'mv-auto-editor-pages',
+  base: 'web/{canvas,keyframes,shots}.html',
+  style: 'inline-css',
+  runtimePackages: [] as ReadonlyArray<{ name: string; version: string }>,
+  artifacts: MV_ARTIFACTS_ALL,
+};
+
+export const MV_REVIEW_TEXT_INPUT_UPSTREAM = {
+  library: 'mv-auto-editor-pages',
+  base: 'web/{canvas,shots}.html',
+  style: 'inline-css',
+  runtimePackages: [] as ReadonlyArray<{ name: string; version: string }>,
+  artifacts: MV_ARTIFACTS_TEXT_INPUT,
+};
+
+/**
  * Page-local symbols of the asset editor inside canvas.html. These are INLINE
  * functions in the page's classic <script> (canvas.html has no `export` and no
  * <script type=module>), so they are page-owned symbols — NOT module exports —
@@ -47,35 +82,97 @@ export const MV_UPSTREAM = {
  */
 const ASSET_EDITOR_PAGE_SYMBOLS = ['simpleAssetEditor', 'assetEditor', 'assetPanel', 'characterAssetPanel'];
 
-function exampleFor(componentType: string): { title: string; code: string } {
-  if (componentType === 'future-ui.dialog') {
-    // Real call site: canvas.html renderDetail() assetCard branch.
-    return {
-      title: 'Asset card editor panel (real call site)',
-      code: [
-        "// canvas.html renderDetail(): when an asset node is selected,",
-        "$('#detail').innerHTML = `<h2>${esc(assetCard.name)}</h2>` + simpleAssetEditor(assetCard, n);",
-        "// #inspector hosts #detail; #closeInspector is the (desktop-hidden) close control.",
-      ].join('\n'),
-    };
-  }
-  if (componentType === 'future-ui.button') {
-    return {
-      title: 'Asset version action buttons (real template)',
-      code: [
+/**
+ * Real in-page symbols per review document (classic inline <script>, no
+ * exports). keyframes.html exposes renderDetail/refresh/post; shots.html
+ * exposes renderDetail/renderList/select.
+ */
+const KEYFRAMES_PAGE_SYMBOLS = ['renderDetail', 'refresh', 'post'];
+const SHOTS_PAGE_SYMBOLS = ['renderDetail', 'renderList', 'select'];
+
+function dialogExample(): { title: string; code: string } {
+  // Real call site: canvas.html renderDetail() assetCard branch.
+  return {
+    title: 'Asset card editor panel (real call site)',
+    code: [
+      "// canvas.html renderDetail(): when an asset node is selected,",
+      "$('#detail').innerHTML = `<h2>${esc(assetCard.name)}</h2>` + simpleAssetEditor(assetCard, n);",
+      "// #inspector hosts #detail; #closeInspector is the (desktop-hidden) close control.",
+    ].join('\n'),
+  };
+}
+
+/** Real per-locator members for the review button source set. */
+function buttonSourceSet() {
+  return [
+    {
+      locator: 'web/canvas.html',
+      owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
+      symbols: ASSET_EDITOR_PAGE_SYMBOLS,
+      example: [
         "`<button data-asset-action=\"select\" data-version=\"${esc(v.id)}\">选用</button>`",
-        "`<button data-asset-action=\"approve\" data-version=\"${esc(v.id)}\">通过</button>`",
         "`<button class=\"primary\" data-asset-action=\"save-card\">保存设定</button>`",
       ].join('\n'),
+    },
+    {
+      locator: 'web/keyframes.html',
+      owner: 'inline classic <script> on the /keyframes route (non-module, page-owned)',
+      symbols: KEYFRAMES_PAGE_SYMBOLS,
+      example: [
+        "`<button data-candidate=\"${c.id}\" data-action=\"approve\">通过并选用</button>`",
+        "`<button data-candidate=\"${c.id}\" data-action=\"reject\" class=\"warn\">淘汰</button>`",
+        "`['failed','canceled'].includes(j.status)?`<button data-job=\"${j.id}\" data-action=\"retry\">重试</button>`:''`",
+        "<button id=\"lock\">锁定当前选图</button>",
+      ].join('\n'),
+    },
+    {
+      locator: 'web/shots.html',
+      owner: 'inline classic <script> on the /shots route (non-module, page-owned)',
+      symbols: SHOTS_PAGE_SYMBOLS,
+      example: [
+        "<button id=\"save\" class=\"primary\">保存镜头计划</button>",
+        "<button id=\"reset\">放弃此镜头未保存修改</button>",
+      ].join('\n'),
+    },
+  ];
+}
+
+/** Real per-locator members for the review text-input source set. */
+function textInputSourceSet() {
+  return [
+    {
+      locator: 'web/canvas.html',
+      owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
+      symbols: ASSET_EDITOR_PAGE_SYMBOLS,
+      example: [
+        "`<input id=\"assetName\" value=\"${esc(card.name)}\">`",
+        "`<textarea id=\"assetPrompt\" rows=\"7\">${esc(assetPrompt)}</textarea>`",
+      ].join('\n'),
+    },
+    {
+      locator: 'web/shots.html',
+      owner: 'inline classic <script> on the /shots route (non-module, page-owned)',
+      symbols: SHOTS_PAGE_SYMBOLS,
+      example: [
+        '<textarea id="intent" placeholder="描写构图、人物动作、情绪与机位">…</textarea>',
+        '<input id="anchor" type="number" min="0" step="0.001">',
+        '<textarea id="generationPrompt">…</textarea>',
+      ].join('\n'),
+    },
+  ];
+}
+
+function exampleFor(componentType: string): { title: string; code: string } {
+  if (componentType === 'future-ui.dialog') return dialogExample();
+  if (componentType === 'future-ui.button') {
+    return {
+      title: 'Review action buttons across the real inline pages',
+      code: buttonSourceSet().map((m) => `// ${m.locator}\n${m.example}`).join('\n'),
     };
   }
   return {
-    title: 'Asset field inputs (real template)',
-    code: [
-      "`<input id=\"assetName\" value=\"${esc(card.name)}\">`",
-      "`<textarea id=\"assetDescription\">${esc(card.description)}</textarea>`",
-      "`<textarea id=\"assetPrompt\" rows=\"7\">${esc(assetPrompt)}</textarea>`",
-    ].join('\n'),
+    title: 'Review form inputs across the real inline pages',
+    code: textInputSourceSet().map((m) => `// ${m.locator}\n${m.example}`).join('\n'),
   };
 }
 
@@ -108,8 +205,14 @@ function limitsFor(componentType: string): MappingLimit[] {
       {
         member: 'features.loading',
         status: 'unsupported',
-        reason: '生成/保存进行中仅使用 disabled + 文本状态，无 aria-busy',
-        impact: 'pending 状态的辅助技术可访问性弱于契约',
+        reason: '生成/保存/上传进行中仅使用 disabled + 文本状态，无 aria-busy',
+        impact: 'pending 状态的辅助技术可访问性弱于契约；disabled 是渲染事实，不是重入守卫的 interaction 证据',
+      },
+      {
+        member: 'accessibility.action-role',
+        status: 'unsupported',
+        reason: 'P4/P5 审核动作语义只挂在 data-action/data-candidate/data-job 自定义属性上，无稳定 aria-label/role 契约，整页应用也不是模态',
+        impact: '候选通过/淘汰/选用、重试、锁定等动作角色只能按真实 data-* 与文案识别；冻结规则集无 button 级 action/pending 规则，相关语义为 not-covered',
       },
     ];
   }
@@ -117,41 +220,54 @@ function limitsFor(componentType: string): MappingLimit[] {
     {
       member: 'features.validation',
       status: 'unsupported',
-      reason: '字段无内联校验消息',
+      reason: '字段无内联校验消息；shots 页校验只在保存时由后端抛出',
       impact: '与 EditDialog 字段校验语义不同',
     },
   ];
 }
 
-// Identity is uniform across the three definitions (same adapter/profile/upstream).
-const identityFor = (): ComponentDefinition['identity'] => ({
-  adapterId: 'shadcn-react',
-  adapterVersion: ADAPTER_PACKAGE_VERSION,
-  contractVersion: CONTRACT_VERSION,
-  profileId: mvAutoEditorProfile.identity.profileId,
-  profileVersion: mvAutoEditorProfile.identity.profileVersion,
-  upstream: MV_UPSTREAM,
-});
+// Identity differs per component because the review control components span
+// multiple real artifacts while the dialog lives only on canvas.html. All
+// three still resolve against the SAME adapter and the SAME single Profile.
+function identityFor(componentType: string): ComponentDefinition['identity'] {
+  const common = {
+    adapterId: 'shadcn-react',
+    adapterVersion: ADAPTER_PACKAGE_VERSION,
+    contractVersion: CONTRACT_VERSION,
+    profileId: mvAutoEditorProfile.identity.profileId,
+    profileVersion: mvAutoEditorProfile.identity.profileVersion,
+  } as const;
+  if (componentType === 'future-ui.dialog') return { ...common, upstream: MV_UPSTREAM };
+  return {
+    ...common,
+    upstream: componentType === 'future-ui.button' ? MV_REVIEW_BUTTON_UPSTREAM : MV_REVIEW_TEXT_INPUT_UPSTREAM,
+  };
+}
+
+function sourceFor(componentType: string): ComponentDefinition['source'] {
+  if (componentType === 'future-ui.dialog') {
+    return {
+      kind: 'inline-source',
+      locator: 'web/canvas.html',
+      owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
+      symbols: ASSET_EDITOR_PAGE_SYMBOLS,
+      example: dialogExample().code,
+    };
+  }
+  // Review controls are genuinely multi-document inline implementations; the
+  // set is pinned member-by-member via upstream.artifacts and never importable.
+  return { kind: 'inline-source-set', sources: componentType === 'future-ui.button' ? buttonSourceSet() : textInputSourceSet() };
+}
 
 /** Build the real MV Project AI View (dialog/button/text-input definitions). */
 export function buildMvAutoEditorComponentDefinitions(): ComponentDefinition[] {
   return (['future-ui.dialog', 'future-ui.button', 'future-ui.text-input'] as const).map((componentType) => ({
     componentType,
     contractVersion: CONTRACT_VERSION,
-    identity: identityFor(),
-    source: {
-      // The MV asset editor is NOT importable: it lives as inline functions in
-      // web/canvas.html (classic <script>, no exports). Record it honestly as an
-      // inline-source so project.catalog/describeComponent never suggest an
-      // `import` that cannot exist (R1-04 #70 P2 contract amendment).
-      kind: 'inline-source',
-      locator: 'web/canvas.html',
-      owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
-      symbols: ASSET_EDITOR_PAGE_SYMBOLS,
-      example: exampleFor(componentType).code,
-    },
+    identity: identityFor(componentType),
+    source: sourceFor(componentType),
     // All three are real but partial: the panel is not a modal dialog and the
-    // controls do not fully satisfy the EditDialog/button/input members.
+    // review controls do not fully satisfy the EditDialog/button/input members.
     mappingStatus: 'partial',
     limits: limitsFor(componentType),
     examples: [exampleFor(componentType)],

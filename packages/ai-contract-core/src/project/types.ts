@@ -42,6 +42,15 @@ export interface AdapterComponentIdentity {
     sourceCommit?: string;
     style?: string;
     runtimePackages: ReadonlyArray<{ name: string; version: string }>;
+    /**
+     * Optional multi-artifact provenance (R1-04 #70 Phase B amendment). When
+     * the adapted implementation spans several real documents (an
+     * inline-source-set), EACH document's exact content hash is pinned here.
+     * The identity fingerprint folds in the locator-sorted artifact set, so a
+     * content change to ANY pinned artifact is identity drift. Definitions that
+     * omit it keep the legacy single-source fingerprint unchanged (back-compat).
+     */
+    artifacts?: ReadonlyArray<{ locator: string; contentHash: string }>;
   };
 }
 
@@ -61,6 +70,13 @@ export interface AdapterComponentIdentity {
  * model could not describe it honestly without a fake module/exports. This
  * union closes ONLY that gap; it deliberately does not add script-tag, global,
  * CDN or bundler-alias source kinds.
+ *
+ * R1-04 (#70) Phase B amendment — 'inline-source-set': the same REAL component
+ * semantics can be implemented by inline, non-module scripts spread across
+ * several real documents (the review controls on canvas/shots/keyframes). Each
+ * member is pinned individually; the set as a whole is still never importable.
+ * provenance for every member locator is pinned separately via
+ * upstream.artifacts so any one page drifting is identity drift.
  */
 export interface ModuleImportSource {
   kind: 'module-import';
@@ -88,7 +104,36 @@ export interface InlinePageSource {
   example: string;
 }
 
-export type ComponentSource = ModuleImportSource | InlinePageSource;
+/**
+ * One REAL inline, non-module implementation location inside an
+ * {@link InlineSourceSet}. Same honesty rules as {@link InlinePageSource}
+ * members: page-owned symbols only, never module exports.
+ */
+export interface InlineSourceEntry {
+  /** real owning document locator, e.g. 'web/keyframes.html'. Unique within the set. */
+  locator: string;
+  /** owning scope inside the document, e.g. the inline <script> on a route. */
+  owner: string;
+  /** real page-local symbols at this locator (not module exports). */
+  symbols: string[];
+  /** real in-page call-site example for THIS locator (never an import). */
+  example: string;
+}
+
+/**
+ * A component whose REAL implementation is spread across SEVERAL inline,
+ * non-module documents (Phase B multi-source provenance). Like inline-source
+ * it can NEVER be turned into an import: module/exports are forbidden, and
+ * {@link importableModule} returns null. The `sources` array is non-empty and
+ * its locators are unique; every locator must be pinned in upstream.artifacts.
+ */
+export interface InlineSourceSet {
+  kind: 'inline-source-set';
+  /** at least one real member; locators must be unique (validator fail-closed). */
+  sources: ReadonlyArray<InlineSourceEntry>;
+}
+
+export type ComponentSource = ModuleImportSource | InlinePageSource | InlineSourceSet;
 
 /** A contract member the adapter cannot fully satisfy (the reason for partial). */
 export interface MappingLimit {
