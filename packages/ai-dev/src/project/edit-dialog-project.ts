@@ -9,6 +9,8 @@
 import {
   InstanceRegistry,
   validateProject,
+  identityRefFor,
+  TrustedEvidence,
   type EvidenceSet,
   type InstanceRegistration,
   type ProjectAIView,
@@ -19,6 +21,11 @@ import { buildShadcnProjectView } from './shadcn-descriptor.js';
 export interface EditDialogProjectContext {
   view: ProjectAIView;
   registry: InstanceRegistry;
+  /**
+   * HOST-OWNED trusted evidence for project.validate, injected only by the dev
+   * host next to the controlled jsdom driver. Never derived from tool args.
+   */
+  evidence?: TrustedEvidence;
 }
 
 /** Build the real shadcn view and an empty explicit registry. */
@@ -45,12 +52,13 @@ export function registerEditDialogInstance(
   ctx: EditDialogProjectContext,
   options: EditDialogInstanceOptions = {},
 ): InstanceRegistration {
+  const def = ctx.view.definitions.find((d) => d.componentType === 'future-ui.dialog');
+  if (def === undefined) throw new Error('future-ui.dialog definition missing from shadcn view');
   const registration: InstanceRegistration = {
     instanceId: options.instanceId ?? 'members/edit-dialog',
     componentType: 'future-ui.dialog',
     scopeId: options.scopeId ?? 'members/edit',
-    adapterId: 'shadcn-react',
-    profileId: 'r1-edit-dialog-reference',
+    identityRef: identityRefFor(def.identity),
     metadata: {
       path: 'members/EditMemberDialog',
       blocking: options.blocking,
@@ -69,10 +77,19 @@ export function registerEditDialogInstance(
   return registration;
 }
 
-/** Run the frozen bounded rules for the EditDialog instance against evidence. */
+/**
+ * Seal raw evidence produced by the controlled jsdom driver into trusted
+ * evidence. This is the trust gate: only code running in the dev host next to
+ * the driver can seal; an external MCP caller cannot.
+ */
+export function sealProjectEvidence(raw: EvidenceSet): TrustedEvidence {
+  return TrustedEvidence.seal(raw);
+}
+
+/** Run the frozen bounded rules for the EditDialog instance against trusted evidence. */
 export function validateEditDialogProject(
   ctx: EditDialogProjectContext,
-  evidence: EvidenceSet,
+  evidence: TrustedEvidence | undefined,
   scopeId?: string,
 ): ValidationReport {
   return validateProject(ctx.view, ctx.registry, evidence, scopeId === undefined ? {} : { scopeId });

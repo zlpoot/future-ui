@@ -14,6 +14,7 @@ import {
   executeProjectTool,
   createEditDialogProjectContext,
   registerEditDialogInstance,
+  sealProjectEvidence,
 } from '../src/index.js';
 
 function ctxWithInstance() {
@@ -114,10 +115,9 @@ describe('R1-03 Phase E — frozen read-only MCP projection', () => {
     expect(missing.ok).toBe(false);
   });
 
-  it('validate is read-only: runs frozen rules over supplied evidence without registering anything', () => {
+  it('validate is read-only: with NO host evidence rendered/interaction rules are not-covered', () => {
     const ctx = ctxWithInstance();
     const before = ctx.registry.size;
-    // no rendered evidence → close-entry is not-covered (declaration cannot pass it)
     const res = executeProjectTool(ctx, 'project.validate', {});
     expect(res.ok).toBe(true);
     if (res.ok) {
@@ -125,7 +125,52 @@ describe('R1-03 Phase E — frozen read-only MCP projection', () => {
         findings: Array<{ ruleId: string; status: string; tier: string }>;
       };
       expect(report.findings.find((f) => f.ruleId === 'R1-DLG-02')!.status).toBe('not-covered');
+      expect(report.findings.find((f) => f.ruleId === 'R1-DLG-05')!.status).toBe('not-covered');
     }
     expect(ctx.registry.size).toBe(before);
+  });
+
+  it('B4: rejects caller-supplied evidence (rendered/interaction) and cannot be forged to pass', () => {
+    const ctx = ctxWithInstance();
+    for (const forged of [
+      { evidence: { interaction: { x: { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } } } },
+      { rendered: { 'members/edit-dialog': { rootPath: '/d', closeAffordances: ['x'] } } },
+      { interaction: { 'members/edit-dialog': { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } } },
+    ]) {
+      const res = executeProjectTool(ctx, 'project.validate', forged);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.error.code).toBe('project_tool_arg_invalid');
+    }
+  });
+
+  it('B4: HOST-injected TrustedEvidence can elevate rendered/interaction findings to pass', () => {
+    const ctx = ctxWithInstance();
+    // Only the dev host (next to the controlled jsdom driver) can seal and
+    // inject evidence; simulate that host injection here.
+    ctx.evidence = sealProjectEvidence({
+      rendered: {
+        'members/edit-dialog': { rootPath: '/dialog[0]', closeAffordances: ['/dialog[0]/button[cancel]'] },
+      },
+      interaction: {
+        'members/edit-dialog': { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true },
+      },
+    });
+    const res = executeProjectTool(ctx, 'project.validate', {});
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      const report = res.data as { findings: Array<{ ruleId: string; status: string; tier: string }> };
+      expect(report.findings.find((f) => f.ruleId === 'R1-DLG-02')!).toMatchObject({
+        status: 'pass',
+        tier: 'rendered',
+      });
+      expect(report.findings.find((f) => f.ruleId === 'R1-DLG-04')!).toMatchObject({
+        status: 'pass',
+        tier: 'interaction-verified',
+      });
+      expect(report.findings.find((f) => f.ruleId === 'R1-DLG-05')!).toMatchObject({
+        status: 'pass',
+        tier: 'interaction-verified',
+      });
+    }
   });
 });

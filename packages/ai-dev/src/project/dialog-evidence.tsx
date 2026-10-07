@@ -24,6 +24,13 @@ function observedCloseAffordances(scope: ParentNode): string[] {
   const out: string[] = [];
   if (scope.querySelector('[data-slot="dialog-close"]')) out.push('/dialog[0]/[data-slot=dialog-close]');
   if (scope.querySelector('[data-testid="edit-dialog-cancel"]')) out.push('/dialog[0]/button[edit-dialog-cancel]');
+  return out;
+}
+
+/** Limited resolution controls (save / discard) observed for the blocking variant. */
+function observedResolutionAffordances(scope: ParentNode): string[] {
+  const out: string[] = [];
+  if (scope.querySelector('[data-testid="edit-dialog-save"]')) out.push('/dialog[0]/button[edit-dialog-save]');
   if (scope.querySelector('[data-testid="edit-dialog-discard"]')) out.push('/dialog[0]/button[edit-dialog-discard]');
   return out;
 }
@@ -39,6 +46,7 @@ export function collectRenderedEvidence(scope: ParentNode = document.body): Rend
     role: dialog?.getAttribute('role') ?? undefined,
     ariaModal: dialog?.getAttribute('aria-modal') === 'true' ? true : undefined,
     closeAffordances: observedCloseAffordances(scope),
+    resolutionAffordances: observedResolutionAffordances(scope),
     rootPath: '/dialog[0]',
   };
 }

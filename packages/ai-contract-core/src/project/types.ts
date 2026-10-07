@@ -13,6 +13,7 @@
  *  3. CapabilityReference  — a business capability that appears ONLY when an
  *     explicit Capability/Binding exists. A rendered button is never a tool.
  */
+import type { InstanceIdentityRef } from './identity.js';
 
 /** Mapping/coverage status reused verbatim from the D15 mapping vocabulary. */
 export type MappingStatus = 'supported' | 'partial' | 'unsupported';
@@ -149,9 +150,12 @@ export interface InstanceRegistration {
   componentType: ComponentType;
   /** page/route/scope this instance belongs to (coverage unit). */
   scopeId: string;
-  /** refs into the view identity; validated against the definition. */
-  adapterId: string;
-  profileId: string;
+  /**
+   * EXACT identity the instance was registered against: adapter id+version,
+   * profile id+version and upstream revision fingerprint. Any difference vs
+   * the current component definition is identity drift (fail-closed).
+   */
+  identityRef: InstanceIdentityRef;
   relations?: InstanceRelation[];
   metadata: InstanceMetadata;
   visibleState: VisibleStatePolicy;

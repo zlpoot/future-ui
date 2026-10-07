@@ -54,6 +54,10 @@ export {
   validateProject,
   getScopeCoverage,
   r1ProjectErrorCodes,
+  TrustedEvidence,
+  validateEvidenceShape,
+  identityRefFor,
+  upstreamIdentityFingerprint,
 } from '@future-ui/ai-contract-core';
 export type {
   BuildProjectViewInput,
@@ -64,6 +68,7 @@ export type {
   EvidenceTier,
   Finding,
   FindingStatus,
+  InstanceIdentityRef,
   InstanceRegistration,
   InteractionEvidence,
   ProjectAIView,
@@ -80,6 +85,7 @@ export {
   createEditDialogProjectContext,
   registerEditDialogInstance,
   validateEditDialogProject,
+  sealProjectEvidence,
 } from './project/edit-dialog-project.js';
 export type { EditDialogProjectContext, EditDialogInstanceOptions } from './project/edit-dialog-project.js';
 export { mountEditDialog, collectRenderedEvidence, drivePendingInteraction } from './project/dialog-evidence.js';

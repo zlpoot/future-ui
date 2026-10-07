@@ -9,12 +9,19 @@
  *   project.describeComponent  — one full component definition
  *   project.listInstances      — list EXPLICIT instances (safe metadata only)
  *   project.describeInstance   — one instance + coverage + bound capability ids
- *   project.validate           — run the frozen bounded rules over evidence
+ *   project.validate           — run the frozen bounded rules over HOST-OWNED
+ *                                trusted evidence (never caller-supplied JSON)
  *
  * Hard boundaries (R1-03):
  *  - dev-time only; this module is never imported by any UI production package;
  *  - read-only: there is NO register/update/unregister/edit/shell/exec tool and
  *    no business Capability invocation (a rendered control is never a tool);
+ *  - TRUST BOUNDARY: rendered/interaction evidence can only come from the
+ *    controlled jsdom driver via TrustedEvidence.seal(), injected by the host
+ *    into the tool context. A caller CANNOT pass evidence JSON to
+ *    project.validate — doing so returns project_tool_arg_invalid, and even if
+ *    forged it carries no trust brand and can never reach rendered/interaction
+ *    tiers;
  *  - no MCP SDK / network / model dependency — this is a pure dispatcher a dev
  *    host can expose over stdio; without that host the core API and UI are
  *    completely unaffected;
@@ -24,7 +31,7 @@ import {
   capabilitiesForInstance,
   describeComponent,
   validateProject,
-  type EvidenceSet,
+  TrustedEvidence,
   type InstanceRegistry,
   type ProjectAIView,
   type ValidationReport,
@@ -79,12 +86,11 @@ export const PROJECT_TOOL_DESCRIPTORS: readonly ProjectToolDescriptor[] = [
   },
   {
     name: 'project.validate',
-    description: 'Run the frozen bounded rules (optionally one ruleId/scopeId) against supplied rendered/interaction evidence and return layered findings. Read-only.',
+    description: 'Run the frozen bounded rules (optionally one ruleId/scopeId) using HOST-OWNED trusted evidence from the controlled driver. Read-only; does NOT accept caller-supplied evidence.',
     readOnly: true,
     inputs: [
       { name: 'scopeId', type: 'string' },
       { name: 'ruleId', type: 'string' },
-      { name: 'evidence', type: 'object' },
     ],
   },
 ];
@@ -109,6 +115,12 @@ export type ProjectToolResult<T = unknown> =
 export interface ProjectToolContext {
   view: ProjectAIView;
   registry: InstanceRegistry;
+  /**
+   * HOST-OWNED trusted evidence produced by the controlled jsdom driver.
+   * Populated only by the dev host, never from a tool argument. Absent →
+   * declared-tier validation only.
+   */
+  evidence?: TrustedEvidence;
 }
 
 function isString(v: unknown): v is string {
@@ -121,8 +133,11 @@ function safeInstanceRow(i: ReturnType<InstanceRegistry['query']>[number]) {
     instanceId: i.instanceId,
     componentType: i.componentType,
     scopeId: i.scopeId,
-    adapterId: i.adapterId,
-    profileId: i.profileId,
+    adapterId: i.identityRef.adapterId,
+    adapterVersion: i.identityRef.adapterVersion,
+    profileId: i.identityRef.profileId,
+    profileVersion: i.identityRef.profileVersion,
+    upstreamFingerprint: i.identityRef.upstreamFingerprint,
     path: i.metadata.path,
     blocking: i.metadata.blocking === true,
     visibleState: {
@@ -221,7 +236,20 @@ export function executeProjectTool(
     case 'project.validate': {
       const scopeId = args['scopeId'];
       const ruleId = args['ruleId'];
-      const evidence = (args['evidence'] ?? {}) as EvidenceSet;
+      // Trust boundary: evidence is never read from tool arguments. A caller
+      // attempting to provide forged evidence is rejected outright.
+      if ('evidence' in args || 'rendered' in args || 'interaction' in args) {
+        return {
+          ok: false,
+          error: {
+            code: 'project_tool_arg_invalid',
+            path: '/args/evidence',
+            message: 'evidence cannot be supplied by the caller; rendered/interaction verification is produced only by the host-controlled jsdom driver',
+            actual: 'caller-provided evidence',
+            expected: 'no evidence argument (host injects TrustedEvidence)',
+          },
+        };
+      }
       if (scopeId !== undefined && !isString(scopeId)) {
         return { ok: false, error: { code: 'project_tool_arg_invalid', path: '/args/scopeId', message: 'scopeId must be a non-empty string' } };
       }
@@ -231,7 +259,7 @@ export function executeProjectTool(
       const report: ValidationReport = validateProject(
         ctx.view,
         ctx.registry,
-        evidence,
+        ctx.evidence,
         {
           ...(isString(scopeId) ? { scopeId } : {}),
           ...(isString(ruleId) ? { ruleId } : {}),

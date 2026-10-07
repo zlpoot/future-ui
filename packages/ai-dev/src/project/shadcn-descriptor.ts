@@ -61,15 +61,34 @@ function limitsFor(componentType: string): MappingLimit[] {
 
 function exampleFor(componentType: string): { title: string; code: string } {
   if (componentType === 'future-ui.dialog') {
+    // onOpenChange receives EditDialogOpenChangeDetail { open, reason }, NOT a
+    // boolean — so a React boolean setter cannot be passed directly.
     return {
       title: 'EditDialog (composition reference)',
-      code: '<EditDialog open label="Edit" fields={[...]} onSave={save} onOpenChange={setOpen} />',
+      code: [
+        'const [open, setOpen] = useState(false);',
+        '',
+        '<EditDialog',
+        '  open={open}',
+        '  label="Edit member"',
+        '  description="Update the member display name"',
+        '  fields={[{ name: "displayName", label: "Name", type: "text", defaultValue: "Ada" }]}',
+        '  onSave={async (values) => { await saveMember(values); }}',
+        '  onOpenChange={({ open: next }) => setOpen(next)}',
+        '/>',
+      ].join('\n'),
     };
   }
   if (componentType === 'future-ui.button') {
-    return { title: 'Button', code: '<ShadcnButton type="button" onClick={fn}>Save</ShadcnButton>' };
+    return {
+      title: 'Button',
+      code: '<ShadcnButton type="button" variant="default" onClick={(event) => handleClick(event)}>Save</ShadcnButton>',
+    };
   }
-  return { title: 'TextInput', code: '<ShadcnTextInput name="email" type="email" onValueChange={({value})=>...} />' };
+  return {
+    title: 'TextInput',
+    code: '<ShadcnTextInput name="email" type="email" defaultValue="ada@example.com" onValueChange={(event) => setEmail(event.value)} />',
+  };
 }
 
 /** Build the three real shadcn component definitions from frozen facts. */

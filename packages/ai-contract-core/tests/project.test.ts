@@ -3,10 +3,11 @@
  * R1-03 (#69) Project AI View + explicit registry + bounded validator.
  *
  * Focuses on the pure deterministic guarantees: the view is NOT the schema
- * catalog; registration is explicit; visible state is allowlisted with
+ * catalog; registration is explicit and pins EXACT identity; the registry is
+ * encapsulation-safe (frozen snapshots); visible state is allowlisted with
  * drafts/sensitive hidden by default; and the validator only concludes against
- * the required evidence tier (declared < rendered < interaction-verified),
- * emitting not-covered instead of a false pass.
+ * the required evidence tier (declared < rendered < interaction-verified) using
+ * SEALED trusted evidence, emitting not-covered instead of a false pass.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -16,9 +17,18 @@ import {
   capabilitiesForInstance,
   InstanceRegistry,
   validateProject,
+  TrustedEvidence,
+  validateEvidenceShape,
+  identityRefFor,
   isKnownRule,
 } from '../src/index.js';
-import type { CapabilityReference, ComponentDefinition, InstanceRegistration, ProjectAIView } from '../src/index.js';
+import type {
+  CapabilityReference,
+  ComponentDefinition,
+  InstanceIdentityRef,
+  InstanceRegistration,
+  ProjectAIView,
+} from '../src/index.js';
 
 function definition(over: Partial<ComponentDefinition> = {}): ComponentDefinition {
   return {
@@ -46,6 +56,9 @@ function definition(over: Partial<ComponentDefinition> = {}): ComponentDefinitio
   };
 }
 
+const DIALOG_DEF = definition();
+const DIALOG_REF = identityRefFor(DIALOG_DEF.identity);
+
 function makeView(
   defs: ComponentDefinition[] = [definition()],
   capabilities: CapabilityReference[] = [],
@@ -61,12 +74,22 @@ function registration(over: Partial<InstanceRegistration> = {}): InstanceRegistr
     instanceId: 'edit-member-dialog',
     componentType: 'future-ui.dialog',
     scopeId: 'members/edit',
-    adapterId: 'shadcn-react',
-    profileId: 'r1-edit-dialog',
+    identityRef: { ...DIALOG_REF },
     metadata: { path: 'members/EditMemberDialog' },
     visibleState: { allow: ['open'], sensitive: ['ssn'] },
     ...over,
   };
+}
+
+function driftRef(patch: Partial<InstanceIdentityRef>): InstanceIdentityRef {
+  return { ...DIALOG_REF, ...patch };
+}
+
+function seal(rendered?: unknown, interaction?: unknown): TrustedEvidence {
+  return TrustedEvidence.seal({
+    ...(rendered === undefined ? {} : { rendered: rendered as never }),
+    ...(interaction === undefined ? {} : { interaction: interaction as never }),
+  });
 }
 
 describe('Project AI View (Phase A)', () => {
@@ -111,21 +134,73 @@ describe('explicit instance registry (Phase B)', () => {
     expect(registry.query({ scopeId: 'members/edit' })).toHaveLength(1);
   });
 
-  it('flags adapter/profile identity drift', () => {
+  it('B1: detects adapter id, adapter version, profile version and upstream fingerprint drift', () => {
     const registry = new InstanceRegistry(makeView());
-    const drift = registry.register(registration({ instanceId: 'd2', adapterId: 'ark-react' }));
-    expect(drift.diagnostics.some((d) => d.code === 'r1_project_identity_mismatch')).toBe(true);
+    const cases: Array<[string, Partial<InstanceIdentityRef>, string]> = [
+      ['adapter id', { adapterId: 'ark-react' }, 'adapterId'],
+      ['adapter version', { adapterVersion: '9.9.9' }, 'adapterVersion'],
+      ['profile version', { profileVersion: '2.0.0' }, 'profileVersion'],
+      ['upstream fingerprint', { upstreamFingerprint: 'deadbeef' }, 'upstreamFingerprint'],
+    ];
+    for (const [label, patch, key] of cases) {
+      const res = registry.register(registration({ instanceId: `drift-${key}`, identityRef: driftRef(patch) }));
+      const d = res.diagnostics.find((x) => x.code === 'r1_project_identity_mismatch');
+      expect(d, label).toBeDefined();
+      expect(d?.path, label).toContain(`identityRef/${key}`);
+      expect(registry.get(`drift-${key}`), `${label} must not be stored`).toBeUndefined();
+    }
   });
 
-  it('update() validates and rolls back on failure; unregister removes fully', () => {
+  it('B1: identity drift also fails the R1-PRJ-IDENTITY rule at the validator', () => {
+    const view = makeView();
+    const registry = new InstanceRegistry(view);
+    // correct id but bumped profile version passes the registry id/shape checks
+    // only if exact identity matches; here it must be rejected by register.
+    const res = registry.register(registration({ identityRef: driftRef({ profileVersion: '9.9.9' }) }));
+    expect(res.diagnostics.some((d) => d.code === 'r1_project_identity_mismatch')).toBe(true);
+  });
+
+  it('update() validates exact identity and rolls back on failure; unregister removes fully', () => {
     const registry = new InstanceRegistry(makeView());
     registry.register(registration());
-    const bad = registry.update('edit-member-dialog', { adapterId: 'wrong' });
+    const bad = registry.update('edit-member-dialog', { identityRef: driftRef({ upstreamFingerprint: '00000000' }) });
     expect(bad.diagnostics.some((d) => d.code === 'r1_project_identity_mismatch')).toBe(true);
-    // rollback keeps the original registration
-    expect(registry.get('edit-member-dialog')?.adapterId).toBe('shadcn-react');
+    // rollback keeps the original exact identity
+    expect(registry.get('edit-member-dialog')?.identityRef.upstreamFingerprint).toBe(DIALOG_REF.upstreamFingerprint);
     expect(registry.unregister('edit-member-dialog')).toEqual([]);
     expect(registry.unregister('edit-member-dialog')[0]?.code).toBe('r1_project_instance_not_found');
+  });
+
+  it('B2: mutating the input, get() result or query() result cannot affect the registry/projection', () => {
+    const registry = new InstanceRegistry(makeView());
+    // runtime-only mutator (bypasses the readonly static types on purpose)
+    const mutate = (o: object, fn: (w: Record<string, any>) => void): (() => void) =>
+      () => fn(o as Record<string, any>);
+    const input = registration();
+    registry.register(input);
+
+    // mutate the caller's original object after registration
+    mutate(input, (w) => {
+      w.identityRef.adapterVersion = 'hacked';
+      w.visibleState.allow.push('ssn');
+      w.visibleState.sensitive.length = 0;
+      w.visibleState.exposeDraft = true;
+    })();
+
+    const got = registry.get('edit-member-dialog')!;
+    expect(Object.isFrozen(got)).toBe(true);
+    expect(mutate(got, (w) => { w.identityRef.adapterVersion = 'x'; })).toThrow(TypeError);
+    expect(mutate(got, (w) => { w.visibleState.allow.push('ssn'); })).toThrow(TypeError);
+
+    const [row] = registry.query();
+    expect(Object.isFrozen(row)).toBe(true);
+    expect(mutate(row!, (w) => { w.scopeId = 'evicted'; })).toThrow(TypeError);
+
+    // projection still withholds sensitive/draft keys
+    const snap = registry.projectVisibleState('edit-member-dialog', { open: true, ssn: '123', fields: { n: 'd' } });
+    expect(snap.projected).toEqual({ open: true });
+    expect(snap.withheld.sort()).toEqual(['fields', 'ssn']);
+    expect(registry.get('edit-member-dialog')?.identityRef.adapterVersion).toBe(DIALOG_REF.adapterVersion);
   });
 
   it('scope cleanup removes all instances and coverage becomes not-covered', () => {
@@ -154,9 +229,10 @@ describe('explicit instance registry (Phase B)', () => {
 
 describe('bounded validator (Phase C)', () => {
   it('declared rules pass; rendered-only rule is not-covered without evidence (no metadata pass)', () => {
-    const registry = new InstanceRegistry(makeView());
+    const view = makeView();
+    const registry = new InstanceRegistry(view);
     registry.register(registration({ metadata: { path: 'p', declared: { pending: true } } }));
-    const report = validateProject(makeView(), registry, {});
+    const report = validateProject(view, registry, undefined);
     const identity = report.findings.find((f) => f.ruleId === 'R1-PRJ-IDENTITY')!;
     const close = report.findings.find((f) => f.ruleId === 'R1-DLG-02')!;
     const pending = report.findings.find((f) => f.ruleId === 'R1-DLG-04')!;
@@ -171,9 +247,8 @@ describe('bounded validator (Phase C)', () => {
     const view = makeView();
     const registry = new InstanceRegistry(view);
     registry.register(registration());
-    const report = validateProject(view, registry, {
-      rendered: { 'edit-member-dialog': { rootPath: '/dialog[0]', closeAffordances: [] } },
-    });
+    const report = validateProject(view, registry,
+      seal({ 'edit-member-dialog': { rootPath: '/dialog[0]', closeAffordances: [] } }));
     const close = report.findings.find((f) => f.ruleId === 'R1-DLG-02')!;
     expect(close.status).toBe('fail');
     expect(close.tier).toBe('rendered');
@@ -181,48 +256,99 @@ describe('bounded validator (Phase C)', () => {
     expect(close.repairHint).toContain('close');
   });
 
-  it('R1-DLG-02 passes when a close entry is rendered, and does not false-positive blocking', () => {
+  it('R1-DLG-02 passes rendered when an ordinary close entry exists', () => {
     const view = makeView();
     const registry = new InstanceRegistry(view);
     registry.register(registration());
-    registry.register(registration({ instanceId: 'blocking', metadata: { path: 'b', blocking: true } }));
-    const report = validateProject(view, registry, {
-      rendered: { 'edit-member-dialog': { rootPath: '/dialog[0]', closeAffordances: ['/dialog[0]/button[0]'] } },
-    });
-    expect(report.findings.find((f) => f.instanceId === 'edit-member-dialog' && f.ruleId === 'R1-DLG-02')!.status).toBe('pass');
-    const blocking = report.findings.find((f) => f.instanceId === 'blocking' && f.ruleId === 'R1-DLG-02')!;
-    expect(blocking.status).toBe('pass');
-    expect(blocking.tier).toBe('declared');
+    const report = validateProject(view, registry,
+      seal({ 'edit-member-dialog': { rootPath: '/dialog[0]', closeAffordances: ['/dialog[0]/button[0]'] } }));
+    const close = report.findings.find((f) => f.instanceId === 'edit-member-dialog' && f.ruleId === 'R1-DLG-02')!;
+    expect(close.status).toBe('pass');
+    expect(close.tier).toBe('rendered');
   });
 
-  it('pending rules require interaction evidence and pass/fail on observed behavior', () => {
+  it('B3: a declared-blocking dialog is not-covered without render, and passes rendered only with a resolution path', () => {
+    const view = makeView();
+
+    // declared only → not-covered (no metadata-only pass), even with blocking
+    const declaredOnly = new InstanceRegistry(view);
+    declaredOnly.register(registration({ instanceId: 'blk1', metadata: { path: 'b', blocking: true } }));
+    const noEvidence = validateProject(view, declaredOnly, undefined);
+    const nc = noEvidence.findings.find((f) => f.instanceId === 'blk1' && f.ruleId === 'R1-DLG-02')!;
+    expect(nc.status).toBe('not-covered');
+    expect(nc.tier).toBe('declared');
+
+    // rendered but ordinary entry still present → fail
+    const ordinaryPresent = new InstanceRegistry(view);
+    ordinaryPresent.register(registration({ instanceId: 'blk2', metadata: { path: 'b', blocking: true } }));
+    const stillOrdinary = validateProject(view, ordinaryPresent, seal({
+      blk2: { rootPath: '/dialog[0]', closeAffordances: ['/dialog[0]/x'], resolutionAffordances: ['/dialog[0]/save'] },
+    }));
+    expect(stillOrdinary.findings.find((f) => f.instanceId === 'blk2' && f.ruleId === 'R1-DLG-02')!.status).toBe('fail');
+
+    // rendered, no ordinary entry and no resolution path → fail (unclosable)
+    const unclosable = new InstanceRegistry(view);
+    unclosable.register(registration({ instanceId: 'blk3', metadata: { path: 'b', blocking: true } }));
+    const noResolution = validateProject(view, unclosable, seal({
+      blk3: { rootPath: '/dialog[0]', closeAffordances: [], resolutionAffordances: [] },
+    }));
+    expect(noResolution.findings.find((f) => f.instanceId === 'blk3' && f.ruleId === 'R1-DLG-02')!.status).toBe('fail');
+
+    // rendered, ordinary removed + resolution present → pass at rendered
+    const good = new InstanceRegistry(view);
+    good.register(registration({ instanceId: 'blk4', metadata: { path: 'b', blocking: true } }));
+    const ok = validateProject(view, good, seal({
+      blk4: { rootPath: '/dialog[0]', closeAffordances: [], resolutionAffordances: ['/dialog[0]/save', '/dialog[0]/discard'] },
+    }));
+    const f = ok.findings.find((f) => f.instanceId === 'blk4' && f.ruleId === 'R1-DLG-02')!;
+    expect(f.status).toBe('pass');
+    expect(f.tier).toBe('rendered');
+  });
+
+  it('pending rules require SEALED interaction evidence and pass/fail on observed behavior', () => {
     const view = makeView();
     const registry = new InstanceRegistry(view);
     registry.register(registration({ metadata: { path: 'p', declared: { pending: true } } }));
 
-    const renderedOnly = validateProject(view, registry, {
-      rendered: { 'edit-member-dialog': { rootPath: '/d', closeAffordances: ['x'] } },
-    });
+    const renderedOnly = validateProject(view, registry,
+      seal({ 'edit-member-dialog': { rootPath: '/d', closeAffordances: ['x'] } }));
     expect(renderedOnly.findings.find((f) => f.ruleId === 'R1-DLG-05')!.status).toBe('not-covered');
 
-    const good = validateProject(view, registry, {
-      interaction: { 'edit-member-dialog': { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } },
-    });
+    const good = validateProject(view, registry, seal(
+      undefined,
+      { 'edit-member-dialog': { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } },
+    ));
     expect(good.findings.find((f) => f.ruleId === 'R1-DLG-04')!.status).toBe('pass');
     expect(good.findings.find((f) => f.ruleId === 'R1-DLG-05')!.status).toBe('pass');
 
-    const bad = validateProject(view, registry, {
-      interaction: { 'edit-member-dialog': { pendingDuplicateSubmitBlocked: false, stopWaitNoSecondClose: false } },
-    });
+    const bad = validateProject(view, registry, seal(
+      undefined,
+      { 'edit-member-dialog': { pendingDuplicateSubmitBlocked: false, stopWaitNoSecondClose: false } },
+    ));
     expect(bad.findings.find((f) => f.ruleId === 'R1-DLG-04')!.status).toBe('fail');
     expect(bad.findings.find((f) => f.ruleId === 'R1-DLG-05')!.repairHint).toContain('generation');
+  });
+
+  it('B4: raw evidence is shape-validated and only sealed evidence is trusted', () => {
+    // malformed raw evidence is rejected, not consumed
+    expect(validateEvidenceShape({ interaction: { x: { pendingDuplicateSubmitBlocked: true } } })[0]?.code)
+      .toBe('r1_project_evidence_invalid');
+    expect(validateEvidenceShape('nope')[0]?.code).toBe('r1_project_evidence_invalid');
+    expect(() => TrustedEvidence.seal({ rendered: { x: { closeAffordances: [1] } } as never })).toThrow(/malformed/);
+
+    // a plain object that LOOKS like evidence does not carry the trust brand
+    const forged = { interaction: { x: { pendingDuplicateSubmitBlocked: true, stopWaitNoSecondClose: true } } };
+    expect(TrustedEvidence.is(forged)).toBe(false);
+    const sealed = TrustedEvidence.seal(forged);
+    expect(TrustedEvidence.is(sealed)).toBe(true);
+    expect(Object.isFrozen(sealed)).toBe(true);
   });
 
   it('unbound capability binding fails; bound instance otherwise generates no tool', () => {
     const view = makeView();
     const registry = new InstanceRegistry(view);
     registry.register(registration({ capabilityBindings: [{ capabilityId: 'ghost.cap', bindingSource: 'g' }] }));
-    const report = validateProject(view, registry, {});
+    const report = validateProject(view, registry, undefined);
     const cap = report.findings.find((f) => f.ruleId === 'R1-PRJ-CAPABILITY')!;
     expect(cap.status).toBe('fail');
     expect(cap.actual).toBe('ghost.cap');
@@ -232,10 +358,10 @@ describe('bounded validator (Phase C)', () => {
     const view = makeView();
     const registry = new InstanceRegistry(view);
     registry.register(registration());
-    const bad = validateProject(view, registry, {}, { ruleId: 'R1-NOT-A-RULE' });
+    const bad = validateProject(view, registry, undefined, { ruleId: 'R1-NOT-A-RULE' });
     expect(bad.diagnostics[0]?.code).toBe('r1_project_rule_unknown');
     expect(bad.findings).toEqual([]);
-    const scoped = validateProject(view, registry, {}, { scopeId: 'unknown/page' });
+    const scoped = validateProject(view, registry, undefined, { scopeId: 'unknown/page' });
     expect(scoped.coverage.find((c) => c.scopeId === 'unknown/page')?.coverage).toBe('not-covered');
     expect(isKnownRule('R1-DLG-02')).toBe(true);
   });

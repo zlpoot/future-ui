@@ -8,11 +8,19 @@
  *  - stable instanceId (caller-provided; duplicate register rejected);
  *  - update/unregister target existing instances;
  *  - unregister / clearScope removes instances with no stale residue;
+ *  - EXACT identity (adapter/profile id+version + upstream fingerprint) is
+ *    checked on register/update and any drift fails closed;
  *  - visible state leaves the registry ONLY through an explicit allowlist, and
  *    sensitive keys / draft form values are hidden by default;
  *  - coverage is reported per scope (covered | not-covered).
+ *
+ * Encapsulation: every registration is captured as a defensive deep snapshot
+ * and deeply FROZEN; get()/query() return those frozen snapshots. No mutable
+ * internal object is ever handed out, so policy (incl. the sensitive/draft
+ * allowlist) cannot be changed outside register/update/unregister/clearScope.
  */
 import type { ProjectDiagnostic } from './errors.js';
+import { identityRefFor } from './identity.js';
 import type {
   ComponentDefinition,
   InstanceRegistration,
@@ -33,6 +41,37 @@ function diag(
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim() !== '';
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Deep-clone plain JSON-like registration data (no class/prototype carried). */
+function deepSnapshot<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((v) => deepSnapshot(v)) as unknown as T;
+  if (isPlainObject(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = deepSnapshot(v);
+    return out as T;
+  }
+  // primitives only are expected in the registration data model
+  return value;
+}
+
+function deepFreeze<T>(value: T): T {
+  if (Array.isArray(value) || isPlainObject(value)) {
+    if (!Object.isFrozen(value)) {
+      for (const v of Object.values(value as Record<string, unknown>)) deepFreeze(v);
+      Object.freeze(value);
+    }
+  }
+  return value;
+}
+
+/** Snapshot then freeze: the stored record is immutable from the outside. */
+function capture<T>(value: T): T {
+  return deepFreeze(deepSnapshot(value));
 }
 
 export interface RegisterResult {
@@ -63,6 +102,34 @@ export class InstanceRegistry {
 
   private definitionFor(componentType: string): ComponentDefinition | undefined {
     return this.view.definitions.find((d) => d.componentType === componentType);
+  }
+
+  /** Exact-match the registration identity against the current definition. */
+  private identityDiagnostics(reg: InstanceRegistration, def: ComponentDefinition, base: string): ProjectDiagnostic[] {
+    const out: ProjectDiagnostic[] = [];
+    const expected = identityRefFor(def.identity);
+    const actual = reg.identityRef;
+    if (!isPlainObject(actual)) {
+      out.push(diag('r1_project_instance_invalid', `${base}/identityRef`,
+        'identityRef { adapterId, adapterVersion, profileId, profileVersion, upstreamFingerprint } is required'));
+      return out;
+    }
+    const checks: Array<{ key: keyof typeof expected; actual: unknown; expected: unknown }> = [
+      { key: 'adapterId', actual: actual['adapterId'], expected: expected.adapterId },
+      { key: 'adapterVersion', actual: actual['adapterVersion'], expected: expected.adapterVersion },
+      { key: 'profileId', actual: actual['profileId'], expected: expected.profileId },
+      { key: 'profileVersion', actual: actual['profileVersion'], expected: expected.profileVersion },
+      { key: 'upstreamFingerprint', actual: actual['upstreamFingerprint'], expected: expected.upstreamFingerprint },
+    ];
+    for (const check of checks) {
+      if (!isNonEmptyString(check.actual) || check.actual !== check.expected) {
+        out.push(diag('r1_project_identity_mismatch', `${base}/identityRef/${check.key}`,
+          `instance ${check.key} does not match the current component definition`,
+          check.expected, check.actual,
+          'rebuild/re-register the instance against the current adapter/profile/upstream definition'));
+      }
+    }
+    return out;
   }
 
   /** Explicit registration only. */
@@ -96,14 +163,7 @@ export class InstanceRegistry {
         this.view.definitions.map((d) => d.componentType), reg.componentType,
         'register an instance of a component the project actually provides'));
     } else {
-      if (reg.adapterId !== def.identity.adapterId) {
-        diagnostics.push(diag('r1_project_identity_mismatch', `${p}/adapterId`,
-          'registered adapterId does not match the component definition', def.identity.adapterId, reg.adapterId));
-      }
-      if (reg.profileId !== def.identity.profileId) {
-        diagnostics.push(diag('r1_project_identity_mismatch', `${p}/profileId`,
-          'registered profileId does not match the component definition', def.identity.profileId, reg.profileId));
-      }
+      diagnostics.push(...this.identityDiagnostics(reg, def, p));
     }
 
     // Validate relation targets exist (registered or about to be registered).
@@ -115,14 +175,14 @@ export class InstanceRegistry {
     }
 
     if (diagnostics.length === 0) {
-      this.instances.set(reg.instanceId, { ...reg, relations: reg.relations ? [...reg.relations] : undefined,
-        capabilityBindings: reg.capabilityBindings ? [...reg.capabilityBindings] : undefined });
-      this.scopes.add(reg.scopeId);
+      const stored = capture(reg);
+      this.instances.set(stored.instanceId, stored);
+      this.scopes.add(stored.scopeId);
     }
     return { diagnostics };
   }
 
-  /** Partial/full replacement of an existing instance; identity fields are re-validated. */
+  /** Partial/full replacement of an existing instance; identity is re-validated. */
   update(instanceId: string, patch: Partial<InstanceRegistration>): RegisterResult {
     const current = this.instances.get(instanceId);
     if (current === undefined) {
@@ -139,6 +199,7 @@ export class InstanceRegistry {
       instanceId,
       metadata: { ...current.metadata, ...(patch.metadata ?? {}) },
       visibleState: patch.visibleState ?? current.visibleState,
+      identityRef: patch.identityRef ?? current.identityRef,
     };
     const result = this.register(merged);
     if (result.diagnostics.length > 0) {
@@ -149,11 +210,13 @@ export class InstanceRegistry {
     return result;
   }
 
-  get(instanceId: string): InstanceRegistration | undefined {
+  /** Returns the frozen snapshot (safe to read; cannot be mutated). */
+  get(instanceId: string): Readonly<InstanceRegistration> | undefined {
     return this.instances.get(instanceId);
   }
 
-  query(filter: { scopeId?: string; componentType?: string } = {}): InstanceRegistration[] {
+  /** Returns frozen snapshots (the array is fresh; records are immutable). */
+  query(filter: { scopeId?: string; componentType?: string } = {}): ReadonlyArray<Readonly<InstanceRegistration>> {
     return [...this.instances.values()].filter(
       (i) =>
         (filter.scopeId === undefined || i.scopeId === filter.scopeId) &&

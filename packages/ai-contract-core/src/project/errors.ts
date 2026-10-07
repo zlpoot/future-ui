@@ -26,6 +26,8 @@ export const r1ProjectErrorCodes = [
   'r1_project_capability_unbound',
   /** validate() referenced a ruleId outside the frozen bounded rule set. */
   'r1_project_rule_unknown',
+  /** Supplied evidence JSON is malformed (runtime shape validation). */
+  'r1_project_evidence_invalid',
   /** A rule needs a higher evidence tier than the supplied evidence provides. */
   'r1_project_evidence_insufficient',
   /** The requested page/scope/instance is explicitly not covered (no guess). */

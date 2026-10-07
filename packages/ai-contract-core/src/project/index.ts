@@ -28,6 +28,8 @@ export {
   isKnownRule,
   validateProject,
   getScopeCoverage,
+  TrustedEvidence,
+  validateEvidenceShape,
 } from './validator.js';
 export type {
   EvidenceSet,
@@ -39,6 +41,9 @@ export type {
   ValidationReport,
   ValidateProjectOptions,
 } from './validator.js';
+
+export { identityRefFor, upstreamIdentityFingerprint } from './identity.js';
+export type { InstanceIdentityRef } from './identity.js';
 
 export type {
   ActualImport,
