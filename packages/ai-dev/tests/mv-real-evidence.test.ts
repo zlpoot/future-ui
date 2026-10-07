@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { RenderedEvidence } from '@future-ui/ai-contract-core';
 import {
   createMvProjectContext,
   registerMvAssetEditInstance,
@@ -32,12 +33,21 @@ function load(pathName: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(dir!, pathName), 'utf8'));
 }
 
+interface RealPageEvidence extends RenderedEvidence {
+  instanceId: string;
+  raw?: Record<string, unknown>;
+}
+
+function loadReal(pathName: string): RealPageEvidence {
+  return load(pathName) as unknown as RealPageEvidence;
+}
+
 describeMaybe('R1-04 Phase A — real-page evidence through the bounded validator', () => {
   it('real desktop canvas: #closeInspector is CSS-hidden → R1-DLG-02 fail (rendered, real gap)', () => {
     const ctx = createMvProjectContext();
     registerMvAssetEditInstance(ctx, REAL_MV_ASSET_CARDS[0]);
-    const desktop = load('mv-real-desktop.json');
-    const evidence = sealProjectEvidence({ rendered: { [desktop.instanceId as string]: desktop } });
+    const desktop = loadReal('mv-real-desktop.json');
+    const evidence = sealProjectEvidence({ rendered: { [desktop.instanceId]: desktop } });
     const report = validateMvProject(ctx, evidence);
     const close = report.findings.find((f) => f.ruleId === 'R1-DLG-02')!;
     // REAL finding: the desktop layout hides the close control (display:none).
@@ -45,14 +55,15 @@ describeMaybe('R1-04 Phase A — real-page evidence through the bounded validato
     expect(close.tier).toBe('rendered');
     expect(close.instanceId).toBe(desktop.instanceId);
     expect(close.reason).toContain('no explicit close entry');
-    expect((desktop.raw as Record<string, unknown>).closeDisplay).toBe('none');
+    const raw = (desktop as unknown as { raw?: Record<string, unknown> }).raw;
+    expect(raw?.closeDisplay).toBe('none');
   });
 
   it('real embedded canvas: close is visible → R1-DLG-02 pass (rendered)', () => {
     const ctx = createMvProjectContext();
     registerMvAssetEditInstance(ctx, REAL_MV_ASSET_CARDS[0]);
-    const embedded = load('mv-real-embedded.json');
-    const evidence = sealProjectEvidence({ rendered: { [embedded.instanceId as string]: embedded } });
+    const embedded = loadReal('mv-real-embedded.json');
+    const evidence = sealProjectEvidence({ rendered: { [embedded.instanceId]: embedded } });
     const report = validateMvProject(ctx, evidence);
     expect(report.findings.find((f) => f.ruleId === 'R1-DLG-02')!).toMatchObject({
       status: 'pass',

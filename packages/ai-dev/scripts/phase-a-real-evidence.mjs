@@ -85,7 +85,8 @@ async function main() {
       if (!task) return;
       pending.delete(data.id);
       clearTimeout(task.timer);
-      data.error ? task.reject(new Error(data.error.message)) : task.resolve(data.result);
+      if (data.error) task.reject(new Error(data.error.message));
+      else task.resolve(data.result);
     };
     const call = (method, params = {}) =>
       new Promise((resolve, reject) => {
@@ -182,7 +183,7 @@ async function main() {
 
     console.log(JSON.stringify(combined, null, 2));
   } finally {
-    ws?.close();
+    if (ws) ws.close();
     chrome.kill();
   }
 }
