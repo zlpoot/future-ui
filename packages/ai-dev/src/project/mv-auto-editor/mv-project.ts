@@ -10,6 +10,8 @@ import { buildMvProjectView } from './mv-view.js';
 import {
   PINNED_MV_CANVAS_BLOB,
   PINNED_MV_HEAD,
+  PINNED_MV_KEYFRAMES_BLOB,
+  PINNED_MV_SHOTS_BLOB,
   type MvCurrentUpstream,
 } from './mv-upstream.js';
 
@@ -59,10 +61,14 @@ export function validateMvProject(
 
 /**
  * Upstream-identity drift record captured by the real-evidence collector.
+ * Phase A checks only canvas/HEAD; Phase B additionally pins keyframes.html and
+ * shots.html (those flags are present only on a Phase B collector record).
  */
 export interface MvEvidenceDrift {
   canvasBlobDrifted: boolean;
   mvHeadDrifted: boolean;
+  keyframesBlobDrifted?: boolean;
+  shotsBlobDrifted?: boolean;
 }
 
 function block(message: string): never {
@@ -83,60 +89,103 @@ function isNonEmpty(v: unknown): v is string {
  * then requires ALL of:
  *  1. the evidence carries a complete drift record (booleans + pinned/live ids);
  *  2. the evidence's pinned ids equal the code's exact pinned commit/sha;
- *  3. the CURRENT independently-read HEAD & canvas blob equal the pinned exact
- *     values — upstream has not moved since pinning (this is what rejects a
- *       stale file: stored false/false + moved upstream ⇒ BLOCK);
+ *  3. the CURRENT independently-read HEAD & EVERY pinned page blob equal the
+ *     pinned exact values — upstream has not moved since pinning (this is what
+ *     rejects a stale file: stored false/false + moved upstream ⇒ BLOCK);
  *  4. the current facts equal the evidence's recorded live facts — the evidence
  *     was produced against the same current state, not pre-written/forged;
  *  5. the stored drift booleans are not already reporting drift.
  * Any failure, or an unresolvable current fact (null), blocks the gate.
+ *
+ * Phase B extension: when `current` carries keyframesBlob/shotsBlob the guard
+ * enforces those two additional page artifacts in exactly the same way. When
+ * only canvasBlob/mvHead are supplied (legacy Phase A call shape) behavior,
+ * messages and the return object remain byte-identical to Phase A.
  */
 export function assertEvidenceNotDrifted(
   combined: { drift?: unknown } | null | undefined,
   current: MvCurrentUpstream,
 ): MvEvidenceDrift {
+  const phaseB = 'keyframesBlob' in current || 'shotsBlob' in current;
+  const blobChecks: Array<{
+    locator: string;
+    label: string;
+    currentKey: 'canvasBlob' | 'keyframesBlob' | 'shotsBlob';
+    flagKey: 'canvasBlobDrifted' | 'keyframesBlobDrifted' | 'shotsBlobDrifted';
+    pinnedKey: string;
+    liveKey: string;
+    frozenPin: string;
+  }> = [
+    {
+      locator: 'web/canvas.html', label: 'canvas.html blob', currentKey: 'canvasBlob',
+      flagKey: 'canvasBlobDrifted', pinnedKey: 'pinnedCanvasBlob', liveKey: 'liveCanvasBlob',
+      frozenPin: PINNED_MV_CANVAS_BLOB,
+    },
+  ];
+  if (phaseB) {
+    blobChecks.push(
+      {
+        locator: 'web/keyframes.html', label: 'keyframes.html blob', currentKey: 'keyframesBlob',
+        flagKey: 'keyframesBlobDrifted', pinnedKey: 'pinnedKeyframesBlob', liveKey: 'liveKeyframesBlob',
+        frozenPin: PINNED_MV_KEYFRAMES_BLOB,
+      },
+      {
+        locator: 'web/shots.html', label: 'shots.html blob', currentKey: 'shotsBlob',
+        flagKey: 'shotsBlobDrifted', pinnedKey: 'pinnedShotsBlob', liveKey: 'liveShotsBlob',
+        frozenPin: PINNED_MV_SHOTS_BLOB,
+      },
+    );
+  }
+
   const drift = (combined ?? {}).drift;
   const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
-  if (
-    !drift ||
-    typeof drift !== 'object' ||
-    !isBool((drift as Partial<MvEvidenceDrift>).canvasBlobDrifted) ||
-    !isBool((drift as Partial<MvEvidenceDrift>).mvHeadDrifted) ||
-    !isNonEmpty((drift as Record<string, unknown>).pinnedCanvasBlob) ||
-    !isNonEmpty((drift as Record<string, unknown>).pinnedMvHead) ||
-    !isNonEmpty((drift as Record<string, unknown>).liveCanvasBlob) ||
-    !isNonEmpty((drift as Record<string, unknown>).liveMvHead)
-  ) {
+  const rec = (drift ?? {}) as Record<string, unknown>;
+  const completeRecord =
+    !!drift &&
+    typeof drift === 'object' &&
+    isBool(rec['mvHeadDrifted']) &&
+    blobChecks.every(
+      (c) =>
+        isBool(rec[c.flagKey]) &&
+        isNonEmpty(rec[c.pinnedKey]) &&
+        isNonEmpty(rec[c.liveKey]),
+    ) &&
+    isNonEmpty(rec['pinnedMvHead']) &&
+    isNonEmpty(rec['liveMvHead']);
+  if (!completeRecord) {
     block('evidence has no complete, usable drift record; refusing to trust evidence of unknown upstream identity');
   }
-  const record = drift as MvEvidenceDrift & {
-    pinnedCanvasBlob: string;
-    pinnedMvHead: string;
-    liveCanvasBlob: string;
-    liveMvHead: string;
-  };
+  const record = drift as MvEvidenceDrift & Record<string, unknown>;
 
   // (2) The evidence must be pinned to the SAME exact commit/sha this gate was
   // frozen against — a file written for a different pin cannot be accepted.
-  if (record.pinnedCanvasBlob !== PINNED_MV_CANVAS_BLOB || record.pinnedMvHead !== PINNED_MV_HEAD) {
-    block(
-      `evidence pin ${record.pinnedMvHead}/${record.pinnedCanvasBlob.slice(0, 7)} does not match the `
-        + `frozen pin ${PINNED_MV_HEAD}/${PINNED_MV_CANVAS_BLOB.slice(0, 7)}`,
-    );
+  const pinMismatch =
+    record['pinnedMvHead'] !== PINNED_MV_HEAD ||
+    blobChecks.some((c) => record[c.pinnedKey] !== c.frozenPin);
+  if (pinMismatch) {
+    const expected = [PINNED_MV_HEAD, ...blobChecks.map((c) => c.frozenPin.slice(0, 7))].join('/');
+    const actual = [
+      record['pinnedMvHead'],
+      ...blobChecks.map((c) => String(record[c.pinnedKey]).slice(0, 7)),
+    ].join('/');
+    block(`evidence pin ${actual} does not match the frozen pin ${expected}`);
   }
 
   // Current facts must be independently resolvable — null means the gate could
   // not establish the live upstream and must fail closed rather than pass.
-  if (!isNonEmpty(current.canvasBlob) || !isNonEmpty(current.mvHead)) {
-    block('could not independently resolve the CURRENT MV HEAD / canvas blob; refusing to validate against evidence whose freshness cannot be proven');
+  if (!isNonEmpty(current.mvHead) || blobChecks.some((c) => !isNonEmpty(current[c.currentKey]))) {
+    block('could not independently resolve the CURRENT MV HEAD / pinned page blob(s); refusing to validate against evidence whose freshness cannot be proven');
   }
 
   // (3) INDEPENDENT freshness — the stale-evidence killer. The CURRENT upstream
   // must still equal the pinned exact values regardless of what the stored file
   // says: a clean false/false file after MV moved fails here.
   const moved: string[] = [];
-  if (current.canvasBlob !== PINNED_MV_CANVAS_BLOB) {
-    moved.push(`canvas.html blob (current=${current.canvasBlob.slice(0, 7)} pinned=${PINNED_MV_CANVAS_BLOB.slice(0, 7)})`);
+  for (const c of blobChecks) {
+    const value = current[c.currentKey] as string;
+    if (value !== c.frozenPin) {
+      moved.push(`${c.label} (current=${value.slice(0, 7)} pinned=${c.frozenPin.slice(0, 7)})`);
+    }
   }
   if (current.mvHead !== PINNED_MV_HEAD) {
     moved.push(`MV HEAD (current=${current.mvHead.slice(0, 7)} pinned=${PINNED_MV_HEAD.slice(0, 7)})`);
@@ -148,21 +197,26 @@ export function assertEvidenceNotDrifted(
   // (4) Same-run binding: the evidence's recorded live facts must equal the
   // facts the gate just read, so a pre-written file cannot be replayed even at
   // a matching pin.
-  if (current.canvasBlob !== record.liveCanvasBlob || current.mvHead !== record.liveMvHead) {
-    block(
-      `evidence was not produced against the current upstream (evidence live=${record.liveMvHead.slice(0, 7)}/`
-        + `${record.liveCanvasBlob.slice(0, 7)} current=${current.mvHead.slice(0, 7)}/${current.canvasBlob.slice(0, 7)})`,
-    );
+  const liveMismatch =
+    current.mvHead !== record['liveMvHead'] ||
+    blobChecks.some((c) => (current[c.currentKey] as string) !== record[c.liveKey]);
+  if (liveMismatch) {
+    const live = [record['liveMvHead'], ...blobChecks.map((c) => String(record[c.liveKey]).slice(0, 7))].join('/');
+    const now = [current.mvHead, ...blobChecks.map((c) => (current[c.currentKey] as string).slice(0, 7))].join('/');
+    block(`evidence was not produced against the current upstream (evidence live=${live} current=${now})`);
   }
 
   // (5) Explicit stored drift still blocks (defense in depth).
-  if (record.canvasBlobDrifted || record.mvHeadDrifted) {
-    const which = [
-      record.canvasBlobDrifted ? 'canvas.html blob' : null,
-      record.mvHeadDrifted ? 'MV HEAD' : null,
-    ].filter(Boolean).join(' + ');
-    block(`${which} marked drifted in the evidence record; refusing to validate against drifted evidence`);
+  const driftedLabels = blobChecks.filter((c) => record[c.flagKey] === true).map((c) => c.label);
+  if (record['mvHeadDrifted'] === true) driftedLabels.push('MV HEAD');
+  if (driftedLabels.length > 0) {
+    block(`${driftedLabels.join(' + ')} marked drifted in the evidence record; refusing to validate against drifted evidence`);
   }
 
-  return { canvasBlobDrifted: false, mvHeadDrifted: false };
+  const result: MvEvidenceDrift = { canvasBlobDrifted: false, mvHeadDrifted: false };
+  if (phaseB) {
+    result.keyframesBlobDrifted = false;
+    result.shotsBlobDrifted = false;
+  }
+  return result;
 }

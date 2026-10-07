@@ -37,6 +37,24 @@ export const PINNED_MV_HEAD = 'd77fc2b77e75cd593733daa8a7e3c31dc2df8a16';
 export const PINNED_MV_CANVAS_BLOB = '52aa42c8ad7dc5217bafb7653dcc0e47ee175131';
 
 /**
+ * R1-04 (#70) Phase B — additional pinned review-page artifacts. The Storyboard
+ * review (web/shots.html) and Keyframe review (web/keyframes.html) are real
+ * inline, non-module documents; each is pinned independently so a content
+ * change to ANY review page is upstream identity drift.
+ *  - web/keyframes.html blob pinned 2026-10-07 at MV HEAD d77fc2b…
+ *  - web/shots.html    blob pinned 2026-10-07 at MV HEAD d77fc2b…
+ */
+export const PINNED_MV_KEYFRAMES_BLOB = 'c8522aaca047e9fd8c2b08c3584d35a61ced9bc9';
+export const PINNED_MV_SHOTS_BLOB = '64f8cd2864d3f7addc17531b24788a352b9d7823';
+
+/** All Phase B pinned page artifacts, locator-sorted deterministically. */
+export const PINNED_MV_REVIEW_ARTIFACTS: ReadonlyArray<{ locator: string; contentHash: string }> = [
+  { locator: 'web/canvas.html', contentHash: PINNED_MV_CANVAS_BLOB },
+  { locator: 'web/keyframes.html', contentHash: PINNED_MV_KEYFRAMES_BLOB },
+  { locator: 'web/shots.html', contentHash: PINNED_MV_SHOTS_BLOB },
+];
+
+/**
  * Current upstream facts, obtained INDEPENDENTLY by the gate right now (not
  * read from the evidence file). A field is null when git cannot resolve it
  * (missing repo / command failure) — the guard treats null as fail-closed.
@@ -44,6 +62,10 @@ export const PINNED_MV_CANVAS_BLOB = '52aa42c8ad7dc5217bafb7653dcc0e47ee175131';
 export interface MvCurrentUpstream {
   /** Current `git hash-object web/canvas.html` in the live checkout. */
   canvasBlob: string | null;
+  /** Current `git hash-object web/keyframes.html` in the live checkout (Phase B). */
+  keyframesBlob?: string | null;
+  /** Current `git hash-object web/shots.html` in the live checkout (Phase B). */
+  shotsBlob?: string | null;
   /** Current `git rev-parse HEAD` of the live checkout. */
   mvHead: string | null;
 }
@@ -56,13 +78,17 @@ function git(mvRepoDir: string, args: string[]): string | null {
 }
 
 /**
- * Independently read the CURRENT MV HEAD and web/canvas.html blob from the real
- * checkout. This is the gate's own fact source, deliberately separate from the
- * collected evidence so upstream movement after collection cannot be hidden by
- * a stale false/false drift record.
+ * Independently read the CURRENT MV HEAD and EVERY pinned page blob from the
+ * real checkout. This is the gate's own fact source, deliberately separate
+ * from the collected evidence so upstream movement after collection cannot be
+ * hidden by a stale all-false drift record.
  */
 export function readMvCurrentUpstream(mvRepoDir: string = MV_REPO_PATH): MvCurrentUpstream {
-  const canvasBlob = git(mvRepoDir, ['hash-object', path.join(mvRepoDir, MV_CANVAS_REL_PATH)]);
-  const mvHead = git(mvRepoDir, ['rev-parse', 'HEAD']);
-  return { canvasBlob, mvHead };
+  const hash = (rel: string): string | null => git(mvRepoDir, ['hash-object', path.join(mvRepoDir, rel)]);
+  return {
+    canvasBlob: hash(path.join('web', 'canvas.html')),
+    keyframesBlob: hash(path.join('web', 'keyframes.html')),
+    shotsBlob: hash(path.join('web', 'shots.html')),
+    mvHead: git(mvRepoDir, ['rev-parse', 'HEAD']),
+  };
 }

@@ -18,3 +18,6 @@ docs/benchmarks/d10-harness/runs/
 
 # R1-02 Phase A scratch (registry probes, scratch apps; never committed)
 .phase-a/
+
+# R1-04 real-evidence headless Chrome user-data dirs (Phase A/B collectors; never committed)
+.local/
