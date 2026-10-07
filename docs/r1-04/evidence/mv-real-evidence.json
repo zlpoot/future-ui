@@ -1,0 +1,161 @@
+{
+  "project": "song-20260928043747",
+  "card": "asset-character-f8cb8312",
+  "collectedAt": "2026-10-07T06:05:38.192Z",
+  "pinned": {
+    "mvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "canvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131"
+  },
+  "drift": {
+    "liveCanvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+    "pinnedCanvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+    "canvasBlobDrifted": false,
+    "liveMvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "pinnedMvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "mvHeadDrifted": false
+  },
+  "variants": {
+    "desktop": {
+      "kind": "rendered",
+      "instanceId": "assets/cards/character-f8cb8312/edit",
+      "closeAffordances": [],
+      "resolutionAffordances": [],
+      "rootPath": "/inspector[0]",
+      "raw": {
+        "inspectorRole": "(none)",
+        "closeExists": true,
+        "closeDisplay": "none",
+        "panelTitle": "我",
+        "panelIntro": "(none)",
+        "actionButtons": [
+          {
+            "action": "upload",
+            "text": "上传参考图",
+            "disabled": false
+          },
+          {
+            "action": "generate",
+            "text": "AI 重新生成",
+            "disabled": false
+          },
+          {
+            "action": "remove-generation-reference",
+            "text": "×",
+            "disabled": false
+          },
+          {
+            "action": "add-generation-reference",
+            "text": "＋",
+            "disabled": false
+          },
+          {
+            "action": "upload",
+            "text": "上传补充角度（可选）",
+            "disabled": false
+          },
+          {
+            "action": "generate",
+            "text": "AI 重新生成",
+            "disabled": false
+          },
+          {
+            "action": "approve",
+            "text": "已确认",
+            "disabled": true
+          },
+          {
+            "action": "select",
+            "text": "选用",
+            "disabled": false
+          },
+          {
+            "action": "select",
+            "text": "选用",
+            "disabled": false
+          }
+        ],
+        "versionRows": [
+          "v3 · 已通过当前使用已确认",
+          "v2 · 已生成历史候选选用",
+          "v1 · 已生成历史候选选用"
+        ],
+        "bodyClass": "",
+        "innerWidth": 1418
+      }
+    },
+    "embedded": {
+      "kind": "rendered",
+      "instanceId": "assets/cards/character-f8cb8312/edit",
+      "closeAffordances": [
+        "/inspector/button[#closeInspector]"
+      ],
+      "resolutionAffordances": [],
+      "rootPath": "/inspector[0]",
+      "raw": {
+        "inspectorRole": "(none)",
+        "closeExists": true,
+        "closeDisplay": "block",
+        "panelTitle": "我",
+        "panelIntro": "(none)",
+        "actionButtons": [
+          {
+            "action": "upload",
+            "text": "上传参考图",
+            "disabled": false
+          },
+          {
+            "action": "generate",
+            "text": "AI 重新生成",
+            "disabled": false
+          },
+          {
+            "action": "remove-generation-reference",
+            "text": "×",
+            "disabled": false
+          },
+          {
+            "action": "add-generation-reference",
+            "text": "＋",
+            "disabled": false
+          },
+          {
+            "action": "upload",
+            "text": "上传补充角度（可选）",
+            "disabled": false
+          },
+          {
+            "action": "generate",
+            "text": "AI 重新生成",
+            "disabled": false
+          },
+          {
+            "action": "approve",
+            "text": "已确认",
+            "disabled": true
+          },
+          {
+            "action": "select",
+            "text": "选用",
+            "disabled": false
+          },
+          {
+            "action": "select",
+            "text": "选用",
+            "disabled": false
+          }
+        ],
+        "versionRows": [
+          "v3 · 已通过当前使用已确认",
+          "v2 · 已生成历史候选选用",
+          "v1 · 已生成历史候选选用"
+        ],
+        "bodyClass": "embedded",
+        "innerWidth": 1418
+      }
+    }
+  },
+  "screenshots": {
+    "desktop": "E:\\projects\\future-ui\\docs\\r1-04\\evidence\\mv-real-desktop.png",
+    "embedded": "E:\\projects\\future-ui\\docs\\r1-04\\evidence\\mv-real-embedded.png"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "kind": "rendered",
+  "instanceId": "assets/cards/character-f8cb8312/edit",
+  "closeAffordances": [],
+  "resolutionAffordances": [],
+  "rootPath": "/inspector[0]",
+  "raw": {
+    "inspectorRole": "(none)",
+    "closeExists": true,
+    "closeDisplay": "none",
+    "panelTitle": "我",
+    "panelIntro": "(none)",
+    "actionButtons": [
+      {
+        "action": "upload",
+        "text": "上传参考图",
+        "disabled": false
+      },
+      {
+        "action": "generate",
+        "text": "AI 重新生成",
+        "disabled": false
+      },
+      {
+        "action": "remove-generation-reference",
+        "text": "×",
+        "disabled": false
+      },
+      {
+        "action": "add-generation-reference",
+        "text": "＋",
+        "disabled": false
+      },
+      {
+        "action": "upload",
+        "text": "上传补充角度（可选）",
+        "disabled": false
+      },
+      {
+        "action": "generate",
+        "text": "AI 重新生成",
+        "disabled": false
+      },
+      {
+        "action": "approve",
+        "text": "已确认",
+        "disabled": true
+      },
+      {
+        "action": "select",
+        "text": "选用",
+        "disabled": false
+      },
+      {
+        "action": "select",
+        "text": "选用",
+        "disabled": false
+      }
+    ],
+    "versionRows": [
+      "v3 · 已通过当前使用已确认",
+      "v2 · 已生成历史候选选用",
+      "v1 · 已生成历史候选选用"
+    ],
+    "bodyClass": "",
+    "innerWidth": 1418
+  }
+}

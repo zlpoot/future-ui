@@ -102,3 +102,34 @@ export type {
   ProjectToolErrorCode,
   ProjectToolContext,
 } from './project/mcp-projection.js';
+
+//
+// R1-04 (#70) Phase A — MV-Auto-Editor real project integration: real Project
+// Profile, Project AI View, explicit instance registration and deterministic
+// jsdom evidence for the Asset Edit & Approval scenario. Dev-only.
+//
+export { mvAutoEditorProfile } from './project/mv-auto-editor/mv-profile.js';
+export {
+  buildMvProjectView,
+  buildMvAutoEditorComponentDefinitions,
+  MV_UPSTREAM,
+} from './project/mv-auto-editor/mv-view.js';
+export type { BuildMvProjectViewInput } from './project/mv-auto-editor/mv-view.js';
+export {
+  createMvProjectContext,
+  validateMvProject,
+} from './project/mv-auto-editor/mv-project.js';
+export type { MvProjectContext } from './project/mv-auto-editor/mv-project.js';
+export {
+  registerMvAssetEditInstance,
+  registerRealMvAssetInstances,
+  REAL_MV_ASSET_CARDS,
+} from './project/mv-auto-editor/mv-instances.js';
+export type { MvAssetInstanceOptions, MvAssetCardRef } from './project/mv-auto-editor/mv-instances.js';
+export {
+  mountMvAssetPanel,
+  collectMvPanelRenderedEvidence,
+  driveMvPendingInteraction,
+  buildMvAssetPanelMarkup,
+} from './project/mv-auto-editor/mv-evidence.js';
+export type { MvPanelFixtureOptions, MvPanelHandle } from './project/mv-auto-editor/mv-evidence.js';
