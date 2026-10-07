@@ -173,28 +173,30 @@ describe('explicit instance registry (Phase B)', () => {
 
   it('B2: mutating the input, get() result or query() result cannot affect the registry/projection', () => {
     const registry = new InstanceRegistry(makeView());
-    // runtime-only mutator (bypasses the readonly static types on purpose)
-    const mutate = (o: object, fn: (w: Record<string, any>) => void): (() => void) =>
-      () => fn(o as Record<string, any>);
+    // runtime-only mutable view (static fields are readonly); no `any` used.
+    type WritableReg = {
+      identityRef: { adapterVersion: string };
+      visibleState: { allow: string[]; sensitive: string[]; exposeDraft?: boolean };
+      scopeId: string;
+    };
     const input = registration();
     registry.register(input);
 
     // mutate the caller's original object after registration
-    mutate(input, (w) => {
-      w.identityRef.adapterVersion = 'hacked';
-      w.visibleState.allow.push('ssn');
-      w.visibleState.sensitive.length = 0;
-      w.visibleState.exposeDraft = true;
-    })();
+    const writableInput = input as unknown as WritableReg;
+    writableInput.identityRef.adapterVersion = 'hacked';
+    writableInput.visibleState.allow.push('ssn');
+    writableInput.visibleState.sensitive.length = 0;
+    writableInput.visibleState.exposeDraft = true;
 
-    const got = registry.get('edit-member-dialog')!;
+    const got = registry.get('edit-member-dialog')! as unknown as WritableReg;
     expect(Object.isFrozen(got)).toBe(true);
-    expect(mutate(got, (w) => { w.identityRef.adapterVersion = 'x'; })).toThrow(TypeError);
-    expect(mutate(got, (w) => { w.visibleState.allow.push('ssn'); })).toThrow(TypeError);
+    expect(() => { got.identityRef.adapterVersion = 'x'; }).toThrow(TypeError);
+    expect(() => { got.visibleState.allow.push('ssn'); }).toThrow(TypeError);
 
-    const [row] = registry.query();
+    const row = registry.query()[0] as unknown as WritableReg;
     expect(Object.isFrozen(row)).toBe(true);
-    expect(mutate(row!, (w) => { w.scopeId = 'evicted'; })).toThrow(TypeError);
+    expect(() => { row.scopeId = 'evicted'; }).toThrow(TypeError);
 
     // projection still withholds sensitive/draft keys
     const snap = registry.projectVisibleState('edit-member-dialog', { open: true, ssn: '123', fields: { n: 'd' } });
