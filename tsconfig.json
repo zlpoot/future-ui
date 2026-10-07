@@ -24,5 +24,10 @@
     "vitest.config.ts",
     "packages/**/*.ts",
     "packages/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages/shadcn-adapter"
   ]
 }

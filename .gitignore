@@ -15,3 +15,6 @@ coverage/
 
 # d10 calibration runs (local)
 docs/benchmarks/d10-harness/runs/
+
+# R1-02 Phase A scratch (registry probes, scratch apps; never committed)
+.phase-a/

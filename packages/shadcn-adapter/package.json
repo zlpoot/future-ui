@@ -1,0 +1,31 @@
+{
+  "name": "@future-ui/shadcn-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R1-02 (#68): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*",
+    "@future-ui/react-provider": "workspace:*",
+    "cn": "0.4.0",
+    "class-variance-authority": "0.7.1",
+    "lucide-react": "1.52.0",
+    "radix-ui": "1.7.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
