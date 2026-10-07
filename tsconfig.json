@@ -28,6 +28,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "packages/shadcn-adapter"
+    "packages/shadcn-adapter",
+    "packages/ai-dev"
   ]
 }

@@ -32,6 +32,9 @@ importers:
 
   packages/ai-dev:
     dependencies:
+      '@future-ui/ai-contract-core':
+        specifier: workspace:*
+        version: link:../ai-contract-core
       '@future-ui/conformance':
         specifier: workspace:*
         version: link:../conformance
@@ -41,10 +44,16 @@ importers:
       '@future-ui/react-provider':
         specifier: workspace:*
         version: link:../react-provider
+      '@future-ui/shadcn-adapter':
+        specifier: workspace:*
+        version: link:../shadcn-adapter
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.6.0
         version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/react':
         specifier: ^19.2.0
         version: 19.3.0

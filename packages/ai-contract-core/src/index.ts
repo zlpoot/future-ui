@@ -19,3 +19,6 @@ export { validateContract } from './validate.js';
 export type { ContractKind } from './validate.js';
 export { isPlainData, NodeStore } from './patch.js';
 export type { NodeRecord, PatchRequest, PatchResult } from './patch.js';
+
+/* R1-03 (#69) Project AI View, explicit instance registry, bounded validator. */
+export * from './project/index.js';

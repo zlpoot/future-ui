@@ -8,12 +8,15 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@future-ui/ai-contract-core": "workspace:*",
     "@future-ui/conformance": "workspace:*",
     "@future-ui/contracts": "workspace:*",
-    "@future-ui/react-provider": "workspace:*"
+    "@future-ui/react-provider": "workspace:*",
+    "@future-ui/shadcn-adapter": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "jsdom": "^26.0.0",
