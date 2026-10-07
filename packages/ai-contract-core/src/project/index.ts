@@ -1,0 +1,58 @@
+/**
+ * R1-03 (#69) Project AI View, explicit instance registry and bounded
+ * consistency validator — pure deterministic data model and rules. No React,
+ * no jsdom, no adapter import here: the integration layer (ai-dev) assembles
+ * real component definitions and supplies rendered/interaction evidence.
+ */
+export { r1ProjectErrorCodes } from './errors.js';
+export type { ProjectDiagnostic, R1ProjectErrorCode } from './errors.js';
+
+export {
+  buildProjectView,
+  validateComponentDefinition,
+  queryComponents,
+  describeComponent,
+  capabilitiesForInstance,
+} from './project-view.js';
+export type { BuildProjectViewInput, BuildProjectViewResult, ComponentQuery } from './project-view.js';
+
+export { InstanceRegistry } from './instance-registry.js';
+export type {
+  RegisterResult,
+  ScopeCleanupResult,
+  VisibleStateSnapshot,
+} from './instance-registry.js';
+
+export {
+  BOUNDED_RULES,
+  isKnownRule,
+  validateProject,
+  getScopeCoverage,
+} from './validator.js';
+export type {
+  EvidenceSet,
+  EvidenceTier,
+  Finding,
+  FindingStatus,
+  InteractionEvidence,
+  RenderedEvidence,
+  ValidationReport,
+  ValidateProjectOptions,
+} from './validator.js';
+
+export type {
+  ActualImport,
+  AdapterComponentIdentity,
+  CapabilityReference,
+  ComponentDefinition,
+  ComponentType,
+  InstanceMetadata,
+  InstanceRegistration,
+  InstanceRelation,
+  InstanceRelationKind,
+  MappingLimit,
+  MappingStatus,
+  ProjectAIView,
+  ScopeCoverage,
+  VisibleStatePolicy,
+} from './types.js';

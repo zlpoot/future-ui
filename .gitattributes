@@ -1,0 +1,5 @@
+# R1-02 vendored shadcn/ui sources are byte-frozen and digest-verified against
+# their RAW working-tree bytes (see provenance.test.ts sha256 + git blob SHA-1).
+# Pin LF so a Windows checkout with core.autocrlf=true cannot rewrite newlines
+# and make the frozen digests drift; CI already reads LF on Linux.
+packages/shadcn-adapter/src/upstream/registry/new-york-v4/ui/*.tsx text eol=lf

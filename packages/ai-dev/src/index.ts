@@ -35,3 +35,64 @@ export type {
 } from './test.js';
 export { devErrorCodes } from './errors.js';
 export type { DevDiagnostic, DevErrorCode } from './errors.js';
+
+//
+// R1-03 (#69) Project-level integration: real shadcn descriptor, explicit
+// instance registry wiring, and deterministic jsdom rendered/interaction
+// evidence for the bounded validator. Dev-only; re-exports the generic core
+// model so consumers need not depend on ai-contract-core directly.
+//
+export {
+  buildProjectView,
+  validateComponentDefinition,
+  queryComponents,
+  describeComponent,
+  capabilitiesForInstance,
+  InstanceRegistry,
+  BOUNDED_RULES,
+  isKnownRule,
+  validateProject,
+  getScopeCoverage,
+  r1ProjectErrorCodes,
+} from '@future-ui/ai-contract-core';
+export type {
+  BuildProjectViewInput,
+  BuildProjectViewResult,
+  ComponentDefinition,
+  ComponentQuery,
+  EvidenceSet,
+  EvidenceTier,
+  Finding,
+  FindingStatus,
+  InstanceRegistration,
+  InteractionEvidence,
+  ProjectAIView,
+  ProjectDiagnostic,
+  R1ProjectErrorCode,
+  RenderedEvidence,
+  ValidationReport,
+  ValidateProjectOptions,
+  VisibleStateSnapshot,
+} from '@future-ui/ai-contract-core';
+
+export { buildShadcnProjectView, buildShadcnComponentDefinitions } from './project/shadcn-descriptor.js';
+export {
+  createEditDialogProjectContext,
+  registerEditDialogInstance,
+  validateEditDialogProject,
+} from './project/edit-dialog-project.js';
+export type { EditDialogProjectContext, EditDialogInstanceOptions } from './project/edit-dialog-project.js';
+export { mountEditDialog, collectRenderedEvidence, drivePendingInteraction } from './project/dialog-evidence.js';
+export {
+  FROZEN_PROJECT_TOOL_NAMES,
+  PROJECT_TOOL_DESCRIPTORS,
+  executeProjectTool,
+} from './project/mcp-projection.js';
+export type {
+  ProjectToolName,
+  ProjectToolDescriptor,
+  ProjectToolResult,
+  ProjectToolError,
+  ProjectToolErrorCode,
+  ProjectToolContext,
+} from './project/mcp-projection.js';
