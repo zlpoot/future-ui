@@ -93,6 +93,35 @@ describe('D15 mapping tables', () => {
     expect(diagnostics.length).toBeGreaterThan(0);
   });
 
+  it('validates every token conclusion (no fail-open in the token domain)', () => {
+    // token conclusion marked not-applicable
+    const na = structuredClone(buttonMapping);
+    na.domains.token[0] = { member: 'control.radius', status: 'not-applicable', reason: 'x' };
+    const dNA = validateComponentMapping(na);
+    expect(
+      dNA.some((d) => d.code === 'r1_adapter_not_applicable_forbidden' && d.path.endsWith('token/control.radius')),
+    ).toBe(true);
+
+    // token conclusion with an illegal status
+    const bad = structuredClone(buttonMapping);
+    bad.domains.token[0] = { member: 'control.radius', status: 'bogus' as never };
+    const dBad = validateComponentMapping(bad);
+    expect(dBad.some((d) => d.code === 'r1_adapter_bad_status' && d.path.endsWith('token/control.radius'))).toBe(true);
+
+    // token conclusion mapped but missing via/mapsTo
+    const incomplete = structuredClone(buttonMapping);
+    incomplete.domains.token[0] = { member: 'control.radius', status: 'mapped' };
+    const dIncomplete = validateComponentMapping(incomplete);
+    expect(
+      dIncomplete.some((d) => d.code === 'r1_adapter_bad_status' && d.path.endsWith('token/control.radius')),
+    ).toBe(true);
+
+    // Any of these malformed tables must stay below "supported".
+    expect(dNA.length).toBeGreaterThan(0);
+    expect(dBad.length).toBeGreaterThan(0);
+    expect(dIncomplete.length).toBeGreaterThan(0);
+  });
+
   it('every concrete profileTokenKey resolves in the D16 Project Profile', () => {
     for (const mapping of componentMappings) {
       const diagnostics = validateMappingProfileLinkage(mapping, (key) => tryResolveToken(editDialogProfile, key));

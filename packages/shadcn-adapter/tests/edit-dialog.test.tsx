@@ -141,6 +141,50 @@ describe('D17 EditDialog reference', () => {
     expect(onOpenChange).toHaveBeenCalledTimes(1);
   });
 
+  it('old in-flight save settling after stop-wait + reopen never closes the new dialog (generation guard)', async () => {
+    let resolveSave: () => void = () => {};
+    const onSave = vi.fn(() => new Promise<void>((resolve) => { resolveSave = resolve; }));
+    const onOpenChange = vi.fn();
+    function Reopenable() {
+      const [open, setOpen] = React.useState(true);
+      return (
+        <>
+          <button type="button" data-testid="reopen" onClick={() => setOpen(true)}>
+            reopen
+          </button>
+          <EditDialog
+            open={open}
+            label="编辑成员"
+            fields={fields}
+            onSave={onSave}
+            onOpenChange={(d) => {
+              onOpenChange(d);
+              setOpen(d.open);
+            }}
+          />
+        </>
+      );
+    }
+    render(<Reopenable />);
+    fireEvent.click(screen.getByTestId('edit-dialog-save'));
+    fireEvent.click(screen.getByTestId('edit-dialog-cancel'));
+    fireEvent.click(await within(await screen.findByTestId('edit-dialog-pending-confirm')).findByRole('button', { name: '停止等待并关闭' }));
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Reopen immediately (new generation) BEFORE the old save settles.
+    fireEvent.click(screen.getByTestId('reopen'));
+    await screen.findByRole('dialog');
+
+    await act(async () => {
+      resolveSave!();
+      await Promise.resolve();
+    });
+    // The stale save must not emit a "save" close against the new dialog.
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('blocking variant removes ordinary cancel and X, exposes finite resolution paths (R1-DLG-08/EX-BLK-001)', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const onOpenChange = vi.fn();

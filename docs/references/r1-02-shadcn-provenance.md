@@ -88,14 +88,14 @@ React peer 范围：`^19.2.0`。样式层：Tailwind v4 工具类（无 Tailwind
 - 事件：组合层 `valueChange` 发出契约 payload **`{ value }`**（本 adapter 无 appId 概念，只携带契约所属的 `value` 字段；不发裸 string）；
 - `name`：vendored Input 只透传原生 `name`，组合层按契约 accessibility 条款补 **`aria-label={name}`**（原生 name 本身不构成 accessible name）。
 
-D15 校验同步加 fail-closed：**已枚举的契约成员不得用 `not-applicable` 逃掉映射**（新增诊断 `r1_adapter_not_applicable_forbidden`，并带负例测试），避免该成员被改标后组件又回到 `supported`。
+D15 校验同步加 fail-closed：**已枚举契约成员与 mapping 声明的 token 结论都不得用 `not-applicable` 逃掉映射**（token 结论同样逐条校验 status/via/mapsTo/evidence；新增诊断 `r1_adapter_not_applicable_forbidden`，并带契约域与 token 域负例测试），避免该成员被改标后组件又回到 `supported`。
 
 ### 4.3 pending 期间关闭：停止等待而非放弃/回滚（R1-DLG-05）
 
 保存请求进行中用户选择关闭时，UI 文案与行为是**"停止等待并关闭"**，不是"放弃"：
 
 - 不调用 Abort/取消，`onSave` 仍在执行，操作在服务端**仍可能成功提交**，也不会自动回滚（符合"取消/关闭 ≠ 回滚"边界）；
-- 组件设置 detached 标志，仅停止等待结果；该请求随后 resolve/reject 都**不再产生第二次 close 通知**、也不再弹出迟到的错误，有成功/失败两条回归测试。
+- 组件使用**会话 generation 守卫**（每次打开自增），每个异步 save 只允许影响创建它的那一代：确认关闭仅把该代标记为 detached（停止等待结果）；该请求随后 resolve/reject 都**不再产生第二次 close 通知**、也不再弹出迟到错误；若关闭后又快速重开，旧请求 settle 时因 generation 已变化而被忽略，不会误伤新一代 Dialog。三条路径（resolve / reject / reopen 竞态）均有回归测试。
 
 ## 6. 工具链证据（仅作 toolingProvenance，不作源码身份）
 

@@ -87,15 +87,20 @@ export function EditDialog({
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // R1-DLG-05: a close requested while pending waits for an explicit confirm.
   const [pendingCloseReason, setPendingCloseReason] = React.useState<EditDialogCloseReason | null>(null);
-  // Set once the user chooses to close while a save is in flight. The in-flight
-  // onSave is NOT aborted (no Abort API); we only stop waiting on it and must
-  // never emit a second close notification when it eventually settles.
-  const detachedRef = React.useRef(false);
+  // Dialog-session generation: incremented every time the dialog opens. Each
+  // in-flight save captures the generation it belongs to and may only affect
+  // that same generation, so a save that settles after stop-wait+reopen cannot
+  // close (or mutate) the freshly reopened dialog.
+  const generationRef = React.useRef(0);
+  // Generation for which the user chose "stop waiting and close". Its in-flight
+  // save is NOT aborted (no Abort API); we only ignore its settle outcome.
+  const detachedGenerationRef = React.useRef<number | null>(null);
 
   // Re-seed draft state each time the dialog opens.
   React.useEffect(() => {
     if (open) {
-      detachedRef.current = false;
+      generationRef.current += 1;
+      detachedGenerationRef.current = null;
       setValues(initialValues(fields));
       setPending(false);
       setSaveAttempts(0);
@@ -128,17 +133,21 @@ export function EditDialog({
 
   const handleSave = React.useCallback(async () => {
     if (pending || saveExhausted) return; // R1-DLG-04: block resubmit while pending
+    const generation = generationRef.current;
     setSaveError(null);
     setPending(true);
+    // An async save is allowed to affect ONLY the dialog generation that
+    // started it: ignored if the user stop-waited that generation or reopened
+    // into a newer one before it settles.
+    const settledAfterLeavingGeneration = (): boolean =>
+      generationRef.current !== generation || detachedGenerationRef.current === generation;
     try {
       await onSave(values);
-      // User already closed while this was pending: do not emit a second close
-      // notification ("save"), and do not churn state the user will not see.
-      if (detachedRef.current) return;
+      if (settledAfterLeavingGeneration()) return;
       setPending(false);
       closeWith('save');
     } catch (error) {
-      if (detachedRef.current) return; // outcome is no longer awaited — stay quiet
+      if (settledAfterLeavingGeneration()) return; // outcome no longer awaited — stay quiet
       setPending(false);
       setSaveAttempts((n) => n + 1);
       setSaveError(error instanceof Error ? error.message : String(error));
@@ -233,8 +242,9 @@ export function EditDialog({
                 type="button"
                 variant="destructive"
                 onClick={() => {
-                  // Stop waiting (no abort); suppress any later settle callback.
-                  detachedRef.current = true;
+                  // Stop waiting (no abort); this generation's later settle is
+                  // suppressed. Reopening starts a fresh generation.
+                  detachedGenerationRef.current = generationRef.current;
                   setPending(false);
                   setPendingCloseReason(null);
                   closeWith('pending-confirm');

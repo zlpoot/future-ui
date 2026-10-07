@@ -121,15 +121,21 @@ export function validateComponentMapping(mapping: ComponentMapping): R1Diagnosti
     const expectedMembers = contractMembers(contract, domain);
     const actualMembers = [...byName.keys()];
 
+    // Status/evidence SHAPE is validated for EVERY conclusion, including the
+    // mapping-declared token conclusions (token has no contract enumeration,
+    // but an illegal status / not-applicable / mapped-without-via there must
+    // not slip through either).
+    for (const c of conclusions) {
+      validateConclusion(diagnostics, `${base}/${domain}/${c.member}`, c, domain);
+    }
+
     // Domain-level not-applicable is structurally impossible; check members.
     for (const member of expectedMembers) {
       const c = byName.get(member);
       if (!c) {
         diagnostics.push(err('r1_adapter_member_missing', `${base}/${domain}/${member}`,
           `Contract member ${member} has no member-level conclusion in domain ${domain}.`));
-        continue;
       }
-      validateConclusion(diagnostics, `${base}/${domain}/${member}`, c, domain);
     }
     for (const member of actualMembers.filter((m) => !expectedMembers.includes(m))) {
       // The token domain has no contract-side member enumeration; extras there
@@ -156,15 +162,17 @@ function validateConclusion(
       `Status must be one of ${VALID_STATUS.join(' | ')}.`, VALID_STATUS, c.status));
     return;
   }
-  // `validateConclusion` only runs over `expectedMembers`, i.e. members the
-  // anchored contract instance actually declares (the token domain has no
-  // contract enumeration and never reaches this function). Such an enumerated
-  // member MUST be concluded mapped / inherited-equivalent / unsupported — it
-  // cannot be waved away as not-applicable, or the component could still be
-  // reported "supported" while a real difference goes unmapped (fail-closed).
-  if (domain !== 'token' && c.status === 'not-applicable') {
+  // Fail-closed for BOTH the eight contract domains and the mapping-declared
+  // token domain: a conclusion the table actually lists cannot be waved away
+  // as not-applicable. Enumerated contract members must be mapped /
+  // inherited-equivalent / unsupported, and a declared visual token that has
+  // no real mapping should simply be omitted (or marked unsupported with a
+  // reason) — not-applicable would let the component still read "supported".
+  if (c.status === 'not-applicable') {
     diagnostics.push(err('r1_adapter_not_applicable_forbidden', path,
-      'An enumerated contract member cannot be concluded not-applicable; conclude mapped, inherited-equivalent or unsupported instead.'));
+      domain === 'token'
+        ? 'A declared token conclusion cannot be not-applicable; omit it, or conclude mapped/inherited-equivalent/unsupported instead.'
+        : 'An enumerated contract member cannot be concluded not-applicable; conclude mapped, inherited-equivalent or unsupported instead.'));
   }
   if (c.status === 'mapped' && !(c.via && c.mapsTo)) {
     diagnostics.push(err('r1_adapter_bad_status', path,
