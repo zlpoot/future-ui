@@ -20,6 +20,8 @@ export const r1AdapterErrorCodes = [
   'r1_adapter_reason_required',
   /** Status value outside the D15-closed set, or domain-level not-applicable. */
   'r1_adapter_bad_status',
+  /** An enumerated contract member was concluded not-applicable (fail-open escape). */
+  'r1_adapter_not_applicable_forbidden',
   /** The visual token domain is empty — zero visual mapping cannot be "supported". */
   'r1_adapter_token_domain_empty',
 ] as const;

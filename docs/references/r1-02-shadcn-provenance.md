@@ -63,16 +63,41 @@ Base UI 是官方"**新工程 create**"默认 base，但对本任务不是薄组
 
 React peer 范围：`^19.2.0`。样式层：Tailwind v4 工具类（无 Tailwind 构建时类名不产生像素效果；确定性测试只断言结构与行为，不断言像素）。
 
-## 4. 与冻结 Component Contract 的一处关键差异（已在 mapping/reference 处理）
+## 4. 与冻结 Component Contract 的关键差异（已在 mapping/reference 处理，不藏黑盒）
+
+### 4.1 Dialog `aria-modal`
 
 契约 `parts.root` 要求 `role=dialog, aria-modal=true`。实测 `@radix-ui/react-dialog@1.2.0`：
 
 - Content 仍渲染 `role="dialog"`，并以 FocusScope trapped + 外部 inert 实现模态；
 - **但不再输出 `aria-modal` 属性**（见其 `dist/index.mjs` DialogContentImpl 约 259–264 行）。
 
-因此组合层（`EditDialog` 的 `DialogContent`）显式补 `aria-modal="true"`；D15 mapping 中 `parts.root` 标记为 `mapped`（via `composition`），`accessibility.role` 标记为 `inherited-equivalent` 并记录该差异，不把行为差异藏进黑盒。
+因此组合层（`EditDialog` 的 `DialogContent`）显式补 `aria-modal="true"`；D15 mapping 中 `parts.root` 标记为 `mapped`（via `composition`），`accessibility.role` 标记为 `inherited-equivalent` 并记录该差异。
 
-## 5. 工具链证据（仅作 toolingProvenance，不作源码身份）
+### 4.2 TextInput 只能报 `partial`：冻结契约的 `role=textbox` 不覆盖全部允许的 type
+
+冻结的 `future-ui.text-input` 契约一方面把 `accessibility.role` 固定为 `textbox`，另一方面 `props.type` 枚举允许 `text/email/password/number/search/tel/url`。原生 `<input>` 的**隐式 ARIA role 随 type 变化**（MDN《<input>》隐式角色）：
+
+- `text / email / tel / url` → `textbox`；
+- `number` → `spinbutton`；
+- `search` → `searchbox`；
+- `password` → **没有**对应的隐式 ARIA role。
+
+单个透传 type 的原生 input 无法对全部契约 type 满足 `role=textbox`；本 PR 不能修改 frozen contract，故 `accessibility.role` 成员标记为 **`unsupported`（reason + impact）**，TextInput 组件级最高 **`partial`**。其余成员仍真实 mapped：
+
+- 事件：组合层 `valueChange` 发出契约 payload **`{ value }`**（本 adapter 无 appId 概念，只携带契约所属的 `value` 字段；不发裸 string）；
+- `name`：vendored Input 只透传原生 `name`，组合层按契约 accessibility 条款补 **`aria-label={name}`**（原生 name 本身不构成 accessible name）。
+
+D15 校验同步加 fail-closed：**已枚举的契约成员不得用 `not-applicable` 逃掉映射**（新增诊断 `r1_adapter_not_applicable_forbidden`，并带负例测试），避免该成员被改标后组件又回到 `supported`。
+
+### 4.3 pending 期间关闭：停止等待而非放弃/回滚（R1-DLG-05）
+
+保存请求进行中用户选择关闭时，UI 文案与行为是**"停止等待并关闭"**，不是"放弃"：
+
+- 不调用 Abort/取消，`onSave` 仍在执行，操作在服务端**仍可能成功提交**，也不会自动回滚（符合"取消/关闭 ≠ 回滚"边界）；
+- 组件设置 detached 标志，仅停止等待结果；该请求随后 resolve/reject 都**不再产生第二次 close 通知**、也不再弹出迟到的错误，有成功/失败两条回归测试。
+
+## 6. 工具链证据（仅作 toolingProvenance，不作源码身份）
 
 - CLI：`shadcn@4.21.2`（MIT），见 `upstream-provenance.ts.toolingProvenance`。
 - 默认通道实证：无 `components.json` 的 `shadcn@4.21.2 view dialog` 解析到 `styles/new-york-v4/dialog.json`（2026-10-06 观测）。

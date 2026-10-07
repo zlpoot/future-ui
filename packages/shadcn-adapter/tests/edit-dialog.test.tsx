@@ -109,17 +109,36 @@ describe('D17 EditDialog reference', () => {
     const confirm = await screen.findByTestId('edit-dialog-pending-confirm');
     expect(confirm).toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
-    fireEvent.click(within(confirm).getByRole('button', { name: '继续编辑' }));
+    fireEvent.click(within(confirm).getByRole('button', { name: '继续等待' }));
     expect(screen.queryByTestId('edit-dialog-pending-confirm')).not.toBeInTheDocument();
-    // request again and confirm discard
+    // request again and confirm stop-waiting
     fireEvent.click(screen.getByTestId('edit-dialog-cancel'));
-    fireEvent.click(await within(await screen.findByTestId('edit-dialog-pending-confirm')).findByRole('button', { name: '放弃并关闭' }));
+    fireEvent.click(await within(await screen.findByTestId('edit-dialog-pending-confirm')).findByRole('button', { name: '停止等待并关闭' }));
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith({ open: false, reason: 'pending-confirm' });
-    // Flush the still-pending save promise inside act so no state update leaks.
+    // The in-flight save eventually succeeds: it must NOT fire a second close.
     await act(async () => {
       resolveSave!();
       await Promise.resolve();
     });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('an in-flight save that rejects after stop-waiting emits no second close or error (R1-DLG-05)', async () => {
+    let rejectSave: (e: unknown) => void = () => {};
+    const onSave = vi.fn(() => new Promise<void>((_resolve, reject) => { rejectSave = reject; }));
+    const onOpenChange = vi.fn();
+    render(<Harness onSave={onSave} onOpenChange={onOpenChange} />);
+    fireEvent.click(screen.getByTestId('edit-dialog-save'));
+    fireEvent.click(screen.getByTestId('edit-dialog-cancel'));
+    fireEvent.click(await within(await screen.findByTestId('edit-dialog-pending-confirm')).findByRole('button', { name: '停止等待并关闭' }));
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      rejectSave!(new Error('late failure'));
+      await Promise.resolve();
+    });
+    // No second close notification surfaces from the late rejection.
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
   });
 
   it('blocking variant removes ordinary cancel and X, exposes finite resolution paths (R1-DLG-08/EX-BLK-001)', async () => {
@@ -180,12 +199,13 @@ describe('ShadcnButton composition', () => {
 });
 
 describe('ShadcnTextInput composition', () => {
-  it('adapts valueChange from event.target.value and sets aria-invalid', () => {
+  it('emits valueChange payload { value } and sets aria-invalid', () => {
     const onValueChange = vi.fn();
     render(<ShadcnTextInput defaultValue="a" error onValueChange={onValueChange} />);
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'abc' } });
-    expect(onValueChange).toHaveBeenCalledWith('abc');
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith({ value: 'abc' });
     expect(input).toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -194,5 +214,40 @@ describe('ShadcnTextInput composition', () => {
     render(<ShadcnTextInput readOnly defaultValue="a" onValueChange={onValueChange} />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'abc' } });
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it('maps name to both the native name attribute and aria-label (contract accessibility clause)', () => {
+    render(<ShadcnTextInput defaultValue="" name="email" />);
+    const input = document.querySelector('input[name="email"]');
+    expect(input).not.toBeNull();
+    expect(input).toHaveAttribute('aria-label', 'email');
+  });
+
+  it('native implicit role follows the input type (textbox set vs number/search/password)', () => {
+    const textboxTypes = ['text', 'email', 'tel', 'url'] as const;
+    for (const type of textboxTypes) {
+      const { unmount } = render(<ShadcnTextInput type={type} defaultValue="" />);
+      expect(screen.queryByRole('textbox'), type).not.toBeNull();
+      expect(screen.queryByRole('spinbutton'), type).toBeNull();
+      expect(screen.queryByRole('searchbox'), type).toBeNull();
+      unmount();
+    }
+
+    const { unmount: unmountNumber } = render(<ShadcnTextInput type="number" defaultValue="" />);
+    expect(screen.queryByRole('spinbutton')).not.toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    unmountNumber();
+
+    const { unmount: unmountSearch } = render(<ShadcnTextInput type="search" defaultValue="" />);
+    expect(screen.queryByRole('searchbox')).not.toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    unmountSearch();
+
+    // password has no corresponding implicit ARIA role.
+    const { unmount: unmountPassword } = render(<ShadcnTextInput type="password" defaultValue="" />);
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByRole('spinbutton')).toBeNull();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    unmountPassword();
   });
 });

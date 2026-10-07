@@ -156,9 +156,15 @@ function validateConclusion(
       `Status must be one of ${VALID_STATUS.join(' | ')}.`, VALID_STATUS, c.status));
     return;
   }
-  if (domain !== 'token' && c.status === 'not-applicable' && !c.reason) {
-    diagnostics.push(err('r1_adapter_reason_required', path,
-      'Member-level not-applicable requires a reason tied to the contract instance.'));
+  // `validateConclusion` only runs over `expectedMembers`, i.e. members the
+  // anchored contract instance actually declares (the token domain has no
+  // contract enumeration and never reaches this function). Such an enumerated
+  // member MUST be concluded mapped / inherited-equivalent / unsupported — it
+  // cannot be waved away as not-applicable, or the component could still be
+  // reported "supported" while a real difference goes unmapped (fail-closed).
+  if (domain !== 'token' && c.status === 'not-applicable') {
+    diagnostics.push(err('r1_adapter_not_applicable_forbidden', path,
+      'An enumerated contract member cannot be concluded not-applicable; conclude mapped, inherited-equivalent or unsupported instead.'));
   }
   if (c.status === 'mapped' && !(c.via && c.mapsTo)) {
     diagnostics.push(err('r1_adapter_bad_status', path,

@@ -377,14 +377,14 @@ export const textInputMapping: ComponentMapping = {
         evidence: 'input.tsx:11 (aria-invalid utility classes); reference wrapper',
       },
       {
-        member: 'name', status: 'mapped', via: 'native',
-        mapsTo: 'native input name attribute',
-        evidence: 'input.tsx:8-16',
+        member: 'name', status: 'mapped', via: 'composition',
+        mapsTo: 'native input name attribute plus aria-label set from name (contract accessibility clause: "name maps to aria-label when provided"); the vendored Input only forwards name, the wrapper adds aria-label',
+        evidence: 'input.tsx:8-16; reference wrapper (shadcn-text-input.tsx)',
       },
       {
         member: 'description', status: 'mapped', via: 'composition',
         mapsTo: 'composition renders a description element and wires aria-describedby (vendored Input has none)',
-        evidence: 'reference/edit-dialog.tsx',
+        evidence: 'reference/shadcn-text-input.tsx',
       },
       {
         member: 'controlled', status: 'mapped', via: 'native',
@@ -420,14 +420,14 @@ export const textInputMapping: ComponentMapping = {
         evidence: 'input.tsx:11; reference wrapper',
       },
       {
-        member: 'name', status: 'mapped', via: 'native',
-        mapsTo: 'name attribute',
-        evidence: 'input.tsx:8-16',
+        member: 'name', status: 'mapped', via: 'composition',
+        mapsTo: 'name attribute plus aria-label emitted from name (wrapper adds the aria-label the contract requires)',
+        evidence: 'input.tsx:8-16; reference/shadcn-text-input.tsx',
       },
       {
         member: 'description', status: 'mapped', via: 'composition',
         mapsTo: 'aria-describedby + description element',
-        evidence: 'reference wrapper',
+        evidence: 'reference/shadcn-text-input.tsx',
       },
       {
         member: 'placeholder', status: 'mapped', via: 'native',
@@ -436,15 +436,17 @@ export const textInputMapping: ComponentMapping = {
       },
       {
         member: 'type', status: 'mapped', via: 'native',
-        mapsTo: 'native input type; all contracted values text/email/password/number/search/tel/url are valid HTML input types',
+        mapsTo: 'native input type; all seven contracted values are valid HTML input types and render/value-submission behavior is native',
+        note: 'All type VALUES are supported, but they do not share one implicit ARIA role — see accessibility.role (unsupported).',
         evidence: 'input.tsx:9,11',
       },
     ],
     events: [
       {
         member: 'valueChange', status: 'mapped', via: 'composition',
-        mapsTo: 'onChange adapter: event.target.value; suppressed natively when disabled/readOnly; never fired by programmatic value sets',
-        evidence: 'input.tsx:8-16; reference wrapper',
+        mapsTo: "onChange adapter emitting the contract payload { value: event.target.value }; suppressed when disabled/readOnly; never fired by programmatic value sets",
+        note: 'This adapter has no appId concept, so the emitted payload carries only the contract-owned `value` field (no appId).',
+        evidence: 'input.tsx:8-16; reference/shadcn-text-input.tsx',
       },
     ],
     state: [
@@ -468,7 +470,7 @@ export const textInputMapping: ComponentMapping = {
       {
         member: 'description', status: 'mapped', via: 'composition',
         mapsTo: 'description element rendered by the wrapper, referenced via aria-describedby',
-        evidence: 'reference wrapper',
+        evidence: 'reference/shadcn-text-input.tsx',
       },
     ],
     control: [
@@ -480,13 +482,17 @@ export const textInputMapping: ComponentMapping = {
     ],
     accessibility: [
       {
-        member: 'role', status: 'inherited-equivalent',
-        mapsTo: 'native single-line <input> implicit role=textbox',
-        evidence: 'input.tsx:8-18',
+        member: 'role', status: 'unsupported',
+        reason:
+          'The frozen contract declares accessibility.role="textbox" for the whole TextInput while props.type enum allows text/email/password/number/search/tel/url. Native implicit ARIA roles differ by type: text/email/tel/url map to textbox, number maps to spinbutton, search maps to searchbox, and password has NO implicit ARIA role at all (it stays a non-generic element without a role). A single native <input> therefore cannot satisfy role=textbox for every contracted type, and the frozen contract cannot be changed in this PR.',
+        impact:
+          'TextInput is partial: types text/email/tel/url meet role=textbox; number/search/password do not. Callers needing the textbox role guarantee must constrain type to the textbox set; full coverage would require a future contract version that declares the role per type (or an explicit role policy), which is out of scope here.',
+        evidence:
+          'MDN <input> implicit roles (number=spinbutton, search=searchbox, password=no corresponding role); input.tsx:8-18 renders one native <input> whose type is forwarded verbatim.',
       },
       {
         member: 'keyboard', status: 'inherited-equivalent',
-        mapsTo: 'native text entry keyboard semantics',
+        mapsTo: 'native text entry keyboard semantics for the requested input type',
         evidence: 'input.tsx:8-18',
       },
       {
@@ -496,9 +502,9 @@ export const textInputMapping: ComponentMapping = {
       },
       {
         member: 'semanticRelations', status: 'mapped', via: 'composition',
-        mapsTo: 'aria-invalid (error), aria-describedby (description); name exposed via aria-label when provided',
-        note: 'Native name does not imply aria-label; the composition adds the accessible-name wiring the contract describes.',
-        evidence: 'input.tsx:11; reference wrapper',
+        mapsTo: 'aria-invalid (error), aria-describedby (description); aria-label emitted from name when provided',
+        note: 'Native name alone does not establish an accessible name; the composition sets aria-label={name} to satisfy the contract clause.',
+        evidence: 'input.tsx:11; reference/shadcn-text-input.tsx',
       },
     ],
     lifecycle: [

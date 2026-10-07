@@ -60,14 +60,37 @@ describe('D15 mapping tables', () => {
     expect(diagnostics.some((d) => d.code === 'r1_adapter_token_domain_empty')).toBe(true);
   });
 
-  it('reports Button as partial (loading unsupported) while Dialog/TextInput are supported', () => {
+  it('reports Dialog supported; Button partial (loading) and TextInput partial (type/role)', () => {
     const reports = Object.fromEntries(getComponentMappingReports().map((r) => [r.componentType, r]));
     expect(reports['future-ui.dialog'].status).toBe('supported');
-    expect(reports['future-ui.text-input'].status).toBe('supported');
     expect(reports['future-ui.button'].status).toBe('partial');
     expect(reports['future-ui.button'].unsupported).toContain('features.loading');
     expect(reports['future-ui.button'].unsupported).toContain('props.loading');
     expect(reports['future-ui.button'].unsupported).toContain('state.loading');
+    // TextInput cannot be "supported": the frozen contract claims role=textbox
+    // for all contracted types, but number/search/password have different/none
+    // implicit roles.
+    expect(reports['future-ui.text-input'].status).toBe('partial');
+    expect(reports['future-ui.text-input'].unsupported).toContain('accessibility.role');
+  });
+
+  it('rejects not-applicable on an enumerated contract member (no fail-open escape)', () => {
+    const broken = structuredClone(textInputMapping);
+    // Try to wave away the very role mismatch as "not-applicable" + a reason.
+    broken.domains.accessibility = broken.domains.accessibility.map((c) =>
+      c.member === 'role'
+        ? { member: 'role', status: 'not-applicable', reason: 'pretend it does not apply' }
+        : c,
+    );
+    const diagnostics = validateComponentMapping(broken);
+    expect(
+      diagnostics.some(
+        (d) => d.code === 'r1_adapter_not_applicable_forbidden' && d.path.endsWith('accessibility/role'),
+      ),
+    ).toBe(true);
+    // And such a table must not be able to surface as "supported": any
+    // diagnostic forces at most "partial" (see reportFor).
+    expect(diagnostics.length).toBeGreaterThan(0);
   });
 
   it('every concrete profileTokenKey resolves in the D16 Project Profile', () => {

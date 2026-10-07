@@ -87,11 +87,17 @@ export function EditDialog({
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // R1-DLG-05: a close requested while pending waits for an explicit confirm.
   const [pendingCloseReason, setPendingCloseReason] = React.useState<EditDialogCloseReason | null>(null);
+  // Set once the user chooses to close while a save is in flight. The in-flight
+  // onSave is NOT aborted (no Abort API); we only stop waiting on it and must
+  // never emit a second close notification when it eventually settles.
+  const detachedRef = React.useRef(false);
 
-  // Re-seed draft values each time the dialog opens.
+  // Re-seed draft state each time the dialog opens.
   React.useEffect(() => {
     if (open) {
+      detachedRef.current = false;
       setValues(initialValues(fields));
+      setPending(false);
       setSaveAttempts(0);
       setSaveError(null);
       setPendingCloseReason(null);
@@ -126,9 +132,13 @@ export function EditDialog({
     setPending(true);
     try {
       await onSave(values);
+      // User already closed while this was pending: do not emit a second close
+      // notification ("save"), and do not churn state the user will not see.
+      if (detachedRef.current) return;
       setPending(false);
       closeWith('save');
     } catch (error) {
+      if (detachedRef.current) return; // outcome is no longer awaited — stay quiet
       setPending(false);
       setSaveAttempts((n) => n + 1);
       setSaveError(error instanceof Error ? error.message : String(error));
@@ -182,7 +192,8 @@ export function EditDialog({
                   description={field.description}
                   error={field.error}
                   value={values[field.name] ?? ''}
-                  onValueChange={(next) => {
+                  onValueChange={(event) => {
+                    const next = event.value;
                     setValues((prev) => ({ ...prev, [field.name]: next }));
                     if (saveError) setSaveError(null);
                   }}
@@ -202,25 +213,34 @@ export function EditDialog({
         {pendingCloseReason ? (
           <div
             role="alertdialog"
-            aria-label="放弃待保存的更改？"
+            aria-label="停止等待并关闭？"
             data-testid="edit-dialog-pending-confirm"
             className="flex flex-col gap-2 rounded-md border p-3"
           >
-            <p className="text-sm font-medium">请求尚未完成，确定要放弃并关闭吗？</p>
+            <p className="text-sm font-medium">保存请求仍在进行。</p>
+            <p className="text-muted-foreground text-sm">
+              现在关闭只会停止等待结果；该请求不会被取消，操作在服务端仍可能完成，也不会因此自动回滚。
+            </p>
             <div className="flex justify-end gap-2">
               <ShadcnButton
                 type="button"
                 variant="outline"
                 onClick={() => setPendingCloseReason(null)}
               >
-                继续编辑
+                继续等待
               </ShadcnButton>
               <ShadcnButton
                 type="button"
                 variant="destructive"
-                onClick={() => closeWith('pending-confirm')}
+                onClick={() => {
+                  // Stop waiting (no abort); suppress any later settle callback.
+                  detachedRef.current = true;
+                  setPending(false);
+                  setPendingCloseReason(null);
+                  closeWith('pending-confirm');
+                }}
               >
-                放弃并关闭
+                停止等待并关闭
               </ShadcnButton>
             </div>
           </div>

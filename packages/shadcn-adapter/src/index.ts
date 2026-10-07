@@ -25,7 +25,11 @@ export * from './upstream/index.js';
 export { ShadcnButton } from './components/shadcn-button.js';
 export type { ShadcnButtonProps } from './components/shadcn-button.js';
 export { ShadcnTextInput } from './components/shadcn-text-input.js';
-export type { ShadcnTextInputProps, ShadcnInputType } from './components/shadcn-text-input.js';
+export type {
+  ShadcnTextInputProps,
+  ShadcnInputType,
+  ShadcnTextInputValueChangeEvent,
+} from './components/shadcn-text-input.js';
 export { EditDialog } from './components/edit-dialog.js';
 export type {
   EditDialogProps,
