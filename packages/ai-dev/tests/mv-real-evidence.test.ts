@@ -23,8 +23,12 @@ import {
   validateMvProject,
   sealProjectEvidence,
   assertEvidenceNotDrifted,
+  readMvCurrentUpstream,
+  PINNED_MV_CANVAS_BLOB,
+  PINNED_MV_HEAD,
   REAL_MV_ASSET_CARDS,
 } from '../src/index.js';
+import type { MvCurrentUpstream } from '../src/index.js';
 
 const dir = process.env.MV_REAL_EVIDENCE_DIR;
 
@@ -82,62 +86,113 @@ describeMaybe('R1-04 Phase A — real-page evidence through the bounded validato
     console.log('[A-GATE REPORT]', JSON.stringify(report, null, 2));
   });
 
-  it('drift guard (POSITIVE): the real pinned evidence is drift-free and the gate accepts it', () => {
-    // The collector only writes this combined file when there is NO drift, so a
-    // present, freshly-collected file must pass the independent gate re-check.
+  it('drift guard (POSITIVE): gate INDEPENDENTLY reads the CURRENT upstream; pinned real evidence passes', () => {
     const combined = load('mv-real-evidence.json');
     const drift = combined.drift as Record<string, unknown>;
     expect(drift.canvasBlobDrifted).toBe(false);
     expect(drift.mvHeadDrifted).toBe(false);
     expect(drift.liveCanvasBlob).toBeTruthy();
     expect(drift.liveMvHead).toBeTruthy();
-    // Gate-side independent assertion: no drift → gate returns the clean record.
-    expect(assertEvidenceNotDrifted(combined)).toEqual({ canvasBlobDrifted: false, mvHeadDrifted: false });
+    // The gate does NOT trust the file's booleans: it reads the live MV checkout
+    // itself (real git) right now, independent of when evidence was collected.
+    const current = readMvCurrentUpstream();
+    expect(current.mvHead).toBe(PINNED_MV_HEAD);
+    expect(current.canvasBlob).toBe(PINNED_MV_CANVAS_BLOB);
+    expect(assertEvidenceNotDrifted(combined, current))
+      .toEqual({ canvasBlobDrifted: false, mvHeadDrifted: false });
   });
 });
 
-// These NEGATIVE drift cases are pure and ALWAYS run (CI-hermetic, no real file
-// or server needed): the gate must FAIL CLOSED on either drift kind and on a
-// missing/malformed record — previously it only warned and still PASSED.
-describe('R1-04 #70 round 2 (P1-2) — A-Gate drift guard fails closed', () => {
-  it('NEGATIVE: canvas.html blob drift blocks the gate (throws)', () => {
-    const drifted = { drift: { canvasBlobDrifted: true, mvHeadDrifted: false } };
-    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/A-Gate BLOCKED \(drift\)/);
-    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/canvas\.html blob/);
+// Pure, ALWAYS-run drift cases (CI-hermetic: no real file/server, no git). The
+// current upstream facts are fed in synthetically; the gated test above is what
+// exercises the real readMvCurrentUpstream().
+const OTHER_BLOB = '1111111111111111111111111111111111111111';
+const OTHER_HEAD = '2222222222222222222222222222222222222222';
+
+function cleanCurrent(): MvCurrentUpstream {
+  return { canvasBlob: PINNED_MV_CANVAS_BLOB, mvHead: PINNED_MV_HEAD };
+}
+
+interface CleanOverrides {
+  liveCanvasBlob?: string;
+  pinnedCanvasBlob?: string;
+  canvasBlobDrifted?: boolean;
+  liveMvHead?: string;
+  pinnedMvHead?: string;
+  mvHeadDrifted?: boolean;
+}
+
+function cleanCombined(overrides: CleanOverrides = {}): { drift: Required<CleanOverrides> } {
+  return {
+    drift: {
+      liveCanvasBlob: PINNED_MV_CANVAS_BLOB,
+      pinnedCanvasBlob: PINNED_MV_CANVAS_BLOB,
+      canvasBlobDrifted: false,
+      liveMvHead: PINNED_MV_HEAD,
+      pinnedMvHead: PINNED_MV_HEAD,
+      mvHeadDrifted: false,
+      ...overrides,
+    },
+  };
+}
+
+describe('R1-04 #70 round 3 (residual P1-2) — gate independently proves freshness; stale evidence fails', () => {
+  it('NEGATIVE (the key stale case): stored evidence clean false/false but canvas blob CHANGED → gate FAILS', () => {
+    // Evidence was collected while clean; no re-run happened; MV has since moved.
+    // The file still says false/false — the gate must catch it from CURRENT facts.
+    const current: MvCurrentUpstream = { canvasBlob: OTHER_BLOB, mvHead: PINNED_MV_HEAD };
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), current))
+      .toThrow(/A-Gate BLOCKED \(drift\)/);
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), current))
+      .toThrow(/CURRENT upstream has moved/);
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), current))
+      .toThrow(/canvas\.html blob/);
   });
 
-  it('NEGATIVE: MV HEAD drift blocks the gate (throws)', () => {
-    const drifted = { drift: { canvasBlobDrifted: false, mvHeadDrifted: true } };
-    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/A-Gate BLOCKED \(drift\)/);
-    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/MV HEAD/);
+  it('NEGATIVE (the key stale case): stored evidence clean false/false but MV HEAD CHANGED → gate FAILS', () => {
+    const current: MvCurrentUpstream = { canvasBlob: PINNED_MV_CANVAS_BLOB, mvHead: OTHER_HEAD };
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), current)).toThrow(/CURRENT upstream has moved/);
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), current)).toThrow(/MV HEAD/);
   });
 
-  it('NEGATIVE: both drifted at once names both causes and still blocks', () => {
-    const drifted = { drift: { canvasBlobDrifted: true, mvHeadDrifted: true } };
-    const err = (): Error => {
-      try {
-        assertEvidenceNotDrifted(drifted);
-        throw new Error('expected throw');
-      } catch (e) {
-        return e as Error;
-      }
-    };
-    const message = err().message;
-    expect(message).toMatch(/canvas\.html blob/);
-    expect(message).toMatch(/MV HEAD/);
+  it('NEGATIVE: CURRENT upstream unresolvable (null git facts) fails closed even with a clean stored record', () => {
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), { canvasBlob: null, mvHead: PINNED_MV_HEAD }))
+      .toThrow(/independently resolve/);
+    expect(() => assertEvidenceNotDrifted(cleanCombined(), { canvasBlob: PINNED_MV_CANVAS_BLOB, mvHead: null }))
+      .toThrow(/independently resolve/);
   });
 
-  it('NEGATIVE: missing / malformed drift record blocks the gate (no trust by default)', () => {
+  it('NEGATIVE: a pre-written/replayed file (live ids != current) at the matching pin is still rejected', () => {
+    const combined = cleanCombined({ liveCanvasBlob: OTHER_BLOB, liveMvHead: OTHER_HEAD });
+    // current is still AT the pin; only the evidence's recorded live ids differ.
+    expect(() => assertEvidenceNotDrifted(combined, cleanCurrent()))
+      .toThrow(/not produced against the current upstream/);
+  });
+
+  it('NEGATIVE: evidence pinned to a different exact commit/sha is rejected', () => {
+    const combined = cleanCombined({ pinnedMvHead: OTHER_HEAD, pinnedCanvasBlob: OTHER_BLOB });
+    expect(() => assertEvidenceNotDrifted(combined, cleanCurrent())).toThrow(/does not match the frozen pin/);
+  });
+
+  it('NEGATIVE: stored drift booleans true still block even if current is at the pin (defense in depth)', () => {
+    const combined = cleanCombined({ canvasBlobDrifted: true, mvHeadDrifted: true });
+    expect(() => assertEvidenceNotDrifted(combined, cleanCurrent())).toThrow(/marked drifted/);
+  });
+
+  it('NEGATIVE: missing / malformed drift record blocks when a usable CURRENT fact is supplied', () => {
     for (const bad of [undefined, null, {}, { drift: undefined }, { drift: null },
-      { drift: {} }, { drift: { canvasBlobDrifted: true } },
-      { drift: { canvasBlobDrifted: 'no', mvHeadDrifted: false } }]) {
+      { drift: { canvasBlobDrifted: true } },
+      { drift: { canvasBlobDrifted: 'no', mvHeadDrifted: false } },
+      { drift: { pinnedCanvasBlob: PINNED_MV_CANVAS_BLOB, pinnedMvHead: PINNED_MV_HEAD,
+        liveCanvasBlob: PINNED_MV_CANVAS_BLOB, liveMvHead: PINNED_MV_HEAD } }]) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(() => assertEvidenceNotDrifted(bad as any), JSON.stringify(bad)).toThrow(/A-Gate BLOCKED \(drift\)/);
+      expect(() => assertEvidenceNotDrifted(bad as any, cleanCurrent()), JSON.stringify(bad))
+        .toThrow(/A-Gate BLOCKED \(drift\)/);
     }
   });
 
-  it('POSITIVE: a clean record passes and is reported as no drift', () => {
-    expect(assertEvidenceNotDrifted({ drift: { canvasBlobDrifted: false, mvHeadDrifted: false } }))
+  it('POSITIVE: stored clean + CURRENT at pin + live matching → passes', () => {
+    expect(assertEvidenceNotDrifted(cleanCombined(), cleanCurrent()))
       .toEqual({ canvasBlobDrifted: false, mvHeadDrifted: false });
   });
 });

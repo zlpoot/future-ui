@@ -22,6 +22,8 @@ import {
   collectMvPanelRenderedEvidence,
   observeMvAssetControls,
   mvAutoEditorProfile,
+  MV_UPSTREAM,
+  PINNED_MV_CANVAS_BLOB,
   REAL_MV_ASSET_CARDS,
   identityRefFor,
   capabilitiesForInstance,
@@ -45,6 +47,12 @@ describe('R1-04 Phase A — MV-Auto-Editor real Project Profile & AI View', () =
     expect(mvAutoEditorProfile.dialogConventions.pendingCloseIsConfirmedNeverSilent).toBe(false);
     expect(mvAutoEditorProfile.dialogConventions.focusEnterAndRestore).toBe(false);
     expect(mvAutoEditorProfile.dialogConventions.explicitCloseEntries).toEqual(['cancel-action']);
+  });
+
+  it('the gate pin constant is the SAME canvas blob as MV_UPSTREAM.sourceCommit (no divergent pins)', () => {
+    // The independent gate reads MV_UPSTREAM-adapted canvas.html; its pinned
+    // blob must be one single identity value.
+    expect(PINNED_MV_CANVAS_BLOB).toBe(MV_UPSTREAM.sourceCommit);
   });
 
   it('builds three definitions from pinned MV facts; all partial with REAL limits', () => {

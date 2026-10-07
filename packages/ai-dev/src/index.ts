@@ -128,6 +128,14 @@ export {
 } from './project/mv-auto-editor/mv-project.js';
 export type { MvProjectContext, MvEvidenceDrift } from './project/mv-auto-editor/mv-project.js';
 export {
+  readMvCurrentUpstream,
+  MV_REPO_PATH,
+  MV_CANVAS_REL_PATH,
+  PINNED_MV_HEAD,
+  PINNED_MV_CANVAS_BLOB,
+} from './project/mv-auto-editor/mv-upstream.js';
+export type { MvCurrentUpstream } from './project/mv-auto-editor/mv-upstream.js';
+export {
   registerMvAssetEditInstance,
   registerRealMvAssetInstances,
   REAL_MV_ASSET_CARDS,
