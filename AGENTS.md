@@ -2,18 +2,18 @@
 
 ## 当前执行边界：R1-004 · #70 ONLY
 
-负责人已明确授权 **R1-004 implementation**。当前唯一活动实现范围是 [#70 R1-04](https://github.com/zlpoot/future-ui/issues/70)：**MV-Auto-Editor 双真实场景验收 + Ark UI 小范围对照**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-004`，仅覆盖 #70。
+负责人已明确授权 **R1-004 implementation**。当前唯一活动实现范围是 [#70 R1-04](https://github.com/zlpoot/future-ui/issues/70)：**本地真实应用 fixture 双场景验收 + Ark UI 小范围对照**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-004`，仅覆盖 #70。
 
-当前 future-ui 基线：main `d79cdfb4969b343581368f47d03c24ae3f40a536`。#67 / #68 / #69 已 Done/Closed。
+当前阶段：**Phase B — Storyboard / Keyframe Review**。Phase A implementation 已在 exact head `451826b91ca1619baeffc90698faf8d4d288ab45` 完成 Third Independent Review，并按 Owner Disposition 以 **ACCEPTED WITH EXPLICIT NOT-COVERED** 通过 A Gate；不得把 Phase A 的 `not-covered` 追溯改写成 PASS。#67 / #68 / #69 已 Done/Closed。
 
 ### 冻结目标
 
-- Real project：本地 `E:/projects/MV-Auto-Editor`
-- Pilot A：人物 / 场景 / 道具卡片编辑与确认
-- Pilot B：分镜 / 关键帧审核、选择/重试、局部返工
+- External validation fixture：本地 `E:/projects/MV-Auto-Editor`（仅用于验证 future-ui，不属于 future-ui 产品组成或依赖）
+- Pilot A：人物 / 场景 / 道具卡片编辑与确认（已完成）
+- Pilot B：分镜 / 关键帧审核、选择/重试、局部返工（当前）
 - Library B：`@ark-ui/react@5.39.3`
 - Ark 首轮范围：Dialog / Button / TextInput
-- Worker：Codex primary
+- Worker：按 #70 最新 Owner / Role Binding；AGENTS 不固定某个产品 Agent
 - 模型/API：未授权
 - #71：未授权
 
@@ -57,8 +57,8 @@
 ### 阶段门
 
 - Preflight Gate：登记 MV exact root / branch / HEAD / worktree 后才允许 A 写入。
-- A Gate：Pilot A 真实页面 + negative cases + evidence 可复核后才进 B。
-- B Gate：A/B 共用同一 Profile 且核心语义通过后才进 C。
+- A Gate：**ACCEPTED WITH EXPLICIT NOT-COVERED**。真实 fixture 的 PASS / FAIL / NOT-COVERED 均可作为有效结果；禁止为 Gate 变绿而改造 fixture 或从 metadata 猜 PASS。
+- B Gate：A/B 共用同一 Profile；对适用语义给出可复核 PASS/FAIL，对不适用或当前边界无法验证的规则明确 NOT-COVERED，且不得复制第二份规范。满足后才进 C。
 - C Gate：Ark exact package/provenance + Dialog/Button/TextInput mapping / real render 通过后进入 Independent Review。
 - 实现完成后停在 **AWAITING_HUMAN_MERGE**。
 
@@ -101,7 +101,7 @@ UI 与能力系统独立，通过可选 Binding 连接；组件库与 WebMCP 都
 
 ## 检查与报告
 
-普通实现使用最小充分定向检查，权限/unknown write 和阶段收口按 Issue 做独立验证。文档不触发模型效果重跑；不增加无必要 CI 层级。
+Phase B 首步先做 `scriptVersionId/sourceBeatIds` read-only diagnosis / dry-run mapping，再进入 Storyboard / Keyframe Review 的最小接入；不得先改真实数据。普通实现使用最小充分定向检查，权限/unknown write 和阶段收口按 Issue 做独立验证。文档不触发模型效果重跑；不增加无必要 CI 层级。
 
 文档只能证明文档；目录可检索不证明页面一致；Schema-valid 不证明实际交互/业务授权；mock 不证明真实浏览器；确定性工具测试不证明模型收益。
 
