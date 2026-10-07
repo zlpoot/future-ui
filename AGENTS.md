@@ -1,14 +1,14 @@
 # future-ui · Agent 工作入口
 
-## 当前执行边界：R1-002 · #68 ONLY
+## 当前执行边界：NO ACTIVE IMPLEMENTATION GRANT
 
-负责人 2026-10-05 确认：future-ui 适配现有 UI 库，在统一语义与项目约定下让 AI 稳定开发界面，并输出 AI 可理解的结构；不重新做组件库，不以复杂任务能力或模型优效作为近期主线。
+负责人已确认的产品方向不变：future-ui 适配现有 UI 库，在统一语义与项目约定下让 AI 稳定开发界面，并输出 AI 可理解的结构；不重新做组件库，不以复杂任务能力或模型优效作为近期主线。
 
-当前唯一活动实现范围是 [#68 R1-02](https://github.com/zlpoot/future-ui/issues/68)：首个 shadcn/React Library Adapter。允许在 #68 内核验官方 shadcn 来源、安装必要依赖、修改代码/lockfile、运行定向测试与 CI、创建 PR；公共 Schema、模型调用、真实工程写入、#69+、MCP/WebMCP、部署与发布均不在授权内。任何扩大都必须先回 [#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4)。
+R1-02 [#68](https://github.com/zlpoot/future-ui/issues/68) 的实现已由 PR #76 合入 main `a905df43f1b489414390bb88688b89d91d0f0a3d`，当前处于 **Closeout**。R1-002 的 implementation 范围已经结束；当前没有活动 implementation grant。
 
-CAL-001 的 5,000,000 token/24-run 范围及历史授权仍见 #4/#23，不得把历史剩余额度推导成新阶段授权。该实验已有 closeout 报告；本次不改原始结果、不重跑、不自动关闭历史 Issue。Merge/Close 按当前明确授权，不由旧 grant 或本页推导。
+[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) 是动态授权唯一事实源。下一候选任务是 #69 R1-03，但 **#69/#70/#71 当前均 NOT_AUTHORIZED**；不得从 #68 的 merge、Closeout 或历史 grant 推导代码实现、MCP/WebMCP、模型调用、真实工程写入、第二 UI 库、部署或发布权限。
 
-当前活动 grant：[#4 `R1-002`](https://github.com/zlpoot/future-ui/issues/4)，**仅覆盖 #68**；Worker profile = `doubao-work` primary。允许官方 shadcn registry/CLI/API 只读来源核验、#68 产品代码与必要依赖/lockfile、定向 lint/typecheck/test/conformance/smoke、CI 与 PR。禁止修改 `packages/contracts` 公共 Schema / `$id` / `CONTRACT_MAJOR` / core error codes；禁止 #69+、模型、真实工程写入、MCP/WebMCP、部署发布。**merge / close 仍为负责人 gate。**
+CAL-001 的 5,000,000 token/24-run 范围及历史授权仍见 #4/#23，不得把历史剩余额度推导成新阶段授权。Merge / Close / 下一 Issue grant 继续分别由负责人明确授权。
 
 ## 事实源与协作边界
 

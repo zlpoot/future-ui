@@ -1,6 +1,6 @@
 # future-ui 后续开发计划 · R1 语义适配与跨工程一致性
 
-日期：2026-10-05。负责人确认产品方向；任务编排为本轮交付计划。当前只做文档/Issue/Notion 整理，产品实现、依赖安装、模型调用与跨工程写入未因此获得授权。动态状态只在 GitHub Issue 和 #4。
+日期：2026-10-05；状态同步：2026-10-07。R1-02 已由 PR #76 合入 main `a905df43`，当前执行 Closeout；下一候选为 #69 R1-03，但尚无新 Current Grant。动态状态仍只在 GitHub Issue 和 #4。
 
 ## 1. 目标与范围
 
@@ -20,21 +20,21 @@
 
 | 顺序 | Issue | 最小交付 | 进入条件 |
 | --- | --- | --- | --- |
-| R1-01 | [#67](https://github.com/zlpoot/future-ui/issues/67) | 只读盘点真实工程；确认首库/两个页面；定义最小语义和 Project Profile | 本轮规划之后，明确范围 |
-| R1-02 | [#68](https://github.com/zlpoot/future-ui/issues/68) | 首个真实库的三种组件映射及代表编辑弹窗 | #67 的最小契约、实际版本与代码授权 |
-| R1-03 | [#69](https://github.com/zlpoot/future-ui/issues/69) | 项目 AI 目录、实例结构、有界规则校验；开发 MCP 薄适配 | #67/#68；不依赖新的 Agent 平台 |
+| R1-01 | [#67](https://github.com/zlpoot/future-ui/issues/67) · **Done** | 最小 UI 语义、Library Adapter / Project Profile 契约与 EditDialog 参考场景 | 已完成 |
+| R1-02 | [#68](https://github.com/zlpoot/future-ui/issues/68) · **Closeout** | shadcn/Radix Dialog / Button / TextInput Adapter + Profile + EditDialog reference | PR #76 已 merge @ `a905df43`；待 Closeout PASS/Done |
+| R1-03 | [#69](https://github.com/zlpoot/future-ui/issues/69) · **Next / NOT_AUTHORIZED** | 项目 AI 目录、实例结构、有界规则校验；开发 MCP 仅作后置薄适配 | #68 Closeout PASS + 新 Current Grant；不依赖新的 Agent 平台 |
 | R1-04 | [#70](https://github.com/zlpoot/future-ui/issues/70) | 两个真实工程复用；随后第二库的小范围对照 | 前三项及目标工程/验证授权 |
 | R1-05 | [#71](https://github.com/zlpoot/future-ui/issues/71) | 显式 Capability/Binding 到协议工具的可选投影 | #69；独立授权，不阻塞前四项 |
 
 原型与契约在同一小任务内最小充分验证，不为每一层新增冻结阶段。不要同时开五条实现线。
 
-## 4. R1-01 首先做的工作
+## 4. 已完成阶段与下一导航
 
-盘点 Model Hub、bilibili docs、MV 制作实际使用的框架、UI 库、版本或源码副本、theme、典型弹窗。当前没有核验它们的前端技术栈，不能默认都可安装 shadcn。
-
-首库候选为 shadcn/React；实际已用其他库时优先适配它，不因本框架强迫业务工程迁移。第二库也以实际使用/有限验证价值选定，不预先承诺全量 MUI/Ark/AntD/Vue 支持。
-
-把同类弹窗规范写成 Profile：标题/关闭入口、操作角色、pending 与重复提交、token 实值与布局、普通/阻塞变体。每条规则记录 ID、适用范围、例外和可验证方式。规范由 Profile 维护，Adapter 实现映射，AI View 读取，不维护三份独立文本。
+- R1-01（#67）已完成契约/规则冻结；真实工程盘点已取消为前置条件。
+- R1-02（#68）已把真实 shadcn/ui new-york-v4（Radix）接入 Adapter/Profile/EditDialog reference，交付树在 main `a905df43`；Closeout 以 #68 与 #4 为准。
+- 下一候选是 R1-03（#69）：Project AI View、显式实例结构与有界一致性校验；**尚未授权 Coding**。
+- 第二 UI 库与两个真实工程复用仍属于 #70，不应提前到 #69 前执行。
+- MCP 在 #69 中只允许作为结构化 API 之后的开发期薄投影；不得把 MCP 反过来变成 Project AI View 的核心数据模型。
 
 ## 5. 第一版验收场景
 
