@@ -45,6 +45,9 @@ export type { DevDiagnostic, DevErrorCode } from './errors.js';
 export {
   buildProjectView,
   validateComponentDefinition,
+  validateComponentSource,
+  importableModule,
+  COMPONENT_SOURCE_KINDS,
   queryComponents,
   describeComponent,
   capabilitiesForInstance,
@@ -64,6 +67,9 @@ export type {
   BuildProjectViewResult,
   ComponentDefinition,
   ComponentQuery,
+  ComponentSource,
+  ModuleImportSource,
+  InlinePageSource,
   EvidenceSet,
   EvidenceTier,
   Finding,
@@ -118,8 +124,9 @@ export type { BuildMvProjectViewInput } from './project/mv-auto-editor/mv-view.j
 export {
   createMvProjectContext,
   validateMvProject,
+  assertEvidenceNotDrifted,
 } from './project/mv-auto-editor/mv-project.js';
-export type { MvProjectContext } from './project/mv-auto-editor/mv-project.js';
+export type { MvProjectContext, MvEvidenceDrift } from './project/mv-auto-editor/mv-project.js';
 export {
   registerMvAssetEditInstance,
   registerRealMvAssetInstances,
@@ -129,7 +136,7 @@ export type { MvAssetInstanceOptions, MvAssetCardRef } from './project/mv-auto-e
 export {
   mountMvAssetPanel,
   collectMvPanelRenderedEvidence,
-  driveMvPendingInteraction,
+  observeMvAssetControls,
   buildMvAssetPanelMarkup,
 } from './project/mv-auto-editor/mv-evidence.js';
-export type { MvPanelFixtureOptions, MvPanelHandle } from './project/mv-auto-editor/mv-evidence.js';
+export type { MvPanelFixtureOptions, MvPanelHandle, MvAssetControlFacts } from './project/mv-auto-editor/mv-evidence.js';

@@ -12,8 +12,12 @@ import type { ProjectDiagnostic } from './errors.js';
 import type {
   CapabilityReference,
   ComponentDefinition,
+  ComponentSource,
   ProjectAIView,
 } from './types.js';
+
+/** The only source `kind` values the frozen model accepts (fail-closed). */
+export const COMPONENT_SOURCE_KINDS = ['module-import', 'inline-source'] as const;
 
 function diag(
   code: ProjectDiagnostic['code'],
@@ -28,6 +32,100 @@ function diag(
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim() !== '';
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function isNonEmptyStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.length > 0 && v.every((x) => isNonEmptyString(x));
+}
+
+/**
+ * Validate the discriminated component source. The two kinds are mutually
+ * exclusive and fail closed: an unknown kind, an empty/fake module/exports and
+ * any cross-kind field are all rejected. An inline source therefore cannot
+ * smuggle in an importable `module`/`exports`, and a module source cannot hide
+ * behind inline locator fields.
+ */
+export function validateComponentSource(source: unknown, base: string): ProjectDiagnostic[] {
+  const d: ProjectDiagnostic[] = [];
+  if (!isRecord(source)) {
+    d.push(diag('r1_project_definition_invalid', `${base}`, 'source must be a discriminated object { kind }',
+      [...COMPONENT_SOURCE_KINDS], typeof source));
+    return d;
+  }
+  const kind = source['kind'];
+  if (kind !== 'module-import' && kind !== 'inline-source') {
+    d.push(diag('r1_project_definition_invalid', `${base}/kind`,
+      'source.kind must be module-import | inline-source', [...COMPONENT_SOURCE_KINDS], kind));
+    return d;
+  }
+
+  if (kind === 'module-import') {
+    if (!isNonEmptyString(source['module'])) {
+      d.push(diag('r1_project_definition_invalid', `${base}/module`,
+        'a module-import source needs a real, non-empty importable module specifier'));
+    }
+    if (!isNonEmptyStringArray(source['exports'])) {
+      d.push(diag('r1_project_definition_invalid', `${base}/exports`,
+        'a module-import source needs at least one named export (string[])'));
+    }
+    if (!isNonEmptyString(source['example'])) {
+      d.push(diag('r1_project_definition_invalid', `${base}/example`,
+        'a module-import source needs a non-empty usage example'));
+    }
+    // Discrimination is enforced, not implied: inline-only keys are forbidden
+    // here so the two source shapes cannot be conflated downstream.
+    for (const key of ['locator', 'owner', 'symbols'] as const) {
+      if (key in source) {
+        d.push(diag('r1_project_definition_invalid', `${base}/${key}`,
+          `${key} belongs only to an inline-source and must not appear on a module-import source`));
+      }
+    }
+    return d;
+  }
+
+  // kind === 'inline-source' — a NON-importable, page-owned implementation.
+  if (!isNonEmptyString(source['locator'])) {
+    d.push(diag('r1_project_definition_invalid', `${base}/locator`,
+      'an inline-source needs the real owning document locator (e.g. web/canvas.html)'));
+  }
+  if (!isNonEmptyString(source['owner'])) {
+    d.push(diag('r1_project_definition_invalid', `${base}/owner`,
+      'an inline-source needs its owning scope inside the document'));
+  }
+  if (!isNonEmptyStringArray(source['symbols'])) {
+    d.push(diag('r1_project_definition_invalid', `${base}/symbols`,
+      'an inline-source lists the real page-local symbol(s) (string[]); they are not module exports'));
+  }
+  if (!isNonEmptyString(source['example'])) {
+    d.push(diag('r1_project_definition_invalid', `${base}/example`,
+      'an inline-source needs a non-empty in-page call-site example (not an import)'));
+  }
+  // Fail closed: an inline source MUST NOT carry importable fields. This is the
+  // structural guarantee that no fake import can ever be generated for it.
+  for (const key of ['module', 'exports'] as const) {
+    if (key in source) {
+      d.push(diag('r1_project_definition_invalid', `${base}/${key}`,
+        `${key} belongs only to a module-import source; an inline page source is not importable and must not fabricate ${key}`));
+    }
+  }
+  return d;
+}
+
+/**
+ * The ONLY sanctioned way to derive an import suggestion from a component
+ * source. Returns null for a non-module inline source: such a component has no
+ * specifier and no exports, so callers MUST NOT fabricate an import for it.
+ */
+export function importableModule(
+  source: ComponentSource,
+): { module: string; exports: string[] } | null {
+  return source.kind === 'module-import'
+    ? { module: source.module, exports: [...source.exports] }
+    : null;
 }
 
 function majorOf(version: string): number | undefined {
@@ -59,9 +157,7 @@ export function validateComponentDefinition(def: ComponentDefinition): ProjectDi
   if (!id?.upstream || !isNonEmptyString(id.upstream.library) || !isNonEmptyString(id.upstream.base)) {
     d.push(diag('r1_project_definition_invalid', `${base}/identity/upstream`, 'upstream.library and upstream.base are required'));
   }
-  if (!def.actualImport || !isNonEmptyString(def.actualImport.module) || def.actualImport.exports.length === 0) {
-    d.push(diag('r1_project_definition_invalid', `${base}/actualImport`, 'actualImport.module and at least one export are required'));
-  }
+  d.push(...validateComponentSource(def.source, `${base}/source`));
   if (!isNonEmptyString(def.mappingStatus) || !['supported', 'partial', 'unsupported'].includes(def.mappingStatus)) {
     d.push(diag('r1_project_definition_invalid', `${base}/mappingStatus`,
       'mappingStatus must be supported | partial | unsupported', 'supported|partial|unsupported', def.mappingStatus));

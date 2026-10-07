@@ -10,6 +10,9 @@ export type { ProjectDiagnostic, R1ProjectErrorCode } from './errors.js';
 export {
   buildProjectView,
   validateComponentDefinition,
+  validateComponentSource,
+  importableModule,
+  COMPONENT_SOURCE_KINDS,
   queryComponents,
   describeComponent,
   capabilitiesForInstance,
@@ -46,17 +49,19 @@ export { identityRefFor, upstreamIdentityFingerprint } from './identity.js';
 export type { InstanceIdentityRef } from './identity.js';
 
 export type {
-  ActualImport,
   AdapterComponentIdentity,
   CapabilityReference,
   ComponentDefinition,
+  ComponentSource,
   ComponentType,
+  InlinePageSource,
   InstanceMetadata,
   InstanceRegistration,
   InstanceRelation,
   InstanceRelationKind,
   MappingLimit,
   MappingStatus,
+  ModuleImportSource,
   ProjectAIView,
   ScopeCoverage,
   VisibleStatePolicy,

@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { validateProfile } from '@future-ui/shadcn-adapter';
+import { importableModule } from '@future-ui/ai-contract-core';
 import {
   buildMvProjectView,
   createMvProjectContext,
@@ -19,11 +20,12 @@ import {
   sealProjectEvidence,
   mountMvAssetPanel,
   collectMvPanelRenderedEvidence,
-  driveMvPendingInteraction,
+  observeMvAssetControls,
   mvAutoEditorProfile,
   REAL_MV_ASSET_CARDS,
   identityRefFor,
   capabilitiesForInstance,
+  executeProjectTool,
 } from '../src/index.js';
 
 const INSTANCE_ID = 'assets/cards/character-f8cb8312/edit';
@@ -57,8 +59,14 @@ describe('R1-04 Phase A — MV-Auto-Editor real Project Profile & AI View', () =
     // identity anchors are the frozen adapter/profile/upstream facts
     expect(dialog.identity.adapterId).toBe('shadcn-react');
     expect(dialog.identity.profileId).toBe('mv-auto-editor');
-    expect(dialog.actualImport.module).toBe('web/canvas.html');
-    expect(dialog.actualImport.example).toContain('simpleAssetEditor');
+    // The asset editor is a NON-importable, page-owned inline source: it must
+    // be recorded honestly and never expose an `import` (P2 contract gap).
+    expect(dialog.source.kind).toBe('inline-source');
+    if (dialog.source.kind !== 'inline-source') throw new Error('narrow');
+    expect(dialog.source.locator).toBe('web/canvas.html');
+    expect(dialog.source.symbols).toContain('simpleAssetEditor');
+    expect(importableModule(dialog.source)).toBeNull();
+    expect(dialog.source.example).toContain('simpleAssetEditor');
     // limits come from REAL MV members, not hand-typed guesses
     const members = dialog.limits.map((l) => l.member);
     expect(members).toContain('accessibility.role');
@@ -86,22 +94,46 @@ describe('R1-04 Phase A — positive cases over the real MV asset panel', () => 
     }
   });
 
-  it('pending: duplicate submit blocked and stop is single-shot → R1-DLG-04/05 pass (interaction-verified)', async () => {
+  it('pending control states are RENDERED facts only; R1-DLG-04/05 stay not-covered (no faked interaction)', () => {
+    // --- Real RENDERED facts observed from the fixture mirroring canvas.html ---
+    const running = mountMvAssetPanel({ running: true });
+    try {
+      const facts = observeMvAssetControls(running.container);
+      // RENDERED FACT (a different fact from R1-DLG-04): while a job runs the
+      // generate control is disabled. A disabled attribute is a render state,
+      // NOT proof that a duplicate REAL start handler is a guarded no-op.
+      expect(facts.generateDisabled).toBe(true);
+      expect(facts.stopPresent).toBe(true);
+    } finally {
+      running.unmount();
+    }
+    const canceling = mountMvAssetPanel({ running: true, canceling: true });
+    try {
+      // RENDERED FACT (a different fact from R1-DLG-05): once stop is requested
+      // the stop control renders disabled — the page's "stop generation" is
+      // single-shot. MV has no close-callback generation/session lifecycle, so
+      // this is NOT R1-DLG-05's "old task settle cannot re-fire close".
+      expect(observeMvAssetControls(canceling.container).stopDisabled).toBe(true);
+    } finally {
+      canceling.unmount();
+    }
+
+    // --- Through the frozen validator those facts never reach interaction tier ---
+    // No InteractionEvidence is sealed (there is no real handler to drive
+    // hermetically), so R1-DLG-04/05 are not-covered for MV.
     const ctx = createMvProjectContext();
     registerMvAssetEditInstance(ctx, REAL_MV_ASSET_CARDS[0]);
-    const observed = await driveMvPendingInteraction();
-    expect(observed.pendingDuplicateSubmitBlocked).toBe(true);
-    expect(observed.stopWaitNoSecondClose).toBe(true);
-    const evidence = sealProjectEvidence({ interaction: { [INSTANCE_ID]: observed } });
-    const report = validateMvProject(ctx, evidence);
-    expect(report.findings.find((f) => f.ruleId === 'R1-DLG-04')!).toMatchObject({
-      status: 'pass',
-      tier: 'interaction-verified',
-    });
-    expect(report.findings.find((f) => f.ruleId === 'R1-DLG-05')!).toMatchObject({
-      status: 'pass',
-      tier: 'interaction-verified',
-    });
+    const panel = mountMvAssetPanel({ running: true });
+    try {
+      const report = validateMvProject(ctx, renderedEvidence(panel.container));
+      for (const ruleId of ['R1-DLG-04', 'R1-DLG-05']) {
+        const finding = report.findings.find((f) => f.ruleId === ruleId)!;
+        expect(finding.status).toBe('not-covered');
+        expect(finding.tier).not.toBe('interaction-verified');
+      }
+    } finally {
+      panel.unmount();
+    }
   });
 
   it('visible-state: draft prompt/description are withheld by the allowlist', () => {
@@ -249,5 +281,37 @@ describe('R1-04 Phase A — negative cases fail or are not-covered', () => {
     expect(ctx.registry.query()).toEqual([]);
     const report = validateMvProject(ctx, undefined, 'canvas/asset-edit');
     expect(report.coverage.find((c) => c.scopeId === 'canvas/asset-edit')!.coverage).toBe('not-covered');
+  });
+});
+
+describe('R1-04 #70 round 2 (P2) — inline page source is never offered as an import', () => {
+  it('project.catalog / describeComponent expose kind=inline-source and import=null for every MV component', () => {
+    const ctx = createMvProjectContext();
+    registerRealMvAssetInstances(ctx);
+
+    type CatalogRow = {
+      componentType: string;
+      source: { kind: string };
+      import: { module: string; exports: string[] } | null;
+    };
+    const catalog = executeProjectTool(ctx, 'project.catalog', {});
+    if (!catalog.ok) throw new Error(`catalog failed: ${JSON.stringify(catalog.error)}`);
+    const rows = (catalog.data as { components: CatalogRow[] }).components;
+    expect(rows.map((r) => r.componentType).sort()).toEqual([
+      'future-ui.button',
+      'future-ui.dialog',
+      'future-ui.text-input',
+    ]);
+    for (const row of rows) {
+      expect(row.source.kind).toBe('inline-source');
+      // The AI-facing surface MUST NOT turn an inline page source into an import.
+      expect(row.import).toBeNull();
+    }
+
+    const described = executeProjectTool(ctx, 'project.describeComponent', { componentType: 'future-ui.dialog' });
+    if (!described.ok) throw new Error(`describe failed: ${JSON.stringify(described.error)}`);
+    const def = described.data as { source: { kind: string }; import: unknown };
+    expect(def.source.kind).toBe('inline-source');
+    expect(def.import).toBeNull();
   });
 });

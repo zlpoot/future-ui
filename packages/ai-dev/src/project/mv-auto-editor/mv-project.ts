@@ -51,3 +51,49 @@ export function validateMvProject(
 ): ValidationReport {
   return validateProject(ctx.view, ctx.registry, evidence, scopeId === undefined ? {} : { scopeId });
 }
+
+/**
+ * Upstream-identity drift record captured by the real-evidence collector.
+ */
+export interface MvEvidenceDrift {
+  canvasBlobDrifted: boolean;
+  mvHeadDrifted: boolean;
+}
+
+/**
+ * A-Gate upstream drift guard — FAIL CLOSED.
+ *
+ * Phase A evidence is trustworthy only while (a) web/canvas.html's blob equals
+ * the pinned value and (b) the live MV HEAD equals the pinned MV commit. ANY
+ * drift — or a missing/malformed drift record — blocks the gate. The collector
+ * independently aborts before writing evidence on drift; this guard is the
+ * gate's own re-check so a stale/pre-written evidence file can never be
+ * accepted (R1-04 #70 first-review correction: previously drift only warned).
+ */
+export function assertEvidenceNotDrifted(combined: { drift?: unknown } | null | undefined): MvEvidenceDrift {
+  const drift = (combined ?? {}).drift;
+  const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
+  if (
+    !drift ||
+    typeof drift !== 'object' ||
+    !isBool((drift as Partial<MvEvidenceDrift>).canvasBlobDrifted) ||
+    !isBool((drift as Partial<MvEvidenceDrift>).mvHeadDrifted)
+  ) {
+    throw new Error(
+      'A-Gate BLOCKED (drift): evidence has no usable drift record; refusing to trust evidence of unknown upstream identity',
+    );
+  }
+  const record = drift as MvEvidenceDrift;
+  if (record.canvasBlobDrifted || record.mvHeadDrifted) {
+    const which = [
+      record.canvasBlobDrifted ? 'canvas.html blob' : null,
+      record.mvHeadDrifted ? 'MV HEAD' : null,
+    ]
+      .filter(Boolean)
+      .join(' + ');
+    throw new Error(
+      `A-Gate BLOCKED (drift): ${which} drifted from the pinned upstream; refusing to validate against stale evidence`,
+    );
+  }
+  return { canvasBlobDrifted: false, mvHeadDrifted: false };
+}

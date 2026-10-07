@@ -3,12 +3,16 @@
  * asset edit & approval panel.
  *
  * Mirrors the REAL canvas.html asset editor DOM (simpleAssetEditor /
- * assetPanel output) and turns the observed DOM/interactions into the layered
- * evidence the bounded validator consumes. Deterministic and controlled: no
- * browser, no network, no model. A rendered fact is observed, never assumed
- * from metadata.
+ * assetPanel output) and turns the OBSERVED DOM into the layered evidence the
+ * bounded validator consumes. Deterministic and controlled: no browser, no
+ * network, no model. A rendered fact is observed, never assumed from metadata.
+ *
+ * This fixture produces RENDERED evidence only. It does NOT provide
+ * interaction-verified evidence for the pending rules (R1-DLG-04/05): the
+ * controls' disabled states are real rendered facts (see
+ * observeMvAssetControls), not a proof of the frozen interaction semantics.
  */
-import type { InteractionEvidence, RenderedEvidence } from '@future-ui/ai-contract-core';
+import type { RenderedEvidence } from '@future-ui/ai-contract-core';
 
 export interface MvPanelFixtureOptions {
   cardName?: string;
@@ -120,33 +124,35 @@ export function collectMvPanelRenderedEvidence(scope: ParentNode = document.body
 }
 
 /**
- * Drive the pending lifecycle of the REAL MV asset panel and observe:
- *  - R1-DLG-04: a second generate click while a job runs is a no-op
- *    (generate button is disabled while running — real canvas behavior);
- *  - R1-DLG-05: stop is single-shot — the real canvas re-renders into
- *    canceling state after the first stop (stop disabled), so a second
- *    stop/close cannot be emitted by this job.
+ * Read RENDERED facts about the asset controls in a mounted MV panel. These
+ * are OBSERVED RENDER STATES ONLY — disabled/presence — and are deliberately
+ * NOT InteractionEvidence: they are never sealed as interaction proof and so
+ * can never elevate R1-DLG-04/05 to interaction-verified.
+ *
+ * Real facts (canvas.html):
+ *  - while a job is running/canceling, the generate control renders disabled
+ *    (template line 141); while canceling, the stop control renders disabled;
+ *  - "stop generation" is single-shot in the real page (stopAssetGeneration
+ *    returns unless state==='running', line 238) — a distinct real fact that
+ *    must NOT be conflated with frozen R1-DLG-05.
+ * Neither proves the frozen pending interaction semantics: MV's inline,
+ * non-module page has no close-callback generation/session lifecycle, and its
+ * real start handler cannot be exercised hermetically (triggering a job needs a
+ * live model call). Those rules therefore stay not-covered for MV (R1-04 #70
+ * first-review correction), never a simulated interaction-verified pass.
  */
-export async function driveMvPendingInteraction(): Promise<InteractionEvidence> {
-  let handle = mountMvAssetPanel({ running: true });
-  try {
-    const generate = (): HTMLButtonElement =>
-      document.body.querySelector('[data-asset-action="generate"]') as HTMLButtonElement;
-    const stop = (): HTMLButtonElement | null =>
-      document.body.querySelector('[data-asset-action="stop-generate"]') as HTMLButtonElement | null;
+export interface MvAssetControlFacts {
+  generateDisabled: boolean;
+  stopPresent: boolean;
+  stopDisabled: boolean;
+}
 
-    // First generate while running is a no-op because the button is disabled.
-    const pendingDuplicateSubmitBlocked = generate().disabled === true;
-    generate().click();
-
-    // First stop → real canvas sets job.state='canceling' and re-renders.
-    stop()?.click();
-    handle.unmount();
-    handle = mountMvAssetPanel({ running: true, canceling: true });
-    const stopWaitNoSecondClose = stop()?.disabled === true;
-
-    return { pendingDuplicateSubmitBlocked, stopWaitNoSecondClose };
-  } finally {
-    handle.unmount();
-  }
+export function observeMvAssetControls(scope: ParentNode = document.body): MvAssetControlFacts {
+  const generate = scope.querySelector('[data-asset-action="generate"]') as HTMLButtonElement | null;
+  const stop = scope.querySelector('[data-asset-action="stop-generate"]') as HTMLButtonElement | null;
+  return {
+    generateDisabled: generate?.disabled === true,
+    stopPresent: stop !== null,
+    stopDisabled: stop?.disabled === true,
+  };
 }

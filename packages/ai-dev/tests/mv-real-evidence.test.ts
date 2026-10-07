@@ -22,6 +22,7 @@ import {
   registerRealMvAssetInstances,
   validateMvProject,
   sealProjectEvidence,
+  assertEvidenceNotDrifted,
   REAL_MV_ASSET_CARDS,
 } from '../src/index.js';
 
@@ -81,16 +82,62 @@ describeMaybe('R1-04 Phase A — real-page evidence through the bounded validato
     console.log('[A-GATE REPORT]', JSON.stringify(report, null, 2));
   });
 
-  it('drift guard: combined evidence pins the canvas blob; any drift is recorded', () => {
+  it('drift guard (POSITIVE): the real pinned evidence is drift-free and the gate accepts it', () => {
+    // The collector only writes this combined file when there is NO drift, so a
+    // present, freshly-collected file must pass the independent gate re-check.
     const combined = load('mv-real-evidence.json');
     const drift = combined.drift as Record<string, unknown>;
-    // When the real page changed since pinning, the evidence must SAY so.
-    expect(typeof drift.canvasBlobDrifted).toBe('boolean');
-    expect(typeof drift.mvHeadDrifted).toBe('boolean');
-    if (drift.canvasBlobDrifted === true) {
-      console.warn('[A-GATE] canvas.html drifted from pinned blob:', drift);
-    }
+    expect(drift.canvasBlobDrifted).toBe(false);
+    expect(drift.mvHeadDrifted).toBe(false);
     expect(drift.liveCanvasBlob).toBeTruthy();
     expect(drift.liveMvHead).toBeTruthy();
+    // Gate-side independent assertion: no drift → gate returns the clean record.
+    expect(assertEvidenceNotDrifted(combined)).toEqual({ canvasBlobDrifted: false, mvHeadDrifted: false });
+  });
+});
+
+// These NEGATIVE drift cases are pure and ALWAYS run (CI-hermetic, no real file
+// or server needed): the gate must FAIL CLOSED on either drift kind and on a
+// missing/malformed record — previously it only warned and still PASSED.
+describe('R1-04 #70 round 2 (P1-2) — A-Gate drift guard fails closed', () => {
+  it('NEGATIVE: canvas.html blob drift blocks the gate (throws)', () => {
+    const drifted = { drift: { canvasBlobDrifted: true, mvHeadDrifted: false } };
+    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/A-Gate BLOCKED \(drift\)/);
+    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/canvas\.html blob/);
+  });
+
+  it('NEGATIVE: MV HEAD drift blocks the gate (throws)', () => {
+    const drifted = { drift: { canvasBlobDrifted: false, mvHeadDrifted: true } };
+    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/A-Gate BLOCKED \(drift\)/);
+    expect(() => assertEvidenceNotDrifted(drifted)).toThrow(/MV HEAD/);
+  });
+
+  it('NEGATIVE: both drifted at once names both causes and still blocks', () => {
+    const drifted = { drift: { canvasBlobDrifted: true, mvHeadDrifted: true } };
+    const err = (): Error => {
+      try {
+        assertEvidenceNotDrifted(drifted);
+        throw new Error('expected throw');
+      } catch (e) {
+        return e as Error;
+      }
+    };
+    const message = err().message;
+    expect(message).toMatch(/canvas\.html blob/);
+    expect(message).toMatch(/MV HEAD/);
+  });
+
+  it('NEGATIVE: missing / malformed drift record blocks the gate (no trust by default)', () => {
+    for (const bad of [undefined, null, {}, { drift: undefined }, { drift: null },
+      { drift: {} }, { drift: { canvasBlobDrifted: true } },
+      { drift: { canvasBlobDrifted: 'no', mvHeadDrifted: false } }]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => assertEvidenceNotDrifted(bad as any), JSON.stringify(bad)).toThrow(/A-Gate BLOCKED \(drift\)/);
+    }
+  });
+
+  it('POSITIVE: a clean record passes and is reported as no drift', () => {
+    expect(assertEvidenceNotDrifted({ drift: { canvasBlobDrifted: false, mvHeadDrifted: false } }))
+      .toEqual({ canvasBlobDrifted: false, mvHeadDrifted: false });
   });
 });

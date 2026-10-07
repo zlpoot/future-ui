@@ -37,8 +37,15 @@ export const MV_UPSTREAM = {
   runtimePackages: [] as ReadonlyArray<{ name: string; version: string }>,
 };
 
-/** Real import surface of the asset editor inside canvas.html. */
-const ASSET_EDITOR_EXPORTS = ['simpleAssetEditor', 'assetEditor', 'assetPanel', 'characterAssetPanel'];
+/**
+ * Page-local symbols of the asset editor inside canvas.html. These are INLINE
+ * functions in the page's classic <script> (canvas.html has no `export` and no
+ * <script type=module>), so they are page-owned symbols — NOT module exports —
+ * and are recorded under an inline-source, never as an importable module.
+ * (All four are real: characterAssetPanel:85 / assetPanel:97 /
+ * assetEditor:106 / simpleAssetEditor:131.)
+ */
+const ASSET_EDITOR_PAGE_SYMBOLS = ['simpleAssetEditor', 'assetEditor', 'assetPanel', 'characterAssetPanel'];
 
 function exampleFor(componentType: string): { title: string; code: string } {
   if (componentType === 'future-ui.dialog') {
@@ -132,9 +139,15 @@ export function buildMvAutoEditorComponentDefinitions(): ComponentDefinition[] {
     componentType,
     contractVersion: CONTRACT_VERSION,
     identity: identityFor(),
-    actualImport: {
-      module: 'web/canvas.html',
-      exports: ASSET_EDITOR_EXPORTS,
+    source: {
+      // The MV asset editor is NOT importable: it lives as inline functions in
+      // web/canvas.html (classic <script>, no exports). Record it honestly as an
+      // inline-source so project.catalog/describeComponent never suggest an
+      // `import` that cannot exist (R1-04 #70 P2 contract amendment).
+      kind: 'inline-source',
+      locator: 'web/canvas.html',
+      owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
+      symbols: ASSET_EDITOR_PAGE_SYMBOLS,
       example: exampleFor(componentType).code,
     },
     // All three are real but partial: the panel is not a modal dialog and the

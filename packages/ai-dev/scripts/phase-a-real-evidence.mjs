@@ -54,6 +54,22 @@ async function main() {
     mvHeadDrifted: facts.liveMvHead !== PINNED_MV_HEAD,
   };
 
+  // FAIL CLOSED at the collector too (R1-04 #70 first-review correction): if
+  // web/canvas.html's blob OR the MV HEAD has drifted from the pinned values —
+  // including when git cannot resolve either (null) — abort BEFORE launching
+  // Chrome and write/refresh NO evidence. The already-pinned files on disk are
+  // left untouched so a drift can never silently replace trusted evidence.
+  if (drift.canvasBlobDrifted || drift.mvHeadDrifted) {
+    const which = [
+      drift.canvasBlobDrifted ? `canvas.html blob (live=${facts.liveCanvasBlob} pinned=${PINNED_CANVAS_BLOB})` : null,
+      drift.mvHeadDrifted ? `MV HEAD (live=${facts.liveMvHead} pinned=${PINNED_MV_HEAD})` : null,
+    ].filter(Boolean).join('; ');
+    throw new Error(
+      `upstream drift detected — ${which}. Refusing to collect/refresh authoritative A-Gate evidence; `
+      + 'the pinned evidence on disk is left unchanged. Re-pin deliberately (and review) before collecting again.',
+    );
+  }
+
   const chrome = spawn(
     CHROME,
     ['--headless=new', '--disable-gpu', '--no-first-run', `--remote-debugging-port=${PORT}`,

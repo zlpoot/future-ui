@@ -45,14 +45,50 @@ export interface AdapterComponentIdentity {
   };
 }
 
-/** A concrete, real import a consumer uses (no generic docs import). */
-export interface ActualImport {
+/**
+ * Where a component's REAL implementation lives and how a consumer reaches it.
+ *
+ * Discriminated union — the two kinds are mutually exclusive and validated
+ * fail-closed (see validateComponentSource):
+ *  - 'module-import': a real ES module the consumer imports named exports from;
+ *  - 'inline-source': an implementation OWNED by an inline, non-module document
+ *    (e.g. an inline <script> inside an HTML page). It has no module specifier
+ *    and no exports, so it can NEVER be turned into an `import` statement.
+ *
+ * R1-04 (#70) pilot-discovered spec gap (amendment to the R1-03/#69 frozen
+ * model): MV-Auto-Editor's asset editor is implemented by inline functions in
+ * web/canvas.html (no `export`, no <script type=module>), so an import-only
+ * model could not describe it honestly without a fake module/exports. This
+ * union closes ONLY that gap; it deliberately does not add script-tag, global,
+ * CDN or bundler-alias source kinds.
+ */
+export interface ModuleImportSource {
+  kind: 'module-import';
+  /** module specifier a consumer actually imports, e.g. '@future-ui/shadcn-adapter'. */
   module: string;
   /** named export(s) the consumer imports from `module`. */
   exports: string[];
   /** short copy-pasteable usage example; deterministic, no network. */
   example: string;
 }
+
+export interface InlinePageSource {
+  kind: 'inline-source';
+  /** real document that owns the implementation, e.g. 'web/canvas.html'. */
+  locator: string;
+  /** owning scope inside the document, e.g. the inline <script> on a route. */
+  owner: string;
+  /**
+   * Page-local symbols implementing the component. These are INLINE FUNCTIONS
+   * in the owning document, NOT module exports; tooling must never emit
+   * `import { symbol } from …` for them.
+   */
+  symbols: string[];
+  /** deterministic reference snippet showing the REAL in-page call site (never an import). */
+  example: string;
+}
+
+export type ComponentSource = ModuleImportSource | InlinePageSource;
 
 /** A contract member the adapter cannot fully satisfy (the reason for partial). */
 export interface MappingLimit {
@@ -67,8 +103,11 @@ export interface ComponentDefinition {
   componentType: ComponentType;
   contractVersion: string;
   identity: AdapterComponentIdentity;
-  /** How this project actually imports and uses the component. */
-  actualImport: ActualImport;
+  /**
+   * Where the real implementation lives and how the consumer reaches it.
+   * A non-module inline source is expressed honestly (no fabricated import).
+   */
+  source: ComponentSource;
   /** Component-level D15 mapping status. */
   mappingStatus: MappingStatus;
   /** Unsupported/partial member limits; empty for a fully supported component. */
