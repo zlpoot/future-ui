@@ -1,14 +1,20 @@
 # future-ui · Agent 工作入口
 
-## 当前执行边界：NO ACTIVE IMPLEMENTATION GRANT
+## 当前执行边界：R1-003 · #69 ONLY
 
 负责人已确认的产品方向不变：future-ui 适配现有 UI 库，在统一语义与项目约定下让 AI 稳定开发界面，并输出 AI 可理解的结构；不重新做组件库，不以复杂任务能力或模型优效作为近期主线。
 
-R1-02 [#68](https://github.com/zlpoot/future-ui/issues/68) 的实现已由 PR #76 合入 main `a905df43f1b489414390bb88688b89d91d0f0a3d`，当前处于 **Closeout**。R1-002 的 implementation 范围已经结束；当前没有活动 implementation grant。
+R1-02 [#68](https://github.com/zlpoot/future-ui/issues/68) 已 Done/Closed；final closeout main = `dfd65d7d3e6476106e85f5834b057885536e1a2c`。
 
-[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) 是动态授权唯一事实源。下一候选任务是 #69 R1-03，但 **#69/#70/#71 当前均 NOT_AUTHORIZED**；不得从 #68 的 merge、Closeout 或历史 grant 推导代码实现、MCP/WebMCP、模型调用、真实工程写入、第二 UI 库、部署或发布权限。
+当前唯一活动实现范围是 [#69 R1-03](https://github.com/zlpoot/future-ui/issues/69)：**Project AI View、显式实例结构与有界一致性校验**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-003`，仅覆盖 #69。
 
-CAL-001 的 5,000,000 token/24-run 范围及历史授权仍见 #4/#23，不得把历史剩余额度推导成新阶段授权。Merge / Close / 下一 Issue grant 继续分别由负责人明确授权。
+允许：扩展 `ai-contract-core` / `ai-dev`、必要的 shadcn-adapter integration surface、显式 project catalog / instance registry / visible-state allowlist / scope cleanup、bounded validator、开发期只读 MCP thin projection、必要 dev dependency、定向测试/CI/PR。
+
+禁止：公共 contracts Schema/$id/CONTRACT_MAJOR/core errors 修改；任意 JSX/DOM/source 自动识别；生产 runtime MCP、file/shell/arbitrary execution；从 UI 自动推导业务工具；#70/#71、第二 UI 库、真实工程写入、browser live、模型/API、部署发布。**merge / close #69 仍为负责人 gate。**
+
+MCP 在 #69 中只是结构化 API 之后的开发期只读投影，不能成为 Project AI View 的核心数据模型；现有 runtime `webmcp-adapter` 的业务 Capability invocation 与本项保持分层。
+
+CAL-001 历史预算不构成本阶段额度。角色切换不扩权；Worker 默认 `codex` primary，Reviewer 优先 `doubao-work` / fresh independent session。
 
 ## 事实源与协作边界
 
