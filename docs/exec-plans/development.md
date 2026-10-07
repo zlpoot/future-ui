@@ -1,6 +1,6 @@
 # future-ui 后续开发计划 · R1 语义适配与跨工程一致性
 
-日期：2026-10-05；状态同步：2026-10-07。R1-02 已由 PR #76 合入 main `a905df43`，当前执行 Closeout；下一候选为 #69 R1-03，但尚无新 Current Grant。动态状态仍只在 GitHub Issue 和 #4。
+日期：2026-10-05；状态同步：2026-10-07。R1-02 已 Done/Closed；R1-003 已登记用于 #69，待 activation sync 合入后 #69 可进入 Ready。动态状态仍只在 GitHub Issue 和 #4。
 
 ## 1. 目标与范围
 
@@ -21,8 +21,8 @@
 | 顺序 | Issue | 最小交付 | 进入条件 |
 | --- | --- | --- | --- |
 | R1-01 | [#67](https://github.com/zlpoot/future-ui/issues/67) · **Done** | 最小 UI 语义、Library Adapter / Project Profile 契约与 EditDialog 参考场景 | 已完成 |
-| R1-02 | [#68](https://github.com/zlpoot/future-ui/issues/68) · **Closeout** | shadcn/Radix Dialog / Button / TextInput Adapter + Profile + EditDialog reference | PR #76 已 merge @ `a905df43`；待 Closeout PASS/Done |
-| R1-03 | [#69](https://github.com/zlpoot/future-ui/issues/69) · **Next / NOT_AUTHORIZED** | 项目 AI 目录、实例结构、有界规则校验；开发 MCP 仅作后置薄适配 | #68 Closeout PASS + 新 Current Grant；不依赖新的 Agent 平台 |
+| R1-02 | [#68](https://github.com/zlpoot/future-ui/issues/68) · **Done/Closed** | shadcn/Radix Dialog / Button / TextInput Adapter + Profile + EditDialog reference | final closeout main `dfd65d7` |
+| R1-03 | [#69](https://github.com/zlpoot/future-ui/issues/69) · **R1-003 / activation** | Project AI View、显式实例结构、有界规则校验；开发 MCP 仅作后置只读薄适配 | #68 Done + R1-003；AGENTS activation sync 后 Ready |
 | R1-04 | [#70](https://github.com/zlpoot/future-ui/issues/70) | 两个真实工程复用；随后第二库的小范围对照 | 前三项及目标工程/验证授权 |
 | R1-05 | [#71](https://github.com/zlpoot/future-ui/issues/71) | 显式 Capability/Binding 到协议工具的可选投影 | #69；独立授权，不阻塞前四项 |
 
@@ -31,8 +31,8 @@
 ## 4. 已完成阶段与下一导航
 
 - R1-01（#67）已完成契约/规则冻结；真实工程盘点已取消为前置条件。
-- R1-02（#68）已把真实 shadcn/ui new-york-v4（Radix）接入 Adapter/Profile/EditDialog reference，交付树在 main `a905df43`；Closeout 以 #68 与 #4 为准。
-- 下一候选是 R1-03（#69）：Project AI View、显式实例结构与有界一致性校验；**尚未授权 Coding**。
+- R1-02（#68）已 Done/Closed；implementation #76 + closeout #77，final main `dfd65d7`。
+- 当前活动项是 R1-03（#69）：Project AI View、显式实例结构与有界一致性校验；Current Grant = **R1-003 (#69 only)**。
 - 第二 UI 库与两个真实工程复用仍属于 #70，不应提前到 #69 前执行。
 - MCP 在 #69 中只允许作为结构化 API 之后的开发期薄投影；不得把 MCP 反过来变成 Project AI View 的核心数据模型。
 
