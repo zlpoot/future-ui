@@ -29,3 +29,5 @@ ACK 丢失先执行 deliver --retry 再 sync，保留原 Event ID/sequence，Git
 ## 验收证据
 
 真实验收须关联 Issue #88、App PR exact head、原始文档验证、confirmed Handoff、Windows Executor/machine、CP Run ID 与连续 timeline。Review/merge/close 尚未发生时只能报告已交付候选，不能称端到端 PASS。完整证据汇总到 Hub #39 的 MVP PR。
+
+后续任务操作参见 [AWH v0.2 日常交付指南](awh-repeatable-workflow.md)。
