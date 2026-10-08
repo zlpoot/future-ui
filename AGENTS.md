@@ -1,66 +1,28 @@
 # future-ui · Agent 工作入口
 
-## 当前执行边界：R1-004 · #70 ONLY
+## 当前执行边界：R1-RC-001 · #86 ONLY
 
-负责人已明确授权 **R1-004 implementation**。当前唯一活动实现范围是 [#70 R1-04](https://github.com/zlpoot/future-ui/issues/70)：**本地真实应用 fixture 双场景验收 + Ark UI 小范围对照**。[#4 Current Grant](https://github.com/zlpoot/future-ui/issues/4) = `R1-004`，仅覆盖 #70。
+负责人于 2026-10-08 明确指示「启动下一步」，目标为 [#86：第一版可人工测试交付](https://github.com/zlpoot/future-ui/issues/86)。唯一活动授权：[**#4 Current Grant = R1-RC-001**](https://github.com/zlpoot/future-ui/issues/4)。它不覆盖 #71、#66 其他任务或任何历史 #70 实施。
 
-当前阶段：**Phase B — Storyboard / Keyframe Review**。Phase A implementation 已在 exact head `451826b91ca1619baeffc90698faf8d4d288ab45` 完成 Third Independent Review，并按 Owner Disposition 以 **ACCEPTED WITH EXPLICIT NOT-COVERED** 通过 A Gate；不得把 Phase A 的 `not-covered` 追溯改写成 PASS。#67 / #68 / #69 已 Done/Closed。
+- 受信起点：`main@259330e51eaf5fd8e7521f7aa196fa68c545d813`，即 [#85](https://github.com/zlpoot/future-ui/pull/85) 已独立复审并获 Owner 授权 squash merge 的基线；[#70](https://github.com/zlpoot/future-ui/issues/70) 已 CLOSED/COMPLETED，历史 NOT-COVERED、首次 CI 失败和审查记录不变。
+- **Activation Gate：本 AGENTS-only 授权同步 PR 必须先独立 Review 并获 Owner Merge 授权、进入 main。其合入前只能执行 #86 的 GitHub / Windows read-only preflight 与 Demo/launch 盘点，不得修改产品代码或运行尚未批准的扩权行为。**
+- 合入之后，#86 才能在单独实现分支内开展最薄本地 Demo/人工验收入口编码；真实 Windows/browser 结果未产生前仍为 NOT-TESTED。
+- Worker：Windows Codex；Reviewer：ChatGPT 在**不同 execution/session** 独立 Review；Human：现场人工验收、Merge/Close/Tag/Release Gate。Owner 的「启动下一步」不是合并/关闭或发布授权。
 
-### 冻结目标
+### #86 产品目标（仅在 Activation Gate 满足后）
 
-- External validation fixture：本地 `E:/projects/MV-Auto-Editor`（仅用于验证 future-ui，不属于 future-ui 产品组成或依赖）
-- Pilot A：人物 / 场景 / 道具卡片编辑与确认（已完成）
-- Pilot B：分镜 / 关键帧审核、选择/重试、局部返工（当前）
-- Library B：`@ark-ui/react@5.39.3`
-- Ark 首轮范围：Dialog / Button / TextInput
-- Worker：按 #70 最新 Owner / Role Binding；AGENTS 不固定某个产品 Agent
-- 模型/API：未授权
-- #71：未授权
+1. **本地真正可启动**：先只读检查已有 demo、脚本、测试与 UI 资产；尽量复用 `packages/shadcn-adapter` 与 `packages/ark-ui-adapter`。无可用浏览器入口时仅补最薄 host / run script，不建第二个 UI 框架。
+2. **可人工操作对照**：在 Windows、Node >=24.21.0 / pnpm 11.28.4、frozen lockfile 下，用浏览器操作 Dialog（标题、显式 Close、Escape、focus）、Button（type/disabled/loading/pending/submit/reset）及 TextInput（controlled/uncontrolled/ARIA），明示 shadcn 与 Ark 的 supported / partial / unsupported；Ark 视觉 token 仍 unsupported。
+3. **AI View/Validator 只读展示**：仅复用已接受的 Project AI View / explicit instance / bounded validator 与 `mv-auto-editor/1.0.0` 同一 Profile；必须能看到身份/版本/import/examples/limits 及 FAIL、NOT-COVERED 负例。不生成 Capability/业务工具；UI-only 示例脱离 Agent/MCP 仍独立运行。
+4. **可复核证据**：交付 README 本地启动命令、10–15 分钟手工检查表、真实 Windows 浏览器截图/操作与 exact HEAD、必要的 lint/typecheck/target tests 和现有 CI；声明 declared/rendered/interaction-verified/not-covered，不能把 jsdom、mock、截图或未测事实伪装成完整浏览器验证。
 
-### Mandatory local preflight
+### 允许 / 禁止 / 停点
 
-在对 MV-Auto-Editor 做任何产品写入前，Codex 必须在 `E:/projects/MV-Auto-Editor` 只读执行并回报：
-
-1. `git rev-parse --show-toplevel`
-2. `git branch --show-current`
-3. `git rev-parse HEAD`
-4. `git status --short`
-5. 当前 package manager、关键 scripts、React/UI stack
-
-把 exact root / branch / HEAD / worktree 登记到 #70 后，才允许 Phase A 产品写入。
-
-如果路径不是预期 repo、不是 Git repo、存在无法解释的未提交修改，或需要 reset/clean/discard 才能继续：**立即停止并报告**。禁止覆盖、清理或丢弃用户现有修改。
-
-### R1-004 允许
-
-- Phase A：MV-Auto-Editor Asset Edit / Approval 最小真实接入
-- Phase B：Storyboard / Keyframe Review 复用同一版本 Project Profile
-- Phase C：future-ui 内 Ark UI 隔离消费者 / 最小 Adapter 对照，仅 Dialog / Button / TextInput
-- #70 必需的依赖 / lockfile 变更
-- 本地 dev-server / jsdom / browser-like interaction，仅限本地工程
-- future-ui 与 MV-Auto-Editor #70 范围内代码、测试、lint/typecheck/build、future-ui GitHub CI
-- 创建 #70 PR 与同范围 review fixes
-- 记录人工纠正次数、validator 捕获遗漏、人工发现但 not-covered 的遗漏
-
-### R1-004 禁止
-
-- 修改 public contracts Schema / `$id` / `CONTRACT_MAJOR` / core error codes
-- 任意 JSX / DOM / source 通用扫描或通用源码编译器
-- 从 UI 自动推导业务 Capability / 权限
-- 大规模迁移 MV-Auto-Editor UI 框架
-- #71 / WebMCP-like runtime implementation
-- 模型/API 付费调用或真实模型 smoke
-- 外部网站/browser live、外部账号或数据写入
-- deploy / publish / npm publish
-- merge / close #70；仍是 Human gate
-
-### 阶段门
-
-- Preflight Gate：登记 MV exact root / branch / HEAD / worktree 后才允许 A 写入。
-- A Gate：**ACCEPTED WITH EXPLICIT NOT-COVERED**。真实 fixture 的 PASS / FAIL / NOT-COVERED 均可作为有效结果；禁止为 Gate 变绿而改造 fixture 或从 metadata 猜 PASS。
-- B Gate：A/B 共用同一 Profile；对适用语义给出可复核 PASS/FAIL，对不适用或当前边界无法验证的规则明确 NOT-COVERED，且不得复制第二份规范。满足后才进 C。
-- C Gate：Ark exact package/provenance + Dialog/Button/TextInput mapping / real render 通过后进入 Independent Review。
-- 实现完成后停在 **AWAITING_HUMAN_MERGE**。
+- 激活之前：只读 preflight，检查 Windows repo root/branch/HEAD/status、现有入口；本 AGENTS-only PR（`Refs #86`）及其独立 Review/合并。
+- 激活之后：只限 #86 的 future-ui 内小范围源代码、文档、必要依赖/lockfile、loopback local browser、定向测试、一个实现 Draft PR；对失败/首次质量记录如实保留。
+- 始终禁止：修改公共 Contract Schema / `$id` / `CONTRACT_MAJOR` / frozen core diagnostics 或 BOUNDED_RULES；复制第二份 Profile、扫描任意 JSX/DOM/source、构建通用平台；对 MV-Auto-Editor 产品与真实数据写入；#71 WebMCP runtime / AWH Dashboard；模型/API 付费调用、外部浏览器/账号写入、非 loopback 端点、部署/npm publish/tag/release。
+- 若 Windows 工作树存在无法解释的改动、必须 reset/clean/discard、需要扩大上述范围或真实验证缺失，立即停在 BLOCKED 并报 Issue；不得 force-push 或覆盖用户改动。
+- 产品 Draft PR 须在 exact HEAD 上独立 Review，Owner 单独授权 Merge/Close；第一版人工体验达标也不自动授权发布。
 
 ## 事实源与协作边界
 
@@ -101,7 +63,7 @@ UI 与能力系统独立，通过可选 Binding 连接；组件库与 WebMCP 都
 
 ## 检查与报告
 
-Phase B 首步先做 `scriptVersionId/sourceBeatIds` read-only diagnosis / dry-run mapping，再进入 Storyboard / Keyframe Review 的最小接入；不得先改真实数据。普通实现使用最小充分定向检查，权限/unknown write 和阶段收口按 Issue 做独立验证。文档不触发模型效果重跑；不增加无必要 CI 层级。
+R1-RC #86 首步先做 Windows future-ui 代码仓/工作树 read-only preflight 和已有 Demo/launch 资产盘点，记录新旧 AGENTS 授权差异；activation PR 未进入 main 前不得 Coding。进入实现时优先复用现有组件/AI View，不触碰 MV 实际业务数据。普通实现使用最小充分定向检查，权限/unknown write 和阶段收口按 Issue 做独立验证。文档不触发模型效果重跑；不增加无必要 CI 层级。
 
 文档只能证明文档；目录可检索不证明页面一致；Schema-valid 不证明实际交互/业务授权；mock 不证明真实浏览器；确定性工具测试不证明模型收益。
 
