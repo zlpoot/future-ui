@@ -1,0 +1,28 @@
+{
+  "name": "@future-ui/ark-ui-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R1-04 (#70) Phase C: Ark UI (@ark-ui/react@5.39.3) contrast adapter for the frozen Dialog/Button/TextInput contract — isolated member-level mapping, no second Project Profile",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ark-ui/react": "5.39.3",
+    "@future-ui/contracts": "workspace:*",
+    "@future-ui/react-provider": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}

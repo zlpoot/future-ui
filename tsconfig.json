@@ -29,6 +29,7 @@
     "node_modules",
     "dist",
     "packages/shadcn-adapter",
+    "packages/ark-ui-adapter",
     "packages/ai-dev"
   ]
 }
