@@ -181,13 +181,32 @@ export function validateArkComponentMapping(
     }
   }
 
-  // Token domain: headless Ark has no contract token block; require a present,
-  // honestly-concluded non-empty set (validated but not membership-matched).
+  // Token domain: headless Ark ships NO CSS/theme/design tokens, so unlike the
+  // 8 literal semantic domains there is no frozen-contract member set to match.
+  // It must nevertheless be present, non-empty and HONEST: a headless library
+  // can only conclude each visual token `unsupported`. A fabricated
+  // mapped/inherited-equivalent visual token is a false claim and is rejected
+  // (Review 1 P2) — the only accepted token conclusion here is an unsupported
+  // one carrying reason+impact. Token conclusions are deliberately NOT folded
+  // into the literal-domain `unsupported` rollup, so a component that is
+  // supported across the 8 semantic domains (Dialog) stays `supported` while
+  // its visual-token layer is independently confessed as unsupported.
   const token = mapping.domains.token;
   if (!Array.isArray(token) || token.length === 0) {
     diagnostics.push({ code: 'r1_ark_adapter_token_unbacked', path: `${base}/token`, message: 'token domain must be present and honestly conclude the headless visual scope (cannot be silently empty)' });
   } else {
-    for (const c of token) validateConclusion(c, `${base}/token`, diagnostics);
+    for (const c of token) {
+      validateConclusion(c, `${base}/token`, diagnostics);
+      if (c.status !== 'unsupported') {
+        diagnostics.push({
+          code: 'r1_ark_adapter_token_false_claim',
+          path: `${base}/token/${c.member ?? '(unnamed)'}`,
+          message:
+            '@ark-ui/react is headless (no upstream CSS/tokens): every visual token conclusion must be `unsupported` with reason+impact; a mapped/inherited-equivalent visual token is a false claim',
+          actual: c.status,
+        });
+      }
+    }
   }
 
   const status: ArkComponentMappingStatus =

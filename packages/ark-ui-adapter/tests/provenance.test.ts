@@ -36,7 +36,11 @@ describe('Ark adapter provenance — pinned artifact identity', () => {
 
   it('on-disk ESM entry files match the recorded sha256 (artifact swap fails closed)', () => {
     for (const entry of arkEntryPoints) {
-      const file = join(arkRoot, entry.resolved.replace(/\//g, '\\'));
+      // entry.resolved is a POSIX-relative path inside the tarball; split and
+      // re-join with path.join so it resolves on BOTH Windows and Linux CI
+      // (forcing backslashes here produced an invalid path on Linux — Review 1
+      // P1-A, CI run 37758971069). The sha256 assertion below is unchanged.
+      const file = join(arkRoot, ...entry.resolved.split('/'));
       expect(existsSync(file), `${entry.subpath} entry missing`).toBe(true);
       expect(sha256(file)).toBe(entry.sha256);
     }

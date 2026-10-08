@@ -98,13 +98,15 @@ rather than silently empty.
 
 - `src/components/ark-dialog.tsx` — real Ark `Dialog*` named exports; controlled
   open, `onOpenChange` forwarded only for user dismiss, `aria-modal` pinned,
-  label/description parts.
+  label/description parts; an OPTIONAL `closeLabel` renders the real
+  `Dialog.CloseTrigger` (no close affordance is invented when omitted).
 - `src/components/ark-text-input.tsx` — real `Field.Root/Field.Input/Field.HelperText`;
   hybrid ownership; valueChange only from user edits and suppressed while
   disabled/readOnly; never forces role=textbox.
 - `src/components/ark-button.tsx` — honest native `<button>`; defaults
-  `type="button"`; click suppressed while disabled/loading; loading only
-  projects host `aria-busy`.
+  `type="button"`; click suppressed while disabled/loading; `loading` projects
+  BOTH the native `disabled` attribute (so a submit/reset form action cannot
+  fire) and host `aria-busy`.
 
 The package is added to `conformance` `UI_PACKAGES`, so package.json and src
 imports are asserted to never reference capability-runtime/ai-contract-core/
@@ -117,16 +119,22 @@ plugin-kernel/openai/ai-sdk, and `@future-ui/*` deps are limited to
   (`src/ark-provenance.ts`, `src/adapter/mappings.ts`).
 - **rendered** — jsdom structural assertions: dialog role/aria-modal/
   aria-labelledby/aria-describedby and zag `data-scope`/generated ids/
-  positioner part; closed-by-default; Field label/describedby/aria-invalid/
+  positioner part; closed-by-default; explicit close entry rendered only on
+  request (real `data-part="close-trigger"` zag button, `type="button"`; absent
+  when `closeLabel` omitted); Field label/describedby/aria-invalid/
   disabled/readOnly/7 types; native button tag/type/aria-busy; real implicit
   roles `spinbutton`/`searchbox`/password-input; absence of
   data-capability/agent/binding/model/mcp.
 - **interaction-verified** — focus moves to the FIRST focusable part on open;
-  Escape fires `onOpenChange({open:false})` only from a user gesture;
-  programmatic open transitions fire nothing; button click fires and is
-  suppressed when disabled/loading; TextInput valueChange payload, controlled
-  reflection with no event on programmatic set, defaultValue seeding, and no
-  event while disabled/readOnly.
+  Escape fires `onOpenChange({open:false})` only from a user gesture; the real
+  Ark `Dialog.CloseTrigger` click also fires `onOpenChange({open:false})`
+  (rendered only when `closeLabel` is supplied); programmatic open transitions
+  fire nothing; button click fires and is suppressed while disabled/loading;
+  a loading/disabled `type=submit|reset` button does NOT trigger its native
+  form submit/reset (native disabled blocks the form action), while an enabled
+  submit/reset still does; TextInput valueChange payload, controlled reflection
+  with no event on programmatic set, defaultValue seeding, and no event while
+  disabled/readOnly.
 - **not-covered** (explicit, never reported as PASS):
   - real-browser pixel/layout/visual appearance and visual tokens (Ark is
     headless; jsdom has no layout engine);
@@ -175,13 +183,65 @@ not-covered.
    collision (`Dialog as ArkDialog` vs the `ArkDialog` component) by using the
    package's named exports.
 
+### Independent Review 1 — REQUEST_CHANGES (preserved; first CI fail kept)
+
+Independent engineering conclusion on exact HEAD `360eb56e` was
+**REQUEST_CHANGES (P1×2, P2×1)**. GitHub CI run
+[37758971069](https://github.com/zlpoot/future-ui/actions/runs/37758971069)
+**failed on Linux** (frozen-install/lint/typecheck passed; test 472 passed /
+8 skipped / 1 failed). The first failure and the worker's repair iterations
+are kept here; the eventual green run does not overwrite them.
+
+7. **P1-A · cross-platform provenance path.** `provenance.test.ts` built the
+   on-disk entry path with `entry.resolved.replace(/\//g, '\\')`, forcing
+   backslashes — an invalid path on Linux, so the `@ark-ui/react/dialog` entry
+   was reported missing only on CI (Windows local passed). Fixed to
+   `join(arkRoot, ...entry.resolved.split('/'))`; the SHA256 re-hash assertion
+   is unchanged. (First cross-platform miss by the worker; caught by Linux CI
+   and the independent reviewer.)
+8. **P1-B · Button loading must imply native disabled.** The native button
+   rendered `disabled={disabled || undefined}`, omitting `loading`; an
+   onClick guard cannot stop a `type=submit/reset` form action. Fixed to
+   `disabled={disabled || loading}` and added real-form negative tests:
+   loading/disabled submit never submits and loading reset never resets, while
+   enabled submit/reset still activate. Button stays **partial** and Ark
+   upstream loading stays **unsupported** (host projection only).
+9. **P2 · headless token fail-closed + no false positive.** The token-domain
+   check only required non-emptiness, so a fabricated `status:'mapped'` visual
+   token could pass. Added `r1_ark_adapter_token_false_claim`: for the headless
+   library every token conclusion must be `unsupported` with reason+impact
+   (`mapped`/`inherited-equivalent` visual tokens are rejected). Added both
+   directions — false `mapped` and false `inherited-equivalent` are rejected,
+   while an honest headless `unsupported` token is accepted (no false
+   positive). Token conclusions are deliberately excluded from the
+   semantic-domain rollup, so Dialog stays **supported** across the 8
+   Component Contract domains while its visual-token layer is independently
+   confessed unsupported (that scope is asserted explicitly).
+10. **P2 · explicit close entry.** Added an opt-in real `Dialog.CloseTrigger`
+    to the consumer and tests for its zag surface (`data-part=
+    "close-trigger"`, `data-scope=dialog`, `type=button"`, ordered after the
+    primary control), its absence when not requested, and its
+    `onOpenChange({open:false})` interaction. Real-browser focus restoration /
+    Tab trap remain **not-covered** and are not promoted by this test.
+    During this the worker iterated several times on a jsdom-only React
+    `act()` timing notice (the focus-trap deactivation chains a raf that, under
+    parallel worker load, could land between acts); the deterministic fix keeps
+    the whole gesture → deferred flush → assertion → in-act unmount inside one
+    `act` via a bounded `drainDeferred` helper — test-only, no product or ARIA
+    change; verified clean across repeated full-package runs.
+
 ## 8. Verification (Node 24, frozen lockfile)
 
-- Targeted: `vitest run packages/ark-ui-adapter` — 6 files / 53 tests pass.
-- Full gate: `pnpm lint`, `pnpm typecheck` (4 tsc projects incl. the new
-  package), `pnpm test` — results recorded on the Phase C Draft PR.
+- Targeted: `vitest run packages/ark-ui-adapter` — 6 files / 65 tests pass
+  (Review 1 increment added 12 tests; deterministic, no React `act()` notice
+  across repeated full-package runs).
+- Full gate (Node v24.21.0, pnpm 11.28.4): `pnpm install --frozen-lockfile`,
+  `pnpm lint` (0 error / 0 warning), `pnpm typecheck` (4 tsc projects incl. the
+  new package) all pass; `pnpm test` = **48 files, 489 passed / 4 skipped**
+  (the 4 skipped are the pre-existing `ai-dev/mv-real-evidence` ones).
 - Dependency graph: the new package is covered by the existing conformance
-  UI-only test; no new/heavy CI is added.
+  UI-only test; no new/heavy CI is added. Linux CI parity is covered by the
+  cross-platform provenance path fix (Review 1 P1-A).
 
 ## 9. Files
 

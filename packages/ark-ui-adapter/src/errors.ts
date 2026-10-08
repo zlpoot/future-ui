@@ -25,6 +25,8 @@ export const r1ArkAdapterErrorCodes = [
   'r1_ark_adapter_not_applicable_forbidden',
   /** A declared token conclusion cannot be backed by the headless upstream. */
   'r1_ark_adapter_token_unbacked',
+  /** A headless visual token is falsely claimed as mapped/inherited. */
+  'r1_ark_adapter_token_false_claim',
 ] as const;
 
 export type R1ArkAdapterErrorCode = (typeof r1ArkAdapterErrorCodes)[number];

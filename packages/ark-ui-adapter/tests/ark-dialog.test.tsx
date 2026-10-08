@@ -7,17 +7,34 @@ import '@testing-library/jest-dom/vitest';
 
 import { ArkDialog } from '../src/index.js';
 
+/**
+ * Pump the finite micro/raf/timer chain zag defers its machine + focus-layer
+ * effects onto. jsdom has no layout engine, and under parallel worker load the
+ * exact frame count can drift, so teardown drains a few frames rather than
+ * asserting on a fixed single raf.
+ */
+async function drainDeferred(frames = 4): Promise<void> {
+  for (let i = 0; i < frames; i += 1) {
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 function Harness({
   open,
   onOpenChange,
   description = 'This action cannot be undone.',
+  closeLabel,
 }: {
   open: boolean;
   onOpenChange?: (e: { open: boolean }) => void;
   description?: string;
+  closeLabel?: string;
 }) {
   return (
-    <ArkDialog open={open} label="Confirm" description={description} onOpenChange={onOpenChange}>
+    <ArkDialog open={open} label="Confirm" description={description} closeLabel={closeLabel} onOpenChange={onOpenChange}>
       <button>Accept</button>
     </ArkDialog>
   );
@@ -52,6 +69,27 @@ describe('ArkDialog — real @ark-ui/react Dialog rendering (rendered evidence)'
     // is used by this adapter), so the surface stays inside the render container.
     expect(dialog.closest('[data-part="positioner"]')).toBeTruthy();
   });
+
+  it('renders NO explicit close affordance when closeLabel is omitted (nothing invented)', async () => {
+    render(<Harness open />);
+    await screen.findByRole('dialog');
+    expect(document.querySelector('[data-part="close-trigger"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /close|dismiss/i })).toBeNull();
+  });
+
+  it('with closeLabel renders the REAL Ark Dialog.CloseTrigger (zag button, not a hand-rolled handler)', async () => {
+    render(<Harness open closeLabel="Close dialog" />);
+    await screen.findByRole('dialog');
+    const trigger = screen.getByRole('button', { name: 'Close dialog' });
+    // Verified 5.39.3 surface: DialogCloseTrigger renders ark.button with
+    // getCloseTriggerProps() => data-part="close-trigger", type="button".
+    expect(trigger).toHaveAttribute('data-part', 'close-trigger');
+    expect(trigger).toHaveAttribute('data-scope', 'dialog');
+    expect(trigger).toHaveAttribute('type', 'button');
+    // Placed after the body, so the primary control remains the first tabbable.
+    expect(screen.getByRole('button', { name: 'Accept' }).compareDocumentPosition(trigger)
+      & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe('ArkDialog — interaction-verified', () => {
@@ -63,24 +101,43 @@ describe('ArkDialog — interaction-verified', () => {
 
   it('Escape requests close via onOpenChange({open:false}) only from a user gesture', async () => {
     const onOpenChange = vi.fn();
-    render(<Harness open onOpenChange={onOpenChange} />);
+    const { unmount } = render(<Harness open onOpenChange={onOpenChange} />);
     await screen.findByRole('dialog');
-    // zag registers the dismissable layer and focus trap on deferred micro/
-    // animation frames; let the layer become top-most before dismissing.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    // zag listens for Escape at document level (capture) while the modal is open.
+    // Entire close lifecycle (deferred dismiss layer, machine transition, focus
+    // trap deactivation/restore, and the chained raf it schedules) is flushed in
+    // ONE act, then the tree is unmounted INSIDE that same act so no late
+    // DialogRoot frame can land in an act-free gap (jsdom is layout-free and,
+    // under parallel worker load, frame counts drift).
     await act(async () => {
+      // Let the dismissable layer become top-most.
+      await drainDeferred();
+      // zag listens for Escape at document level (capture) while modal.
       fireEvent.keyDown(document, { key: 'Escape' });
-      // The dismiss→machine-send→controlled React update flushes on deferred
-      // frames; stay inside act so no state update leaks past the gesture.
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await drainDeferred(6);
+      expect(onOpenChange).toHaveBeenCalledTimes(1);
+      expect(onOpenChange.mock.calls[0][0]).toMatchObject({ open: false });
+      unmount();
+      await drainDeferred(3);
     });
-    // The controlled onOpenChange is emitted via the zag machine's subscriber
-    // flush, so wait for it rather than asserting synchronously.
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(1));
-    expect(onOpenChange.mock.calls[0][0]).toMatchObject({ open: false });
+  });
+
+  it('clicking the explicit Ark CloseTrigger requests close via onOpenChange({open:false})', async () => {
+    const onOpenChange = vi.fn();
+    // Ark keeps the surface mounted by default and only flips data-state to
+    // "closed", so (like the Escape case) the host stays controlled-open and
+    // the user-dismiss contract is proven via the onOpenChange payload.
+    const { unmount } = render(<Harness open closeLabel="Close dialog" onOpenChange={onOpenChange} />);
+    const trigger = await screen.findByRole('button', { name: 'Close dialog' });
+    await act(async () => {
+      await drainDeferred();
+      // Real Ark DialogCloseTrigger: getCloseTriggerProps() sends CLOSE.
+      fireEvent.click(trigger);
+      await drainDeferred(6);
+      expect(onOpenChange).toHaveBeenCalledTimes(1);
+      expect(onOpenChange.mock.calls[0][0]).toMatchObject({ open: false });
+      unmount();
+      await drainDeferred(3);
+    });
   });
 
   it('programmatic open transitions never fire onOpenChange (host owns open)', async () => {

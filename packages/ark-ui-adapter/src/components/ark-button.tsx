@@ -10,10 +10,12 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
  * an Ark-native component.
  *
  * `loading` is UNSUPPORTED as an upstream feature — Ark has no busy concept.
- * The only honest projection is the host's pending state onto the native
- * aria-busy attribute while suppressing activation; no spinner/state machine
- * is invented. `type` defaults to "button" to match the frozen contract
- * default (the raw native default is "submit" inside a form).
+ * The honest host projection is BOTH the native disabled attribute and
+ * aria-busy while suppressing activation (frozen contract: loading implies
+ * disabled + aria-busy). Native disabled — not just an onClick guard — is what
+ * prevents a type=submit/reset button from firing its form action. No
+ * spinner/state machine is invented. `type` defaults to "button" to match the
+ * frozen contract default (the raw native default is "submit" inside a form).
  */
 export interface ArkButtonProps {
   disabled?: boolean;
@@ -42,7 +44,10 @@ export function ArkButton({
       data-part="root"
       data-composition="native"
       type={type}
-      disabled={disabled || undefined}
+      // Frozen contract: loading IMPLIES native disabled, not merely a guarded
+      // onClick — a true disabled attribute is what also blocks the native
+      // type=submit/reset form actions (Review 1 P1-B).
+      disabled={inactive || undefined}
       aria-busy={loading ? true : undefined}
       onClick={handleClick}
     >

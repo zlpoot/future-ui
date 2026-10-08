@@ -1,4 +1,5 @@
 import {
+  DialogCloseTrigger,
   DialogContent,
   DialogDescription,
   DialogPositioner,
@@ -32,11 +33,19 @@ export interface ArkDialogProps {
   label: string;
   description?: string;
   children?: ReactNode;
+  /**
+   * Optional accessible label for an EXPLICIT close entry. When provided the
+   * wrapper renders the real Ark `Dialog.CloseTrigger` (a zag
+   * data-part="close-trigger" button whose onClick sends CLOSE); when omitted
+   * no close affordance is invented. Placed after the body so the first
+   * tabbable part remains the host's primary control.
+   */
+  closeLabel?: string;
   /** Fired only on a USER request to change open state (never on programmatic open). */
   onOpenChange?: (event: { open: boolean }) => void;
 }
 
-export function ArkDialog({ open, label, description, children, onOpenChange }: ArkDialogProps) {
+export function ArkDialog({ open, label, description, children, closeLabel, onOpenChange }: ArkDialogProps) {
   return (
     <DialogRoot
       open={open}
@@ -53,6 +62,11 @@ export function ArkDialog({ open, label, description, children, onOpenChange }: 
             <DialogDescription data-part="content-description">{description}</DialogDescription>
           ) : null}
           <div data-part="content">{children}</div>
+          {closeLabel ? (
+            // Real Ark primitive: getCloseTriggerProps() renders type="button"
+            // and sends CLOSE (stopPropagation) — not a hand-rolled handler.
+            <DialogCloseTrigger>{closeLabel}</DialogCloseTrigger>
+          ) : null}
         </DialogContent>
       </DialogPositioner>
     </DialogRoot>

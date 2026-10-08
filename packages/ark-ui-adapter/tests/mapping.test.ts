@@ -131,6 +131,56 @@ describe('Ark adapter mapping — fail-closed negatives', () => {
     expect(diagnostics.some((d) => d.code === 'r1_ark_adapter_token_unbacked')).toBe(true);
   });
 
+  it('P2: a fabricated MAPPED visual token is rejected (headless cannot provide one)', () => {
+    const m = clone(arkDialogMapping);
+    m.domains.token = [
+      {
+        member: 'visual-layer',
+        status: 'mapped',
+        via: 'composition',
+        mapsTo: 'some host stylesheet',
+        evidence: 'claimed',
+      },
+    ];
+    const { diagnostics } = validateArkComponentMapping(m, dialogContract);
+    expect(diagnostics.some((d) => d.code === 'r1_ark_adapter_token_false_claim')).toBe(true);
+  });
+
+  it('P2: an inherited-equivalent visual token is also rejected (tokens are not inherited)', () => {
+    const m = clone(arkDialogMapping);
+    m.domains.token = [
+      { member: 'visual-layer', status: 'inherited-equivalent', evidence: 'claimed platform default' },
+    ];
+    const { diagnostics } = validateArkComponentMapping(m, dialogContract);
+    expect(diagnostics.some((d) => d.code === 'r1_ark_adapter_token_false_claim')).toBe(true);
+  });
+
+  it('P2 (no false positive): an honest headless `unsupported` token with reason+impact is accepted', () => {
+    const m = clone(arkDialogMapping);
+    m.domains.token = [
+      {
+        member: 'visual-layer',
+        status: 'unsupported',
+        reason: '@ark-ui/react@5.39.3 ships no CSS/theme/design tokens (JS/.d.ts only).',
+        impact: 'All visuals are the host application responsibility; jsdom asserts structure, never pixels.',
+      },
+    ];
+    const { diagnostics } = validateArkComponentMapping(m, dialogContract);
+    expect(diagnostics.some((d) => d.code === 'r1_ark_adapter_token_unbacked')).toBe(false);
+    expect(diagnostics.some((d) => d.code === 'r1_ark_adapter_token_false_claim')).toBe(false);
+  });
+
+  it('P2 (scope): Dialog is supported across the 8 semantic domains while the token layer is independently unsupported', () => {
+    const { diagnostics, report } = validateArkComponentMapping(arkDialogMapping, dialogContract);
+    expect(diagnostics).toEqual([]);
+    // supported means the 8 Component Contract semantic domains; it does NOT
+    // claim visual-token support, which stays honestly unsupported.
+    expect(report.status).toBe('supported');
+    expect(report.unsupported).toEqual([]);
+    expect(arkDialogMapping.domains.token).toHaveLength(1);
+    expect(arkDialogMapping.domains.token[0]?.status).toBe('unsupported');
+  });
+
   it('diagnostic code set is the package-independent namespace', () => {
     for (const code of r1ArkAdapterErrorCodes) expect(code).toMatch(/^r1_ark_adapter_/);
     const { diagnostics } = validateArkComponentMapping(clone(arkDialogMapping), dialogContract);
