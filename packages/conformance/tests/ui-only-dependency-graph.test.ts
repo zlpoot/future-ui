@@ -22,6 +22,7 @@ const UI_PACKAGES = [
   'packages/theme',
   'packages/conformance',
   'packages/shadcn-adapter',
+  'packages/ark-ui-adapter',
 ];
 
 const FORBIDDEN_DEPENDENCIES = [
