@@ -45,6 +45,9 @@ export type { DevDiagnostic, DevErrorCode } from './errors.js';
 export {
   buildProjectView,
   validateComponentDefinition,
+  validateComponentSource,
+  importableModule,
+  COMPONENT_SOURCE_KINDS,
   queryComponents,
   describeComponent,
   capabilitiesForInstance,
@@ -64,6 +67,9 @@ export type {
   BuildProjectViewResult,
   ComponentDefinition,
   ComponentQuery,
+  ComponentSource,
+  ModuleImportSource,
+  InlinePageSource,
   EvidenceSet,
   EvidenceTier,
   Finding,
@@ -102,3 +108,43 @@ export type {
   ProjectToolErrorCode,
   ProjectToolContext,
 } from './project/mcp-projection.js';
+
+//
+// R1-04 (#70) Phase A — MV-Auto-Editor real project integration: real Project
+// Profile, Project AI View, explicit instance registration and deterministic
+// jsdom evidence for the Asset Edit & Approval scenario. Dev-only.
+//
+export { mvAutoEditorProfile } from './project/mv-auto-editor/mv-profile.js';
+export {
+  buildMvProjectView,
+  buildMvAutoEditorComponentDefinitions,
+  MV_UPSTREAM,
+} from './project/mv-auto-editor/mv-view.js';
+export type { BuildMvProjectViewInput } from './project/mv-auto-editor/mv-view.js';
+export {
+  createMvProjectContext,
+  validateMvProject,
+  assertEvidenceNotDrifted,
+} from './project/mv-auto-editor/mv-project.js';
+export type { MvProjectContext, MvEvidenceDrift } from './project/mv-auto-editor/mv-project.js';
+export {
+  readMvCurrentUpstream,
+  MV_REPO_PATH,
+  MV_CANVAS_REL_PATH,
+  PINNED_MV_HEAD,
+  PINNED_MV_CANVAS_BLOB,
+} from './project/mv-auto-editor/mv-upstream.js';
+export type { MvCurrentUpstream } from './project/mv-auto-editor/mv-upstream.js';
+export {
+  registerMvAssetEditInstance,
+  registerRealMvAssetInstances,
+  REAL_MV_ASSET_CARDS,
+} from './project/mv-auto-editor/mv-instances.js';
+export type { MvAssetInstanceOptions, MvAssetCardRef } from './project/mv-auto-editor/mv-instances.js';
+export {
+  mountMvAssetPanel,
+  collectMvPanelRenderedEvidence,
+  observeMvAssetControls,
+  buildMvAssetPanelMarkup,
+} from './project/mv-auto-editor/mv-evidence.js';
+export type { MvPanelFixtureOptions, MvPanelHandle, MvAssetControlFacts } from './project/mv-auto-editor/mv-evidence.js';

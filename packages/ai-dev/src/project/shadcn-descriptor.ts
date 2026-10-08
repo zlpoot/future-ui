@@ -113,7 +113,8 @@ export function buildShadcnComponentDefinitions(): ComponentDefinition[] {
           runtimePackages: runtimeDependencies.map((d) => ({ name: d.name, version: d.version })),
         },
       },
-      actualImport: {
+      source: {
+        kind: 'module-import',
         module: '@future-ui/shadcn-adapter',
         exports,
         example: exampleFor(report.componentType).code,

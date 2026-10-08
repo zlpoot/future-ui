@@ -30,6 +30,7 @@
 import {
   capabilitiesForInstance,
   describeComponent,
+  importableModule,
   validateProject,
   TrustedEvidence,
   type InstanceRegistry,
@@ -59,13 +60,13 @@ export interface ProjectToolDescriptor {
 export const PROJECT_TOOL_DESCRIPTORS: readonly ProjectToolDescriptor[] = [
   {
     name: 'project.catalog',
-    description: 'List the components this project can actually use (real import, identity, mapping status/limits) and the explicit capability references. Read-only.',
+    description: 'List the components this project can actually use (real source: importable module vs non-importable inline page source, identity, mapping status/limits) and the explicit capability references. A component with import=null is page-owned and must NOT be imported. Read-only.',
     readOnly: true,
     inputs: [],
   },
   {
     name: 'project.describeComponent',
-    description: 'Return the full definition (actual import, frozen adapter/upstream identity, mapping limits, examples) for one componentType. Read-only.',
+    description: 'Return the full definition (real source: importable module vs non-importable inline page source, frozen adapter/upstream identity, mapping limits, examples) for one componentType. When import is null the component is page-owned and must not be imported. Read-only.',
     readOnly: true,
     inputs: [{ name: 'componentType', required: true, type: 'string' }],
   },
@@ -182,7 +183,11 @@ export function executeProjectTool(
             componentType: d.componentType,
             mappingStatus: d.mappingStatus,
             limitMembers: d.limits.map((l) => l.member),
-            actualImport: d.actualImport,
+            // Discriminated source. `import` is non-null ONLY for a real
+            // importable module; an inline page source reports import:null, and
+            // its page-local symbols must never be turned into an import.
+            source: d.source,
+            import: importableModule(d.source),
           })),
           explicitCapabilities: ctx.view.capabilities.map((c) => c.capabilityId),
         },
@@ -196,7 +201,9 @@ export function executeProjectTool(
       if (def === undefined) {
         return { ok: false, error: { code: 'project_tool_not_found', path: '/args/componentType', message: 'no component definition for componentType', actual: args['componentType'] } };
       }
-      return { ok: true, data: def };
+      // Surface the full discriminated source plus a precomputed import flag:
+      // non-null only for a real module; null for an inline page source.
+      return { ok: true, data: { ...def, import: importableModule(def.source) } };
     }
 
     case 'project.listInstances': {

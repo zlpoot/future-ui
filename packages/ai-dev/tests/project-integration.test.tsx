@@ -20,8 +20,15 @@ import {
   collectRenderedEvidence,
   drivePendingInteraction,
 } from '../src/index.js';
+import { importableModule, type ComponentDefinition, type ModuleImportSource } from '@future-ui/ai-contract-core';
 
 const INSTANCE_ID = 'members/edit-dialog';
+
+/** Narrow a component source to the importable module kind or fail the test. */
+function moduleSource(def: ComponentDefinition): ModuleImportSource {
+  if (def.source.kind !== 'module-import') throw new Error(`expected module-import source, got ${def.source.kind}`);
+  return def.source;
+}
 
 function renderedEvidence(scope: ParentNode = document.body) {
   return sealProjectEvidence({ rendered: { [INSTANCE_ID]: collectRenderedEvidence(scope) } });
@@ -46,19 +53,20 @@ describe('R1-03 Phase D — real shadcn descriptor', () => {
     const dialog = byType.get('future-ui.dialog')!;
     expect(dialog.identity.adapterId).toBe('shadcn-react');
     expect(dialog.identity.profileId).toBe('r1-edit-dialog-reference');
-    expect(dialog.actualImport.exports).toContain('EditDialog');
+    expect(dialog.source.kind).toBe('module-import');
+    expect(importableModule(dialog.source)?.exports).toContain('EditDialog');
   });
 
   it('B5: all component examples match the real public API (no boolean/pseudocode examples)', () => {
     const view = buildShadcnProjectView().view!;
-    const dialog = view.definitions.find((d) => d.componentType === 'future-ui.dialog')!;
-    expect(dialog.actualImport.example).toContain('onOpenChange={({ open: next }) => setOpen(next)}');
-    expect(dialog.actualImport.example).not.toContain('onOpenChange={setOpen}');
-    expect(dialog.actualImport.example).toContain('onSave={async (values) => { await saveMember(values); }}');
-    const button = view.definitions.find((d) => d.componentType === 'future-ui.button')!;
-    expect(button.actualImport.example).toContain('onClick={(event) => handleClick(event)}');
-    const textInput = view.definitions.find((d) => d.componentType === 'future-ui.text-input')!;
-    expect(textInput.actualImport.example).toContain('onValueChange={(event) => setEmail(event.value)}');
+    const dialogSrc = moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.dialog')!);
+    expect(dialogSrc.example).toContain('onOpenChange={({ open: next }) => setOpen(next)}');
+    expect(dialogSrc.example).not.toContain('onOpenChange={setOpen}');
+    expect(dialogSrc.example).toContain('onSave={async (values) => { await saveMember(values); }}');
+    const buttonSrc = moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.button')!);
+    expect(buttonSrc.example).toContain('onClick={(event) => handleClick(event)}');
+    const textSrc = moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.text-input')!);
+    expect(textSrc.example).toContain('onValueChange={(event) => setEmail(event.value)}');
   });
 });
 

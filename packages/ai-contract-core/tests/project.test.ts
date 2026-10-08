@@ -14,6 +14,7 @@ import {
   buildProjectView,
   queryComponents,
   describeComponent,
+  importableModule,
   capabilitiesForInstance,
   InstanceRegistry,
   validateProject,
@@ -25,6 +26,7 @@ import {
 import type {
   CapabilityReference,
   ComponentDefinition,
+  InlinePageSource,
   InstanceIdentityRef,
   InstanceRegistration,
   ProjectAIView,
@@ -48,7 +50,7 @@ function definition(over: Partial<ComponentDefinition> = {}): ComponentDefinitio
         runtimePackages: [{ name: 'radix-ui', version: '1.7.0' }],
       },
     },
-    actualImport: { module: '@future-ui/shadcn-adapter', exports: ['EditDialog'], example: '<EditDialog/>' },
+    source: { kind: 'module-import', module: '@future-ui/shadcn-adapter', exports: ['EditDialog'], example: '<EditDialog/>' },
     mappingStatus: 'supported',
     limits: [],
     examples: [{ title: 'basic', code: '<EditDialog/>' }],
@@ -97,7 +99,7 @@ describe('Project AI View (Phase A)', () => {
     const view = makeView();
     expect(view.generatedFrom.kind).toBe('project-ai-view');
     expect(queryComponents(view, { componentType: 'future-ui.dialog' })).toHaveLength(1);
-    expect(describeComponent(view, 'future-ui.dialog')?.actualImport.exports).toContain('EditDialog');
+    expect(importableModule(describeComponent(view, 'future-ui.dialog')!.source)?.exports).toContain('EditDialog');
     expect(describeComponent(view, 'future-ui.button')).toBeUndefined();
   });
 
@@ -121,6 +123,83 @@ describe('Project AI View (Phase A)', () => {
     );
     expect(capabilitiesForInstance(view, 'edit-member-dialog')).toHaveLength(1);
     expect(capabilitiesForInstance(view, 'other-dialog')).toEqual([]);
+  });
+});
+
+describe('Project AI View — discriminated component source (R1-04 #70 amendment)', () => {
+  // A REAL, non-importable, page-owned implementation (MV web/canvas.html case).
+  const inlineSource: InlinePageSource = {
+    kind: 'inline-source',
+    locator: 'web/canvas.html',
+    owner: 'inline classic <script> on the /canvas route (non-module, page-owned)',
+    symbols: ['simpleAssetEditor', 'assetPanel'],
+    example: "$('#detail').innerHTML = `<h2>${esc(card.name)}</h2>` + simpleAssetEditor(card, n);",
+  };
+
+  it('accepts a non-importable inline page source; the ONLY import derivation yields null', () => {
+    const view = makeView([definition({ source: inlineSource })]);
+    const def = describeComponent(view, 'future-ui.dialog')!;
+    expect(def.source.kind).toBe('inline-source');
+    if (def.source.kind !== 'inline-source') throw new Error('narrow');
+    expect(def.source.locator).toBe('web/canvas.html');
+    expect(def.source.symbols).toEqual(['simpleAssetEditor', 'assetPanel']);
+    // An inline source carries no module/exports and must yield NO import.
+    expect(importableModule(def.source)).toBeNull();
+    expect('module' in def.source).toBe(false);
+    expect('exports' in def.source).toBe(false);
+  });
+
+  it('keeps a real module-import source importable (back-compat for shadcn consumers)', () => {
+    const view = makeView();
+    const def = describeComponent(view, 'future-ui.dialog')!;
+    expect(def.source.kind).toBe('module-import');
+    expect(importableModule(def.source)).toEqual({ module: '@future-ui/shadcn-adapter', exports: ['EditDialog'] });
+    expect('locator' in def.source).toBe(false);
+  });
+
+  it('NEGATIVE: an inline source that fabricates module/exports is rejected (no fake import)', () => {
+    const fake = { ...inlineSource, module: 'web/canvas.html', exports: ['simpleAssetEditor'] };
+    const res = buildProjectView({ projectName: 'x', definitions: [definition({ source: fake as ComponentDefinition['source'] })] });
+    expect(res.view).toBeNull();
+    const paths = res.diagnostics
+      .filter((d) => d.code === 'r1_project_definition_invalid')
+      .map((d) => d.path);
+    expect(paths).toContain('/definitions/future-ui.dialog/source/module');
+    expect(paths).toContain('/definitions/future-ui.dialog/source/exports');
+  });
+
+  it('NEGATIVE: a module-import source cannot carry inline-only fields (kinds stay exclusive)', () => {
+    const mixed = {
+      kind: 'module-import',
+      module: '@future-ui/shadcn-adapter',
+      exports: ['EditDialog'],
+      example: '<EditDialog/>',
+      locator: 'web/canvas.html',
+    };
+    const res = buildProjectView({ projectName: 'x', definitions: [definition({ source: mixed as ComponentDefinition['source'] })] });
+    expect(res.view).toBeNull();
+    expect(res.diagnostics.some((d) => d.code === 'r1_project_definition_invalid' && d.path.endsWith('/source/locator'))).toBe(true);
+  });
+
+  it('rejects unknown/missing/non-object kind and malformed source shapes', () => {
+    const cases: Array<[string, unknown]> = [
+      ['unknown kind', { kind: 'cdn', module: 'x', exports: ['A'], example: 'e' }],
+      ['missing kind', { module: 'x', exports: ['A'], example: 'e' }],
+      ['non-object', null],
+      ['inline missing locator', { kind: 'inline-source', owner: 'o', symbols: ['s'], example: 'e' }],
+      ['inline missing owner', { kind: 'inline-source', locator: 'l', symbols: ['s'], example: 'e' }],
+      ['inline empty symbols', { kind: 'inline-source', locator: 'l', owner: 'o', symbols: [], example: 'e' }],
+      ['module blank module', { kind: 'module-import', module: '  ', exports: ['A'], example: 'e' }],
+      ['module empty exports', { kind: 'module-import', module: '@x/y', exports: [], example: 'e' }],
+    ];
+    for (const [label, source] of cases) {
+      const res = buildProjectView({
+        projectName: 'x',
+        definitions: [definition({ source: source as ComponentDefinition['source'] })],
+      });
+      expect(res.view, label).toBeNull();
+      expect(res.diagnostics.some((d) => d.code === 'r1_project_definition_invalid'), label).toBe(true);
+    }
   });
 });
 
