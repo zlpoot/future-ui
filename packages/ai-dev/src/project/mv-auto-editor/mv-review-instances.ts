@@ -11,8 +11,12 @@
  *  - relations use only real page/data-flow evidence (field-of the save
  *    action, trigger-of the real refresh/lock/retry chains);
  *  - visibleState allowlists carry safe status only — generationPrompt,
- *    candidate.prompt, notes, the file picker, draft form VALUES and the
- *    checked set are never projected (only the safe checkedShot COUNT is);
+ *    candidate.prompt, notes, draft form VALUES and the checked set are never
+ *    projected (only the safe checkedShot COUNT is);
+ *  - the P5 `input[type=file]` picker is NOT registered (a file picker is no
+ *    text input, and text-input provenance excludes keyframes.html); it is
+ *    recorded in MV_REVIEW_UNMAPPED_CONTROLS as out-of-scope/unsupported and
+ *    projects zero state;
  *  - capabilityBindings stays EMPTY: every review button generates zero
  *    business tools (R1-PRJ-CAPABILITY).
  */
@@ -82,14 +86,6 @@ const P5_SPECS: ReviewSpec[] = [
     declared: { nonModal: true, page: 'web/keyframes.html' },
     allow: ['shotId', 'lockedCandidateId'],
     relations: [{ kind: 'trigger-of', target: 'p5/candidate-approve' }],
-  },
-  {
-    // The file chooser's VALUE is a user-selected file: never projected.
-    instanceId: 'p5/candidate-file', scopeId: P5_SCOPE, componentType: 'future-ui.text-input',
-    path: 'keyframes.html #detail 回传图片 panel · input#uploadFile[type=file]',
-    declared: { nonModal: true, page: 'web/keyframes.html', inputKind: 'file', accepts: ['png', 'jpeg', 'webp'] },
-    allow: [],
-    relations: [{ kind: 'field-of', target: 'p5/candidate-upload' }],
   },
   {
     instanceId: 'p5/job-retry', scopeId: P5_SCOPE, componentType: 'future-ui.button',
@@ -222,6 +218,68 @@ const P4_SPECS: ReviewSpec[] = [
 export const MV_REVIEW_SPECS: readonly ReviewSpec[] = [...P5_SPECS, ...P4_SPECS];
 
 /**
+ * REAL controls deliberately LEFT UNMAPPED in Phase B (Independent Review
+ * P1-B fix). The P5 upload form contains a real `input#uploadFile[type=file]`,
+ * but a file picker is NOT a text input: the frozen `future-ui.text-input`
+ * definition's provenance intentionally covers only canvas/shots (keyframes'
+ * only input is this file picker). Registering it under text-input would
+ * create a valid-looking instance whose definition/pins cannot cover its own
+ * source page. There is no frozen file-input component type and this phase
+ * does not invent one, so the honest disposition is OUT OF SCOPE /
+ * UNSUPPORTED: the control is not registered, carries no visibleState and
+ * therefore projects zero AI-facing state (its selected file is never
+ * exposed). Promoting it needs a separate, truthfully-defined component type
+ * (Owner decision), not a forced text-input mapping.
+ */
+export interface MvUnmappedReviewControl {
+  locator: string;
+  page: string;
+  reason: 'no-frozen-component-type';
+  disposition: 'out-of-scope-unsupported';
+}
+
+export const MV_REVIEW_UNMAPPED_CONTROLS: readonly MvUnmappedReviewControl[] = [
+  {
+    locator: 'keyframes.html #detail 回传图片 panel · input#uploadFile[type=file]',
+    page: 'web/keyframes.html',
+    reason: 'no-frozen-component-type',
+    disposition: 'out-of-scope-unsupported',
+  },
+];
+
+/**
+ * Locator-vs-definition consistency guard (Independent Review P1-B fix).
+ * Returns the REAL source document locators a component definition actually
+ * covers: the single locator of an inline-source, or every member locator of
+ * an inline-source-set.
+ */
+export function definitionSourceLocators(source: { kind: string; locator?: string; sources?: ReadonlyArray<{ locator: string }> }): string[] {
+  if (source.kind === 'inline-source-set') return source.sources?.map((m) => m.locator) ?? [];
+  if (source.kind === 'inline-source' && source.locator) return [source.locator];
+  return [];
+}
+
+/**
+ * Every registered review instance MUST live on a document its definition's
+ * provenance actually covers. This turns the P1-B mismatch into a registration-
+ * time failure instead of a silently accepted, misleading instance.
+ */
+export function assertInstancePageCovered(
+  componentType: string,
+  page: unknown,
+  coveredLocators: readonly string[],
+  instanceId: string,
+): void {
+  if (typeof page !== 'string' || !coveredLocators.includes(page)) {
+    throw new Error(
+      `review instance ${instanceId} (${componentType}) lives on ${String(page)} which is not covered by `
+        + `that definition's source provenance [${coveredLocators.join(', ')}]; `
+        + 'map it to a definition that pins its real page or record it as an out-of-scope unmapped control',
+    );
+  }
+}
+
+/**
  * Guard enforcing the NON-MODAL nature of the review pages. A review instance
  * must never be a future-ui.dialog and must never declare blocking — the P4/P5
  * pages have no modal/close/ESC semantics, so faking them would be dishonest.
@@ -238,6 +296,12 @@ export function assertNonModalReview(reg: Pick<InstanceRegistration, 'componentT
 function toRegistration(ctx: MvProjectContext, spec: ReviewSpec): InstanceRegistration {
   const def = ctx.view.definitions.find((d) => d.componentType === spec.componentType);
   if (def === undefined) throw new Error(`${spec.componentType} definition missing from MV project view`);
+  assertInstancePageCovered(
+    spec.componentType,
+    spec.declared['page'],
+    definitionSourceLocators(def.source),
+    spec.instanceId,
+  );
   const registration: InstanceRegistration = {
     instanceId: spec.instanceId,
     componentType: spec.componentType,

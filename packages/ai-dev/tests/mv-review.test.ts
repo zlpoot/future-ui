@@ -39,6 +39,9 @@ import {
   registerMvReviewInstances,
   reviewInstanceCounts,
   assertNonModalReview,
+  assertInstancePageCovered,
+  definitionSourceLocators,
+  MV_REVIEW_UNMAPPED_CONTROLS,
   MV_REVIEW_SPECS,
   P4_SCOPE,
   P5_SCOPE,
@@ -191,10 +194,22 @@ describe('R1-04 Phase B — explicit P4/P5 review instance registry', () => {
     expect(p4Snap.projected).toEqual({ fieldKind: 'generationPrompt', shotId: 'shot-01' });
     expect(p4Snap.withheld).toEqual(expect.arrayContaining(['value', 'generationPrompt']));
 
-    // file picker projects nothing.
+    // The P5 file picker is NOT a registered instance (P1-B): it is recorded as
+    // an out-of-scope/unsupported control and carries no visibleState, so it
+    // projects zero AI-facing state and cannot be queried in the registry.
+    const file = MV_REVIEW_UNMAPPED_CONTROLS.find((c) => c.locator.includes('#uploadFile'))!;
+    expect(file).toBeDefined();
+    expect(file.disposition).toBe('out-of-scope-unsupported');
+    expect(file.page).toBe('web/keyframes.html');
+    expect(MV_REVIEW_SPECS.every((s) => s.instanceId !== 'p5/candidate-file')).toBe(true);
+    expect(ctx.registry.query().every((i) => i.instanceId !== 'p5/candidate-file')).toBe(true);
+    // Querying the unregistered picker is fail-closed: nothing projects, every
+    // key is withheld, and an instance-not-found diagnostic is attached (the
+    // registry never throws here — it records the illegal projection attempt).
     const fileSnap = ctx.registry.projectVisibleState('p5/candidate-file', { value: 'C:/secret/path.png' });
     expect(fileSnap.projected).toEqual({});
-    expect(fileSnap.withheld).toContain('value');
+    expect(fileSnap.withheld).toEqual(['value']);
+    expect(fileSnap.diagnostics.some((d) => d.code === 'r1_project_instance_not_found')).toBe(true);
   });
 
   it('NEGATIVE: mapping a review page as dialog or declaring blocking is rejected', () => {
@@ -226,6 +241,30 @@ describe('R1-04 Phase B — explicit P4/P5 review instance registry', () => {
       (d) => d.code === 'r1_project_identity_mismatch' && d.path.includes('upstreamFingerprint'),
     )).toBe(true);
     expect(ctx.registry.get('p5/stale-fp')).toBeUndefined();
+  });
+
+  it('NEGATIVE (P1-B): every instance page is covered by its definition provenance; a keyframes text-input would be refused', () => {
+    const ctx = createMvProjectContext();
+    const byType = new Map(ctx.view.definitions.map((d) => [d.componentType, d]));
+    const buttonPages = definitionSourceLocators(byType.get('future-ui.button')!.source);
+    const inputPages = definitionSourceLocators(byType.get('future-ui.text-input')!.source);
+    expect(buttonPages).toContain('web/keyframes.html');
+    expect(inputPages).not.toContain('web/keyframes.html');
+
+    // registration of all real specs succeeds — every declared page is covered
+    expect(() => registerMvReviewInstances(ctx)).not.toThrow();
+
+    // The P1-B mismatch itself must now throw: text-input does not pin keyframes
+    expect(() =>
+      assertInstancePageCovered('future-ui.text-input', 'web/keyframes.html', inputPages, 'p5/candidate-file'),
+    ).toThrow(/not covered by[\s\S]*source provenance/);
+    // a covered page passes
+    expect(() =>
+      assertInstancePageCovered('future-ui.text-input', 'web/shots.html', inputPages, 'p4/field-intent'),
+    ).not.toThrow();
+    // and the honest fix leaves exactly one unmapped control (the file picker)
+    expect(MV_REVIEW_UNMAPPED_CONTROLS).toHaveLength(1);
+    expect(MV_REVIEW_UNMAPPED_CONTROLS[0].locator).toContain('#uploadFile');
   });
 
   it('scope cleanup removes every review instance; coverage becomes not-covered', () => {
@@ -375,9 +414,71 @@ describe('R1-04 Phase B — committed real-page evidence matches the fixture def
     readOnly: boolean;
     pinned: { mvHead: string; blobs: Record<string, string> };
     current: { mvHead: string; canvasBlob: string; keyframesBlob: string; shotsBlob: string };
+    drift: {
+      pinnedMvHead: string;
+      liveMvHead: string;
+      mvHeadDrifted: boolean;
+      pinnedCanvasBlob: string;
+      liveCanvasBlob: string;
+      canvasBlobDrifted: boolean;
+      pinnedKeyframesBlob: string;
+      liveKeyframesBlob: string;
+      keyframesBlobDrifted: boolean;
+      pinnedShotsBlob: string;
+      liveShotsBlob: string;
+      shotsBlobDrifted: boolean;
+    };
     p5: { facts: Record<string, unknown> };
     p4: { facts: Record<string, unknown> };
   };
+
+  it('evidence carries the complete three-page drift record the consumer gate requires (P1-A)', () => {
+    const d = evidence.drift;
+    expect(d).toBeDefined();
+    expect(d.pinnedMvHead).toBe(PINNED_MV_HEAD);
+    expect(d.pinnedCanvasBlob).toBe(PINNED_MV_CANVAS_BLOB);
+    expect(d.pinnedKeyframesBlob).toBe(PINNED_MV_KEYFRAMES_BLOB);
+    expect(d.pinnedShotsBlob).toBe(PINNED_MV_SHOTS_BLOB);
+    // captured clean (assertAtPins gate before collection)
+    expect([d.canvasBlobDrifted, d.keyframesBlobDrifted, d.shotsBlobDrifted, d.mvHeadDrifted]).toEqual([false, false, false, false]);
+    expect(d.liveCanvasBlob).toBe(d.pinnedCanvasBlob);
+    expect(d.liveKeyframesBlob).toBe(d.pinnedKeyframesBlob);
+    expect(d.liveShotsBlob).toBe(d.pinnedShotsBlob);
+  });
+
+  // P1-A: the COMMITTED record must actually pass the independent gate using a
+  // CURRENT checkout read at test time — not just equal stored constants.
+  const live = readMvCurrentUpstream();
+  const hasLiveRepo = live.mvHead !== null
+    && live.canvasBlob !== null
+    && live.keyframesBlob !== null
+    && live.shotsBlob !== null;
+
+  it.skipIf(!hasLiveRepo)('P1-A: committed evidence passes the independent CURRENT three-page gate right now', () => {
+    // The gate re-derives current facts itself; it does not trust the file.
+    expect(assertEvidenceNotDrifted(evidence, live)).toEqual({
+      canvasBlobDrifted: false,
+      keyframesBlobDrifted: false,
+      shotsBlobDrifted: false,
+      mvHeadDrifted: false,
+    });
+  });
+
+  it.skipIf(!hasLiveRepo)('P1-A NEGATIVE: a stale committed record (live id moved vs CURRENT) is blocked by the gate', () => {
+    // Copy the REAL committed record and simulate staleness on its recorded
+    // LIVE keyframes blob only — the CURRENT checkout is still at the pin. The
+    // independent gate must reject it even though every drift boolean is false.
+    const stale = JSON.parse(JSON.stringify(evidence)) as typeof evidence;
+    stale.drift.liveKeyframesBlob = OTHER_BLOB;
+    expect(() => assertEvidenceNotDrifted(stale, live)).toThrow(/not produced against the current upstream/);
+  });
+
+  it.skipIf(!hasLiveRepo)('P1-A NEGATIVE: a committed record pinned to a different blob is rejected', () => {
+    const repinned = JSON.parse(JSON.stringify(evidence)) as typeof evidence;
+    repinned.drift.pinnedShotsBlob = OTHER_BLOB;
+    repinned.drift.liveShotsBlob = OTHER_BLOB;
+    expect(() => assertEvidenceNotDrifted(repinned, live)).toThrow(/frozen pin/);
+  });
 
   it('evidence was a read-only capture against the frozen pins', () => {
     expect(evidence.readOnly).toBe(true);
@@ -399,6 +500,13 @@ describe('R1-04 Phase B — committed real-page evidence matches the fixture def
     expect(f.cancelButtons).toBe(0);
     expect(f.failButtons).toBe(0);
     expect(f.jobRows).toBe(0);
+    // P1-B cross-check: the file picker REALLY renders on keyframes, is the one
+    // and only unmapped control, and is not smuggled in as a text input.
+    expect(f.fileInputPresent).toBe(true);
+    expect(MV_REVIEW_UNMAPPED_CONTROLS).toHaveLength(1);
+    expect(MV_REVIEW_UNMAPPED_CONTROLS[0].page).toBe('web/keyframes.html');
+    expect(MV_REVIEW_UNMAPPED_CONTROLS[0].locator).toContain('#uploadFile');
+    expect(MV_REVIEW_SPECS.every((s) => s.instanceId !== 'p5/candidate-file')).toBe(true);
     const handle = mountP5ShotDetail();
     try {
       const facts = observeP5ReviewControls(handle.container);
