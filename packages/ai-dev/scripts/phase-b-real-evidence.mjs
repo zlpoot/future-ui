@@ -184,12 +184,35 @@ async function main() {
     const p5 = await observe(`http://127.0.0.1:3001/keyframes?project=${PROJECT}`, p5Expr, 'p5-keyframes', true);
     const p4 = await observe(`http://127.0.0.1:3001/shots?project=${PROJECT}`, p4Expr, 'p4-shots', true);
 
+    // The `drift` record is the EXACT shape the consumer gate
+    // assertEvidenceNotDrifted() requires (same key names as the Phase B
+    // three-page guard). Collection only proceeds after assertAtPins(), so at
+    // collection time live === current === pinned and every flag is false. The
+    // gate that consumes this file later RE-READS the CURRENT checkout itself
+    // and does not trust these booleans — the record exists so a stale copy can
+    // be detected independently of when it was written.
+    const drift = {
+      pinnedMvHead: PINNED_MV_HEAD,
+      liveMvHead: current.mvHead,
+      mvHeadDrifted: false,
+      pinnedCanvasBlob: PIN_LOOKUP['web/canvas.html'],
+      liveCanvasBlob: current.canvasBlob,
+      canvasBlobDrifted: false,
+      pinnedKeyframesBlob: PIN_LOOKUP['web/keyframes.html'],
+      liveKeyframesBlob: current.keyframesBlob,
+      keyframesBlobDrifted: false,
+      pinnedShotsBlob: PIN_LOOKUP['web/shots.html'],
+      liveShotsBlob: current.shotsBlob,
+      shotsBlobDrifted: false,
+    };
+
     const combined = {
       project: PROJECT,
       collectedAt: new Date().toISOString(),
       readOnly: true,
       pinned: { mvHead: PINNED_MV_HEAD, blobs: PIN_LOOKUP },
       current,
+      drift,
       p5,
       p4,
     };

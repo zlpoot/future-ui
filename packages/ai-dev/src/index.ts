@@ -159,10 +159,14 @@ export {
   registerMvReviewInstances,
   reviewInstanceCounts,
   assertNonModalReview,
+  assertInstancePageCovered,
+  definitionSourceLocators,
+  MV_REVIEW_UNMAPPED_CONTROLS,
   MV_REVIEW_SPECS,
   P4_SCOPE,
   P5_SCOPE,
 } from './project/mv-auto-editor/mv-review-instances.js';
+export type { MvUnmappedReviewControl } from './project/mv-auto-editor/mv-review-instances.js';
 export {
   mountP4ShotDetail,
   mountP5ShotDetail,
