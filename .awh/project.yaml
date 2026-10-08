@@ -1,0 +1,6 @@
+apiVersion: awh/v1
+project:
+  id: "future-ui"
+  repository: "zlpoot/future-ui"
+profile:
+  ref: "future-ui/c1c-acceptance"
