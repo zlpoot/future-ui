@@ -17,7 +17,7 @@ import type {
 } from './types.js';
 
 /** The only source `kind` values the frozen model accepts (fail-closed). */
-export const COMPONENT_SOURCE_KINDS = ['module-import', 'inline-source'] as const;
+export const COMPONENT_SOURCE_KINDS = ['module-import', 'inline-source', 'inline-source-set'] as const;
 
 function diag(
   code: ProjectDiagnostic['code'],
@@ -57,9 +57,9 @@ export function validateComponentSource(source: unknown, base: string): ProjectD
     return d;
   }
   const kind = source['kind'];
-  if (kind !== 'module-import' && kind !== 'inline-source') {
+  if (kind !== 'module-import' && kind !== 'inline-source' && kind !== 'inline-source-set') {
     d.push(diag('r1_project_definition_invalid', `${base}/kind`,
-      'source.kind must be module-import | inline-source', [...COMPONENT_SOURCE_KINDS], kind));
+      'source.kind must be module-import | inline-source | inline-source-set', [...COMPONENT_SOURCE_KINDS], kind));
     return d;
   }
 
@@ -78,12 +78,67 @@ export function validateComponentSource(source: unknown, base: string): ProjectD
     }
     // Discrimination is enforced, not implied: inline-only keys are forbidden
     // here so the two source shapes cannot be conflated downstream.
-    for (const key of ['locator', 'owner', 'symbols'] as const) {
+    for (const key of ['locator', 'owner', 'symbols', 'sources'] as const) {
       if (key in source) {
         d.push(diag('r1_project_definition_invalid', `${base}/${key}`,
           `${key} belongs only to an inline-source and must not appear on a module-import source`));
       }
     }
+    return d;
+  }
+
+  if (kind === 'inline-source-set') {
+    // A multi-document inline implementation: non-importable, fail-closed.
+    if ('module' in source || 'exports' in source) {
+      for (const key of ['module', 'exports'] as const) {
+        if (key in source) {
+          d.push(diag('r1_project_definition_invalid', `${base}/${key}`,
+            `${key} belongs only to a module-import source; an inline-source-set is never importable`));
+        }
+      }
+      return d;
+    }
+    const members = source['sources'];
+    if (!Array.isArray(members) || members.length === 0) {
+      d.push(diag('r1_project_definition_invalid', `${base}/sources`,
+        'an inline-source-set needs a non-empty sources[] of real inline implementations'));
+      return d;
+    }
+    const locators = new Set<string>();
+    members.forEach((member, i) => {
+      const mb = `${base}/sources/${i}`;
+      if (!isRecord(member)) {
+        d.push(diag('r1_project_definition_invalid', mb, 'each source member must be an object { locator, owner, symbols, example }'));
+        return;
+      }
+      if (!isNonEmptyString(member['locator'])) {
+        d.push(diag('r1_project_definition_invalid', `${mb}/locator`, 'each source member needs a real document locator'));
+        return;
+      }
+      if (locators.has(member['locator'])) {
+        d.push(diag('r1_project_definition_invalid', `${mb}/locator`,
+          'inline-source-set locators must be unique', 'a unique locator per member', member['locator']));
+      }
+      locators.add(member['locator']);
+      if (!isNonEmptyString(member['owner'])) {
+        d.push(diag('r1_project_definition_invalid', `${mb}/owner`, 'each source member needs its owning scope'));
+      }
+      if (!isNonEmptyStringArray(member['symbols'])) {
+        d.push(diag('r1_project_definition_invalid', `${mb}/symbols`,
+          'each source member lists real page-local symbol(s) (string[]), not module exports'));
+      }
+      if (!isNonEmptyString(member['example'])) {
+        d.push(diag('r1_project_definition_invalid', `${mb}/example`,
+          'each source member needs a real in-page call-site example (not an import)'));
+      }
+      // A member must never carry importable fields.
+      for (const key of ['module', 'exports'] as const) {
+        if (key in member) {
+          d.push(diag('r1_project_definition_invalid', `${mb}/${key}`,
+            `${key} belongs only to a module-import source; inline source members are not importable`));
+        }
+      }
+    });
     return d;
   }
 
@@ -133,6 +188,79 @@ function majorOf(version: string): number | undefined {
   return m ? Number(m[1]) : undefined;
 }
 
+/**
+ * Validate optional multi-artifact provenance (Phase B amendment).
+ *  - if `artifacts` is present it must be a non-empty list of unique-locator,
+ *    non-empty { locator, contentHash } entries (each pinned independently so
+ *    ANY document change changes the identity fingerprint);
+ *  - an inline-source-set MUST pin exactly its member locators (same set); a
+ *    member left unpinned or a pinned locator with no member both fail closed,
+ *    so the set's provenance can never silently cover only part of the source.
+ */
+function validateUpstreamArtifacts(
+  upstream: NonNullable<ComponentDefinition['identity']['upstream']>,
+  source: ComponentDefinition['source'],
+  base: string,
+): ProjectDiagnostic[] {
+  const d: ProjectDiagnostic[] = [];
+  // A malformed (non-object) source is reported by validateComponentSource;
+  // there is no sound locator set to cross-check against here.
+  if (!isRecord(source)) return d;
+  const artifacts = upstream.artifacts;
+  if (artifacts === undefined) {
+    if (source.kind === 'inline-source-set') {
+      d.push(diag('r1_project_definition_invalid', `${base}/artifacts`,
+        'an inline-source-set must pin every member locator in upstream.artifacts'));
+    }
+    return d;
+  }
+  if (!Array.isArray(artifacts) || artifacts.length === 0) {
+    d.push(diag('r1_project_definition_invalid', `${base}/artifacts`,
+      'upstream.artifacts must be a non-empty array when present'));
+    return d;
+  }
+  const pinned = new Map<string, number>();
+  artifacts.forEach((a, i) => {
+    const ab = `${base}/artifacts/${i}`;
+    if (!isRecord(a) || !isNonEmptyString(a['locator']) || !isNonEmptyString(a['contentHash'])) {
+      d.push(diag('r1_project_definition_invalid', ab, 'each artifact needs a non-empty { locator, contentHash }'));
+      return;
+    }
+    const locator = a['locator'];
+    if (pinned.has(locator)) {
+      d.push(diag('r1_project_definition_invalid', ab,
+        'artifact locators must be unique', 'unique locator', locator));
+    }
+    pinned.set(locator, i);
+  });
+
+  if (source.kind === 'inline-source-set') {
+    // Guard: sources may be malformed here (missing/non-array); the source
+    // validator already reported it, so only compare well-formed locators.
+    const memberLocators = Array.isArray(source.sources)
+      ? source.sources
+          .filter((m) => isRecord(m) && isNonEmptyString(m.locator))
+          .map((m) => m.locator)
+      : [];
+    for (const locator of memberLocators) {
+      if (!pinned.has(locator)) {
+        d.push(diag('r1_project_definition_invalid', `${base}/artifacts`,
+          'every inline-source-set member locator must be pinned in upstream.artifacts',
+          [...pinned.keys()], locator,
+          'add the exact content hash for this real document (git hash-object)'));
+      }
+    }
+    for (const locator of pinned.keys()) {
+      if (!memberLocators.includes(locator)) {
+        d.push(diag('r1_project_definition_invalid', `${base}/artifacts`,
+          'an upstream.artifacts locator has no matching inline-source-set member',
+          memberLocators, locator));
+      }
+    }
+  }
+  return d;
+}
+
 /** Validate one component definition; returns all problems (fail-closed). */
 export function validateComponentDefinition(def: ComponentDefinition): ProjectDiagnostic[] {
   const d: ProjectDiagnostic[] = [];
@@ -156,6 +284,8 @@ export function validateComponentDefinition(def: ComponentDefinition): ProjectDi
   }
   if (!id?.upstream || !isNonEmptyString(id.upstream.library) || !isNonEmptyString(id.upstream.base)) {
     d.push(diag('r1_project_definition_invalid', `${base}/identity/upstream`, 'upstream.library and upstream.base are required'));
+  } else {
+    d.push(...validateUpstreamArtifacts(id.upstream, def.source, `${base}/identity/upstream`));
   }
   d.push(...validateComponentSource(def.source, `${base}/source`));
   if (!isNonEmptyString(def.mappingStatus) || !['supported', 'partial', 'unsupported'].includes(def.mappingStatus)) {

@@ -293,7 +293,7 @@ describe('R1-04 Phase A — negative cases fail or are not-covered', () => {
 });
 
 describe('R1-04 #70 round 2 (P2) — inline page source is never offered as an import', () => {
-  it('project.catalog / describeComponent expose kind=inline-source and import=null for every MV component', () => {
+  it('project.catalog / describeComponent expose the real inline source kind and import=null for every MV component', () => {
     const ctx = createMvProjectContext();
     registerRealMvAssetInstances(ctx);
 
@@ -311,8 +311,12 @@ describe('R1-04 #70 round 2 (P2) — inline page source is never offered as an i
       'future-ui.text-input',
     ]);
     for (const row of rows) {
-      expect(row.source.kind).toBe('inline-source');
-      // The AI-facing surface MUST NOT turn an inline page source into an import.
+      // Phase A: dialog stays a single inline-source. Phase B amendment: the
+      // review button/text-input span multiple real inline documents, so they
+      // are inline-source-set. Both are page-owned and NEVER importable.
+      if (row.componentType === 'future-ui.dialog') expect(row.source.kind).toBe('inline-source');
+      else expect(row.source.kind).toBe('inline-source-set');
+      // The AI-facing surface MUST NOT turn any inline source into an import.
       expect(row.import).toBeNull();
     }
 

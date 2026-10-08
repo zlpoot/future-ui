@@ -119,6 +119,8 @@ export {
   buildMvProjectView,
   buildMvAutoEditorComponentDefinitions,
   MV_UPSTREAM,
+  MV_REVIEW_BUTTON_UPSTREAM,
+  MV_REVIEW_TEXT_INPUT_UPSTREAM,
 } from './project/mv-auto-editor/mv-view.js';
 export type { BuildMvProjectViewInput } from './project/mv-auto-editor/mv-view.js';
 export {
@@ -133,6 +135,9 @@ export {
   MV_CANVAS_REL_PATH,
   PINNED_MV_HEAD,
   PINNED_MV_CANVAS_BLOB,
+  PINNED_MV_KEYFRAMES_BLOB,
+  PINNED_MV_SHOTS_BLOB,
+  PINNED_MV_REVIEW_ARTIFACTS,
 } from './project/mv-auto-editor/mv-upstream.js';
 export type { MvCurrentUpstream } from './project/mv-auto-editor/mv-upstream.js';
 export {
@@ -148,3 +153,31 @@ export {
   buildMvAssetPanelMarkup,
 } from './project/mv-auto-editor/mv-evidence.js';
 export type { MvPanelFixtureOptions, MvPanelHandle, MvAssetControlFacts } from './project/mv-auto-editor/mv-evidence.js';
+
+// R1-04 (#70) Phase B — Storyboard (P4) / Keyframe (P5) review mapping. Dev-only.
+export {
+  registerMvReviewInstances,
+  reviewInstanceCounts,
+  assertNonModalReview,
+  assertInstancePageCovered,
+  definitionSourceLocators,
+  MV_REVIEW_UNMAPPED_CONTROLS,
+  MV_REVIEW_SPECS,
+  P4_SCOPE,
+  P5_SCOPE,
+} from './project/mv-auto-editor/mv-review-instances.js';
+export type { MvUnmappedReviewControl } from './project/mv-auto-editor/mv-review-instances.js';
+export {
+  mountP4ShotDetail,
+  mountP5ShotDetail,
+  observeP4ReviewControls,
+  observeP5ReviewControls,
+  buildP4ShotDetailMarkup,
+  buildP5ShotDetailMarkup,
+} from './project/mv-auto-editor/mv-review-evidence.js';
+export type {
+  P4RenderedFacts,
+  P5RenderedFacts,
+  P4FixtureOptions,
+  P5FixtureOptions,
+} from './project/mv-auto-editor/mv-review-evidence.js';

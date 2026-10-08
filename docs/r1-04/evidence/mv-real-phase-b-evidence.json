@@ -1,0 +1,74 @@
+{
+  "project": "song-20260928043747",
+  "collectedAt": "2026-10-08T01:08:38.007Z",
+  "readOnly": true,
+  "pinned": {
+    "mvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "blobs": {
+      "web/canvas.html": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+      "web/keyframes.html": "c8522aaca047e9fd8c2b08c3584d35a61ced9bc9",
+      "web/shots.html": "64f8cd2864d3f7addc17531b24788a352b9d7823"
+    }
+  },
+  "current": {
+    "mvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "canvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+    "keyframesBlob": "c8522aaca047e9fd8c2b08c3584d35a61ced9bc9",
+    "shotsBlob": "64f8cd2864d3f7addc17531b24788a352b9d7823"
+  },
+  "drift": {
+    "pinnedMvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "liveMvHead": "d77fc2b77e75cd593733daa8a7e3c31dc2df8a16",
+    "mvHeadDrifted": false,
+    "pinnedCanvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+    "liveCanvasBlob": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131",
+    "canvasBlobDrifted": false,
+    "pinnedKeyframesBlob": "c8522aaca047e9fd8c2b08c3584d35a61ced9bc9",
+    "liveKeyframesBlob": "c8522aaca047e9fd8c2b08c3584d35a61ced9bc9",
+    "keyframesBlobDrifted": false,
+    "pinnedShotsBlob": "64f8cd2864d3f7addc17531b24788a352b9d7823",
+    "liveShotsBlob": "64f8cd2864d3f7addc17531b24788a352b9d7823",
+    "shotsBlobDrifted": false
+  },
+  "p5": {
+    "facts": {
+      "hasDialogRole": false,
+      "hasCloseEntry": false,
+      "approveButtons": 1,
+      "rejectButtons": 1,
+      "selectButtons": 0,
+      "retryButtons": 0,
+      "cancelButtons": 0,
+      "failButtons": 0,
+      "lockPresent": true,
+      "uploadPresent": true,
+      "fileInputPresent": true,
+      "jobRows": 0,
+      "location": "/keyframes"
+    },
+    "screenshot": "E:\\projects\\future-ui\\docs\\r1-04\\evidence\\mv-real-phase-b-p5-keyframes.png",
+    "url": "http://127.0.0.1:3001/keyframes?project=song-20260928043747"
+  },
+  "p4": {
+    "facts": {
+      "hasDialogRole": false,
+      "hasCloseEntry": false,
+      "savePresent": true,
+      "resetPresent": true,
+      "makePromptPresent": true,
+      "prevPresent": true,
+      "nextPresent": true,
+      "draftFieldIds": [
+        "intent",
+        "notes",
+        "composition",
+        "generationPrompt",
+        "start",
+        "anchor"
+      ],
+      "location": "/shots"
+    },
+    "screenshot": "E:\\projects\\future-ui\\docs\\r1-04\\evidence\\mv-real-phase-b-p4-shots.png",
+    "url": "http://127.0.0.1:3001/shots?project=song-20260928043747"
+  }
+}

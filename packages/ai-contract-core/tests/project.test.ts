@@ -22,11 +22,13 @@ import {
   validateEvidenceShape,
   identityRefFor,
   isKnownRule,
+  upstreamIdentityFingerprint,
 } from '../src/index.js';
 import type {
   CapabilityReference,
   ComponentDefinition,
   InlinePageSource,
+  InlineSourceSet,
   InstanceIdentityRef,
   InstanceRegistration,
   ProjectAIView,
@@ -200,6 +202,156 @@ describe('Project AI View — discriminated component source (R1-04 #70 amendmen
       expect(res.view, label).toBeNull();
       expect(res.diagnostics.some((d) => d.code === 'r1_project_definition_invalid'), label).toBe(true);
     }
+  });
+});
+
+describe('Project AI View — multi-document inline source set (R1-04 #70 Phase B amendment)', () => {
+  const sourceSet: InlineSourceSet = {
+    kind: 'inline-source-set',
+    sources: [
+      {
+        locator: 'web/keyframes.html',
+        owner: 'inline classic <script> on the /keyframes route (non-module, page-owned)',
+        symbols: ['renderDetail', 'refresh'],
+        example: "post(`${base()}/candidates/${id}`, { action: 'approve' })",
+      },
+      {
+        locator: 'web/shots.html',
+        owner: 'inline classic <script> on the /shots route (non-module, page-owned)',
+        symbols: ['renderDetail', 'renderList'],
+        example: "`<button id=\"save\" class=\"primary\">保存镜头计划</button>`",
+      },
+    ],
+  };
+  const upstreamWithArtifacts = {
+    library: 'mv-auto-editor-pages',
+    base: 'web/keyframes.html',
+    style: 'inline-css',
+    runtimePackages: [] as Array<{ name: string; version: string }>,
+    artifacts: [
+      { locator: 'web/keyframes.html', contentHash: 'c8522aac' },
+      { locator: 'web/shots.html', contentHash: '64f8cd28' },
+    ],
+  } as const;
+
+  it('accepts a multi-document inline source set; import derivation stays null and no module/exports keys exist', () => {
+    const view = makeView([definition({ source: sourceSet, identity: { ...definition().identity, upstream: upstreamWithArtifacts } })]);
+    const def = describeComponent(view, 'future-ui.dialog')!;
+    expect(def.source.kind).toBe('inline-source-set');
+    if (def.source.kind !== 'inline-source-set') throw new Error('narrow');
+    expect(def.source.sources.map((s) => s.locator)).toEqual(['web/keyframes.html', 'web/shots.html']);
+    expect(importableModule(def.source)).toBeNull();
+    expect('module' in def.source).toBe(false);
+    expect('exports' in def.source).toBe(false);
+  });
+
+  it('NEGATIVE: empty/missing sources and missing member fields are rejected', () => {
+    const cases: Array<[string, unknown]> = [
+      ['sources missing', { kind: 'inline-source-set' }],
+      ['sources empty', { kind: 'inline-source-set', sources: [] }],
+      ['member missing locator', { kind: 'inline-source-set', sources: [{ owner: 'o', symbols: ['s'], example: 'e' }] }],
+      ['member missing owner', { kind: 'inline-source-set', sources: [{ locator: 'l', symbols: ['s'], example: 'e' }] }],
+      ['member empty symbols', { kind: 'inline-source-set', sources: [{ locator: 'l', owner: 'o', symbols: [], example: 'e' }] }],
+      ['member missing example', { kind: 'inline-source-set', sources: [{ locator: 'l', owner: 'o', symbols: ['s'] }] }],
+    ];
+    for (const [label, source] of cases) {
+      const res = buildProjectView({
+        projectName: 'x',
+        definitions: [definition({
+          source: source as ComponentDefinition['source'],
+          identity: { ...definition().identity, upstream: upstreamWithArtifacts },
+        })],
+      });
+      expect(res.view, label).toBeNull();
+      expect(res.diagnostics.some((d) => d.code === 'r1_project_definition_invalid'), label).toBe(true);
+    }
+  });
+
+  it('NEGATIVE: duplicate member locators are rejected', () => {
+    const dup: InlineSourceSet = {
+      kind: 'inline-source-set',
+      sources: [sourceSet.sources[0], { ...sourceSet.sources[1], locator: 'web/keyframes.html' }],
+    };
+    const res = buildProjectView({
+      projectName: 'x',
+      definitions: [definition({ source: dup, identity: { ...definition().identity, upstream: upstreamWithArtifacts } })],
+    });
+    expect(res.view).toBeNull();
+    expect(res.diagnostics.some((d) => d.path.endsWith('/sources/1/locator'))).toBe(true);
+  });
+
+  it('NEGATIVE: module/exports on the set or on a member are rejected (never importable)', () => {
+    const onSet = { ...sourceSet, module: 'web/keyframes.html', exports: ['refresh'] };
+    const onMember: InlineSourceSet = {
+      kind: 'inline-source-set',
+      sources: [{ ...sourceSet.sources[0], module: 'web/keyframes.html' } as unknown as InlineSourceSet['sources'][number]],
+    };
+    for (const [label, source] of [['set', onSet], ['member', onMember]] as Array<[string, unknown]>) {
+      const res = buildProjectView({
+        projectName: 'x',
+        definitions: [definition({
+          source: source as ComponentDefinition['source'],
+          identity: { ...definition().identity, upstream: upstreamWithArtifacts },
+        })],
+      });
+      expect(res.view, label).toBeNull();
+      expect(res.diagnostics.some((d) => /module|exports/.test(d.path)), label).toBe(true);
+    }
+  });
+
+  it('NEGATIVE: an inline-source-set without upstream.artifacts, or with a locator set mismatch, is rejected', () => {
+    const noArtifacts = buildProjectView({
+      projectName: 'x',
+      definitions: [definition({ source: sourceSet })],
+    });
+    expect(noArtifacts.view).toBeNull();
+    expect(noArtifacts.diagnostics.some((d) => d.path.endsWith('/upstream/artifacts'))).toBe(true);
+
+    const mismatched = buildProjectView({
+      projectName: 'x',
+      definitions: [definition({
+        source: sourceSet,
+        identity: {
+          ...definition().identity,
+          upstream: {
+            ...upstreamWithArtifacts,
+            artifacts: [{ locator: 'web/keyframes.html', contentHash: 'c8522aac' }],
+          },
+        },
+      })],
+    });
+    expect(mismatched.view).toBeNull();
+    // unpinned member locator reported
+    expect(mismatched.diagnostics.some((d) => d.explanation.includes('must be pinned'))).toBe(true);
+  });
+
+  it('upstream fingerprint folds in locator-sorted artifacts; any artifact hash drift changes it', () => {
+    const fp0 = upstreamIdentityFingerprint(upstreamWithArtifacts);
+    const reordered = {
+      ...upstreamWithArtifacts,
+      artifacts: [...upstreamWithArtifacts.artifacts].reverse(),
+    };
+    // locator order independent
+    expect(upstreamIdentityFingerprint(reordered)).toBe(fp0);
+    const keyframesChanged = {
+      ...upstreamWithArtifacts,
+      artifacts: upstreamWithArtifacts.artifacts.map((a) => (a.locator === 'web/keyframes.html' ? { ...a, contentHash: 'deadbeef' } : a)),
+    };
+    const shotsChanged = {
+      ...upstreamWithArtifacts,
+      artifacts: upstreamWithArtifacts.artifacts.map((a) => (a.locator === 'web/shots.html' ? { ...a, contentHash: 'deadbeef' } : a)),
+    };
+    expect(upstreamIdentityFingerprint(keyframesChanged)).not.toBe(fp0);
+    expect(upstreamIdentityFingerprint(shotsChanged)).not.toBe(fp0);
+  });
+
+  it('back-compat: a definition without artifacts has the same fingerprint as before amendment', () => {
+    const legacy = definition().identity.upstream;
+    const fp = upstreamIdentityFingerprint(legacy);
+    // an explicitly empty artifact list contributes nothing (same as absent)
+    expect(upstreamIdentityFingerprint({ ...legacy, artifacts: [] } as ComponentDefinition['identity']['upstream'])).toBe(fp);
+    expect(typeof fp).toBe('string');
+    expect(fp).toHaveLength(8);
   });
 });
 

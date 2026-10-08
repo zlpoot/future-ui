@@ -44,16 +44,24 @@ function stableStringify(value: unknown): string {
 
 /** Upstream revision fingerprint: library/base/source commit/runtime packages. */
 export function upstreamIdentityFingerprint(upstream: AdapterComponentIdentity['upstream']): string {
-  return fnv1aHex(
-    stableStringify({
-      library: upstream.library,
-      base: upstream.base,
-      sourceCommit: upstream.sourceCommit ?? '',
-      runtimePackages: [...upstream.runtimePackages]
-        .map((p) => ({ name: p.name, version: p.version }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    }),
-  );
+  // Phase B: fold in the optional multi-artifact provenance. Each artifact is
+  // pinned as { locator, contentHash } and sorted by locator so array order can
+  // never hide a change. The key is added ONLY when artifacts exist: a legacy
+  // definition (Phase A / shadcn, no artifacts) serializes exactly the same
+  // object as before, so its fingerprint stays byte-identical.
+  const artifacts = (upstream.artifacts ?? [])
+    .map((a) => ({ locator: a.locator, contentHash: a.contentHash }))
+    .sort((a, b) => a.locator.localeCompare(b.locator));
+  const payload: Record<string, unknown> = {
+    library: upstream.library,
+    base: upstream.base,
+    sourceCommit: upstream.sourceCommit ?? '',
+    runtimePackages: [...upstream.runtimePackages]
+      .map((p) => ({ name: p.name, version: p.version }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+  if (artifacts.length > 0) payload['artifacts'] = artifacts;
+  return fnv1aHex(stableStringify(payload));
 }
 
 /** Build the exact identity ref an instance must match for a definition. */
