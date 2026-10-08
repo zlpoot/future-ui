@@ -21,3 +21,6 @@ docs/benchmarks/d10-harness/runs/
 
 # R1-04 real-evidence headless Chrome user-data dirs (Phase A/B collectors; never committed)
 .local/
+
+# AWH local verification and handoff records
+.handoff/
