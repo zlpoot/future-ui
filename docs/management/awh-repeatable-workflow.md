@@ -4,12 +4,12 @@
 
 ## 一次性升级
 
-安装交付的 Client 0.4.0 tarball；保留原外部配置、credential、machine 文件、endpoint 与 state_directory。模板版本为 `v02-repeatable-v1`，沿用 `future-ui/c1c-acceptance`。仅 `c1c-future-ui-windows` 及其原机器可用。
+安装交付的 Client 0.4.1 tarball；保留原外部配置、credential、machine 文件、endpoint 与 state_directory。模板版本为 `v02-repeatable-v1`，沿用 `future-ui/c1c-acceptance`。仅 `c1c-future-ui-windows` 及其原机器可用。
 
 新模板声明 `issue_prefix`，要求已审查且已获 Human 授权部署的兼容 CP 运行时。Operator 先登记原 Run/Event，保留可恢复的数据库副本，在隔离副本验证旧历史，再用原配置、端点和身份受控切换运行时；原服务回读成功后，仅追加一次不可变模板版本。在原 Client 外部配置中一次性选择该版本，再 register 升级后的 Client 元数据。保留原 Profile、历史记录、已完成 Journal 和安装备份。
 
 ```powershell
-npm install --prefix '<原外部Client安装目录>' --offline --ignore-scripts --no-audit --no-fund '<Client-0.4.0-tarball>'
+npm install --prefix '<原外部Client安装目录>' --offline --ignore-scripts --no-audit --no-fund '<Client-0.4.1-tarball>'
 & '<原外部Client安装目录>/node_modules/.bin/awh.cmd' --version
 & '<原外部Client安装目录>/node_modules/.bin/awh.cmd' --config '<原外部Client配置.json>' register
 ```
@@ -48,6 +48,8 @@ App Draft PR 和 confirmed Handoff 发布后，Run 为 `awaiting_review`。Build
 
 sync 只读核对 App actor、原分支和 exact head、有效 User APPROVED、无有效 changes requested、实际 merge SHA 与同一 Issue closed；stale、dismissed、bot、foreign App 或身份漂移均不能完成。满足全部事实后才 `completed`。下一 Issue 会按原始字节归档旧 Session；旧 completed Journal 原位只读保留，旧 CP Run/Event/cursor 不删除、不重排。
 
-ACK 丢失时仅执行 `deliver --retry`，重发相同 Event ID/sequence，不重复 GitHub push/PR。初始 RUN_STARTED 的 ACK 丢失且尚无 Journal/provider write 时，可以原参数恢复同一任务。stopped、ambiguous、in-progress、pending 或缺失 Journal 阻断下一任务；不得删除/重命名 Journal、清空 session、换 namespace、重复 push 或新建 PR 绕过。
+ACK 丢失时仅执行 `deliver --retry`，重发相同 Event ID/sequence，不重新验证，也不重复 GitHub push/PR。初始 RUN_STARTED 的 ACK 丢失且尚无 Journal/provider write 时，可以原参数恢复同一任务。除下述明确恢复情形外，stopped、ambiguous、in-progress、pending 或缺失 Journal 阻断下一任务；不得删除/重命名 Journal、清空 session、换 namespace、重复 push 或新建 PR 绕过。
+
+Client 0.4.1 的 `--recover-from-run <failed-run-id>` 仅适用于 CP 与本地失败记录及原始验证证据一致、确认在 GitHub Push/PR 之前发生的 verification 失败，且远端同分支 ref 与全状态 PR 均不存在、receipt 未消费、pending/outbox 均为空的情况。取得 Human 单次授权后，才可从同一 Issue/分支的新 clean SHA 恢复，并保留原 CP、Profile、Executor/machine、凭据、namespace 和失败 Run/Journal。其他 stopped、ambiguous、in-progress、pending 或缺失记录继续阻断；恢复失败须停止并保留证据，不得重复调用或修改 receipt，详见 [Hub Client 0.4.1 恢复说明](https://github.com/zlpoot/agent-workflow-hub/blob/39c0ba845e15152dd511422ebceea34c171b7924/docs/repeatable.md#client-041-verification-recovery-candidate)。
 
 #90 的真实验收还要回读 #88 completed Run/13 Event 与更早六 Run/24 Event。未发生独立 Review、Human 授权 merge/close 和原工作树 sync 时，不宣告第二个真实 Run completed。
