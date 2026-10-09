@@ -37,6 +37,25 @@ export const MATERIAL_SCOPE = 'material/edit';
 /** 素材编辑 Dialog 实例 id。 */
 export const DIALOG_INSTANCE_ID = 'material/edit-dialog';
 
+/**
+ * 单个只读保存 Action 引用（非可执行描述）—— UI 的提交行为标识与 Agent
+ * 投影共同消费同一对象；不创建可执行 Agent tool。
+ */
+export interface MaterialSaveAction {
+  ref: string;
+  label: string;
+}
+
+export const MATERIAL_SAVE_ACTION: MaterialSaveAction = {
+  ref: 'material/edit#save',
+  label: '保存并关闭',
+};
+
+/** 由保存 Action 对象派生只读引用（UI 与 Agent 投影共用同一数据源）。 */
+export function materialSaveAction(action: MaterialSaveAction = MATERIAL_SAVE_ACTION): MaterialSaveAction {
+  return { ref: action.ref, label: action.label };
+}
+
 /** 素材行：虚拟业务数据（仅试用，值永不进入 Agent 投影）。 */
 export interface MaterialRow {
   id: string;
@@ -58,22 +77,25 @@ export const VIRTUAL_MATERIALS: readonly MaterialRow[] = [
   },
 ];
 
-/** 由声明派生 EditDialog 字段（UI 侧；与投影同源）。 */
+/** 由声明派生 EditDialog 字段（UI 侧；与投影同源，按声明 order 稳定排序）。 */
 export function toEditDialogFields(
   fields: readonly MaterialFieldDecl[],
   values: Record<string, string>,
 ): Array<{ name: string; label: string; type: 'text'; value: string; placeholder?: string }> {
-  return fields.map((f) => ({ name: f.name, label: f.label, type: 'text' as const, value: values[f.name] ?? f.initial }));
+  return [...fields]
+    .sort((a, b) => a.order - b.order)
+    .map((f) => ({ name: f.name, label: f.label, type: 'text' as const, value: values[f.name] ?? f.initial }));
 }
 
-/** 由声明派生 Agent 可公开字段元数据（窄 allowlist；敏感字段被过滤）。 */
+/** 由声明派生 Agent 可公开字段元数据（窄 allowlist；敏感字段被过滤；按声明 order 稳定排序）。 */
 export function publicFieldMetadata(fields: readonly MaterialFieldDecl[]): Array<{
   name: string;
   label: string;
   order: number;
   actionRef: string;
 }> {
-  return fields
+  return [...fields]
     .filter((f) => f.sensitive !== true)
+    .sort((a, b) => a.order - b.order)
     .map((f) => ({ name: f.name, label: f.label, order: f.order, actionRef: f.actionRef }));
 }

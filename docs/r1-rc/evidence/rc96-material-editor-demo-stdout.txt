@@ -8,12 +8,12 @@
 
 [1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90mE:/projects/future-ui-r2a1/examples/material-editor[39m
 
- [32m✓[39m tests/material-editor.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1423[2mms[22m[39m
+ [32m✓[39m tests/material-editor.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 1406[2mms[22m[39m
    [32m✓[39m R2-A1 素材编辑交互闭环（UI） [2m(2)[22m
-     [33m[2m✓[22m[39m 预填→修改→保存中阻止重复提交→保存并关闭→列表更新[33m 1347[2mms[22m[39m
+     [33m[2m✓[22m[39m 预填→修改→保存中阻止重复提交→保存并关闭→列表更新[33m 1331[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
-[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
-[2m   Start at [22m 14:41:56
-[2m   Duration [22m 5.72s[2m (import 47%, tests 26%, environment 17%, transform 10%)[22m
+[2m      Tests [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m   Start at [22m 15:33:08
+[2m   Duration [22m 5.50s[2m (import 47%, tests 27%, environment 16%, transform 10%)[22m
 

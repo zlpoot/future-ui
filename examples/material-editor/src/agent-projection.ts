@@ -21,8 +21,8 @@ import {
   type InstanceRegistration,
   type ProjectAIView,
 } from '@future-ui/ai-contract-core';
-import { DIALOG_INSTANCE_ID, MATERIAL_SCOPE } from './material-declaration.js';
-import type { MaterialFieldDecl } from './material-declaration.js';
+import { DIALOG_INSTANCE_ID, MATERIAL_SCOPE, materialSaveAction } from './material-declaration.js';
+import type { MaterialFieldDecl, MaterialSaveAction } from './material-declaration.js';
 
 export type { EditDialogProjectContext } from '@future-ui/ai-dev';
 
@@ -95,6 +95,13 @@ export function projectFieldMetadata(
 /** 覆盖情况（显式注册才有 covered；未注册 scope 一律 not-covered）。 */
 export function scopeCoverage(registry: InstanceRegistry, scopeId: string): { coverage: string; instanceIds: string[] } {
   return registry.coverage(scopeId);
+}
+
+/**
+ * 只读保存 Action 引用（非可执行描述）——与 UI 的提交行为标识共用同一对象。
+ */
+export function projectSaveAction(action: MaterialSaveAction = materialSaveAction()): MaterialSaveAction {
+  return { ref: action.ref, label: action.label };
 }
 
 export { InstanceRegistry, identityRefFor };

@@ -19,12 +19,15 @@ import {
 } from '../src/agent-projection.js';
 import {
   MATERIAL_FIELDS,
+  MATERIAL_SAVE_ACTION,
   MATERIAL_SCOPE,
   DIALOG_INSTANCE_ID,
   VIRTUAL_MATERIALS,
+  materialSaveAction,
   publicFieldMetadata,
   toEditDialogFields,
 } from '../src/material-declaration.js';
+import { projectSaveAction } from '../src/agent-projection.js';
 import type { MaterialFieldDecl } from '../src/material-declaration.js';
 
 describe('R2-A1 素材编辑交互闭环（UI）', () => {
@@ -57,8 +60,15 @@ describe('R2-A1 素材编辑交互闭环（UI）', () => {
     // 保存完成：弹窗关闭（reason=save），列表更新（保存为真实异步 1.2s，放宽 waitFor 超时）
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
     expect(screen.getByTestId('me-name-m1').textContent).toBe('春日山景-改.mp4');
-    expect(screen.getByTestId('me-log').textContent).toContain('close reason=save open=false');
-    const pendingCount = screen.getByTestId('me-log').textContent!.match(/save pending/g)!.length;
+    const logText = screen.getByTestId('me-log').textContent!;
+    // 日志只记录保存开始/结束与 Action 引用（与声明同源），不扩散敏感/草稿值
+    expect(logText).toContain(`save pending action=${MATERIAL_SAVE_ACTION.ref}`);
+    expect(logText).toContain(`saved id=m1 action=${MATERIAL_SAVE_ACTION.ref}`);
+    expect(logText).toContain('close reason=save open=false');
+    expect(logText).not.toContain('版权归属');
+    expect(logText).not.toContain('secretNote');
+    expect(logText).not.toContain('displayName');
+    const pendingCount = logText.match(/save pending/g)!.length;
     expect(pendingCount).toBe(1);
   });
 
@@ -103,6 +113,32 @@ describe('R2-A1 同源性（同一字段表，无第二套副本）', () => {
     expect(agentLabel).toBe('素材文件名');
     // 原始声明不受影响（证明变化来自同一数据源而非复制表）
     expect(publicFieldMetadata(MATERIAL_FIELDS).find((f) => f.name === 'displayName')!.label).toBe('素材名称');
+  });
+
+  test('字段乱序声明：UI 与投影均按声明 order 稳定排序（排序同源）', () => {
+    const shuffled: readonly MaterialFieldDecl[] = [
+      MATERIAL_FIELDS[1], // description (order 2)
+      MATERIAL_FIELDS[2], // secretNote (order 3)
+      MATERIAL_FIELDS[0], // displayName (order 1)
+    ];
+    const values = VIRTUAL_MATERIALS[0].values;
+    const uiNames = toEditDialogFields(shuffled, values).map((f) => f.name);
+    expect(uiNames).toEqual(['displayName', 'description', 'secretNote']);
+    const agentNames = publicFieldMetadata(shuffled).map((f) => f.name);
+    expect(agentNames).toEqual(['displayName', 'description']);
+    // 投影输出的 order 与 UI 顺序一致（声明序）
+    expect(publicFieldMetadata(shuffled).map((f) => f.order)).toEqual([1, 2]);
+  });
+
+  test('保存 Action 引用同一数据源：UI 日志与 Agent 投影共用，改动双端同步', () => {
+    // 默认引用：UI（日志）与 Agent（投影）来自同一对象
+    expect(projectSaveAction().ref).toBe(MATERIAL_SAVE_ACTION.ref);
+    expect(materialSaveAction().ref).toBe(MATERIAL_SAVE_ACTION.ref);
+    // 改动引用后双端同步（同一数据源派生；不创建可执行 tool，仅引用/描述）
+    const v2 = { ref: 'material/edit#save-v2', label: '保存并关闭' };
+    expect(projectSaveAction(v2).ref).toBe('material/edit#save-v2');
+    expect(materialSaveAction(v2).ref).toBe('material/edit#save-v2');
+    expect(projectSaveAction(v2)).toEqual({ ref: 'material/edit#save-v2', label: '保存并关闭' });
   });
 });
 

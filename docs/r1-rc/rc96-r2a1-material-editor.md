@@ -19,15 +19,26 @@ Refs #96（#91 第一薄片）。实现范围：`examples/material-editor/` + �
 
 ## 验证
 
-- 定向 jsdom（`demo` 脚本）：7/7 通过 —— 交互闭环（预填→修改→保存中防重复提交→保存并关闭 reason=save→列表更新）、
-  取消不修改、同源性（改声明 label 双端变化、顺序/Action ref 一致）、注册表/工具安全面（listInstances 无
+- 定向 jsdom（`demo` 脚本）：**9/9 通过** —— 交互闭环（预填→修改→保存中防重复提交→保存并关闭 reason=save→列表更新）、
+  取消不修改、同源性（改声明 label 双端变化、顺序/Action ref 一致）、字段乱序声明按 `order` 稳定排序（UI 与投影一致）、
+  保存 Action 引用同一数据源（UI 日志与 Agent 投影共用，改动双端同步）、注册表/工具安全面（listInstances 无
   secretNote、describeInstance covered + 0 工具、未注册 scope not-covered、catalog 0 capabilities）、
-  负例（draft value withheld、secretNote 不可描述）。
-- 既有 CI：typecheck ×7 全 0、eslint 0、全量 vitest **55 files / 508 passed / 4 skipped**（基线 54/501/4 + 本薄片 7）。
+  负例（draft value withheld、secretNote 不可描述、日志不含任何字段值）。
+- 既有 CI：typecheck ×7 全 0、eslint 0、全量 vitest **55 files / 510 passed / 4 skipped**（基线 54/501/4 + 本薄片 9）。
 - 真实 Chrome smoke（loopback 127.0.0.1:5175，受控一次）：列表渲染 → 编辑弹窗（aria-modal、3 字段预填含
   secretNote 仅 UI 可见）→ 修改名称 → 保存 `保存中…`（disabled+aria-busy）→ 重复点击忽略 → 关闭
-  `reason=save` → 列表更新；0 console error/warning、0 外部请求。证据：
+  `reason=save` → 列表更新；日志仅含保存开始/结束与 Action 引用，**不含任何字段值/敏感值**；
+  0 console error/warning、0 外部请求。证据：
   `docs/r1-rc/evidence/rc96-material-editor-{initial,dialog,after-save}.png`、`rc96-material-editor-demo-stdout.txt`。
+
+## 审查修复轮（PR #97 review · 2026-10-09）
+
+- **[P1 / #96 Gate] 保存 Action 引用同源**：新增单个只读 `MATERIAL_SAVE_ACTION`（`material/edit#save`），
+  UI `handleSave` 与 Agent `projectSaveAction` 共同消费同一对象（非可执行 tool）；改引用双端同步（定向测试）。
+- **[P2] 字段排序**：`toEditDialogFields` / `publicFieldMetadata` 统一按声明 `order` 稳定排序；补乱序声明测试。
+- **[P2] 日志敏感值**：`me-log` 不再序列化 `values`（含 `secretNote`），只记录保存开始/结束与 Action 引用；
+  补“日志不含字段值/敏感值”断言。
+- 修复后：定向 9/9、typecheck ×7 0、eslint 0、全量 510 passed / 4 skipped；真实 Chrome 复验日志干净。
 
 ## 首次失败与修正（如实保留）
 

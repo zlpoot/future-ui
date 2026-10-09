@@ -11,8 +11,10 @@ import type { EditDialogOpenChangeDetail } from '@future-ui/shadcn-adapter/brows
 import {
   DIALOG_INSTANCE_ID,
   MATERIAL_FIELDS,
+  MATERIAL_SAVE_ACTION,
   MATERIAL_SCOPE,
   VIRTUAL_MATERIALS,
+  materialSaveAction,
   toEditDialogFields,
 } from './material-declaration.js';
 import type { MaterialRow } from './material-declaration.js';
@@ -35,10 +37,12 @@ export function MaterialEditorPage(): ReactElement {
   };
 
   const handleSave = async (values: Record<string, string>): Promise<void> => {
-    pushLog(`save pending values=${JSON.stringify(values)}`);
+    // 只记录保存开始/结束与 Action 引用；不把（含 secretNote 的）字段值写入 UI 日志。
+    const action = materialSaveAction(MATERIAL_SAVE_ACTION);
+    pushLog(`save pending action=${action.ref}`);
     await new Promise((resolve) => setTimeout(resolve, SAVE_DELAY_MS));
     setMaterials((prev) => prev.map((m) => (m.id === editingId ? { ...m, values } : m)));
-    pushLog(`saved id=${editingId}`);
+    pushLog(`saved id=${editingId} action=${action.ref}`);
   };
 
   return (
