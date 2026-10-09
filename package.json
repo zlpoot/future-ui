@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "pnpm --filter @future-ui/rc-manual-host dev",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit && tsc -p packages/ark-ui-adapter/tsconfig.json --noEmit && tsc -p packages/ai-dev/tsconfig.json --noEmit && tsc -p packages/rc-manual-host/tsconfig.json --noEmit && tsc -p examples/rc-consumer/tsconfig.json --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit && tsc -p packages/ark-ui-adapter/tsconfig.json --noEmit && tsc -p packages/ai-dev/tsconfig.json --noEmit && tsc -p packages/rc-manual-host/tsconfig.json --noEmit && tsc -p examples/rc-consumer/tsconfig.json --noEmit && tsc -p examples/material-editor/tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
