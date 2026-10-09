@@ -1,13 +1,77 @@
+/* ============================================================
+ * R2-A2 (#98) · 示例端受控双主题样式（仅 examples/material-editor）
+ * ------------------------------------------------------------
+ * - 视觉 token 使用公共 D08 命名空间 --future-ui-*；:root 为 Light
+ *   默认值，html[data-theme='dark'] 覆盖为深色高对比值。
+ * - ThemeProvider 容器与 <html> 都会带上 data-theme 与 token（见
+ *   themes.ts），因此页面内容与 Portal 内 Dialog 使用同一组变量。
+ * - shadcn v4 语义类（bg-background/border/ring 等）在仓库内无 CSS
+ *   变量定义，示例端在此把它们映射到 D08 token——只改示例作用域，
+ *   不改公共契约、不读 provider-private DOM。
+ * ============================================================ */
+
+:root {
+  --future-ui-bg: #ffffff;
+  --future-ui-surface: #ffffff;
+  --future-ui-text: #1a1a1a;
+  --future-ui-muted: #555555;
+  --future-ui-border: #e2e8f0;
+  --future-ui-accent: #f1f5f9;
+  --future-ui-accent-text: #1e293b;
+  --future-ui-primary: #0f172a;
+  --future-ui-primary-text: #ffffff;
+  --future-ui-focus: #2563eb;
+  --future-ui-overlay: rgba(2, 6, 23, 0.5);
+  --future-ui-danger: #dc2626;
+}
+
+html[data-theme='dark'] {
+  --future-ui-bg: #0b1220;
+  --future-ui-surface: #101a2c;
+  --future-ui-text: #e6edf7;
+  --future-ui-muted: #8fa3bf;
+  --future-ui-border: #2a3a56;
+  --future-ui-accent: #1c2b45;
+  --future-ui-accent-text: #f1f5f9;
+  --future-ui-primary: #3b82f6;
+  --future-ui-primary-text: #0b1220;
+  --future-ui-focus: #60a5fa;
+  --future-ui-overlay: rgba(0, 0, 0, 0.65);
+  --future-ui-danger: #f87171;
+}
+
+body {
+  background-color: var(--future-ui-bg);
+  color: var(--future-ui-text);
+}
+
+/* ---------- 页面元素（me-*） ---------- */
+
 .me-page {
   max-width: 720px;
   margin: 24px auto;
   font-family: system-ui, sans-serif;
-  color: #1a1a1a;
+  color: var(--future-ui-text);
 }
+
+.me-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+/* 主题切换浮层：fixed + z-60，高于 Dialog overlay（z-50），弹窗打开时仍可点击 */
+.me-theme-float {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 60;
+}
+
 .me-note {
-  color: #555;
+  color: var(--future-ui-muted);
   font-size: 13px;
 }
+
 .me-list {
   list-style: none;
   padding: 0;
@@ -16,30 +80,136 @@
   flex-direction: column;
   gap: 8px;
 }
+
 .me-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--future-ui-border);
   border-radius: 8px;
   padding: 10px 14px;
+  background-color: var(--future-ui-surface);
 }
+
 .me-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
 .me-text span {
-  color: #666;
+  color: var(--future-ui-muted);
   font-size: 13px;
 }
+
 .me-log {
-  background: #f6f6f6;
-  border: 1px solid #eee;
+  background: var(--future-ui-accent);
+  border: 1px solid var(--future-ui-border);
   border-radius: 6px;
   padding: 10px;
   font-size: 12px;
   min-height: 60px;
   white-space: pre-wrap;
+  color: var(--future-ui-text);
 }
+
+/* ---------- shadcn 语义类 → D08 token（示例端映射） ---------- */
+
+[data-theme] .border {
+  border-color: var(--future-ui-border);
+}
+
+[data-theme] .bg-background {
+  background-color: var(--future-ui-surface);
+}
+
+[data-theme] .text-muted-foreground {
+  color: var(--future-ui-muted);
+}
+
+[data-theme] .text-destructive {
+  color: var(--future-ui-danger);
+}
+
+/* ---------- Dialog（含 Portal 内） ---------- */
+
+[data-theme] [data-slot='dialog-overlay'] {
+  background-color: var(--future-ui-overlay);
+}
+
+[data-theme] [data-slot='dialog-content'] {
+  background-color: var(--future-ui-surface);
+  border-color: var(--future-ui-border);
+  color: var(--future-ui-text);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme] [data-slot='dialog-title'] {
+  color: var(--future-ui-text);
+}
+
+[data-theme] [data-slot='dialog-description'] {
+  color: var(--future-ui-muted);
+}
+
+[data-theme] [data-slot='dialog-close'] {
+  color: var(--future-ui-muted);
+}
+
+[data-theme] [data-slot='dialog-close']:focus-visible {
+  outline: 2px solid var(--future-ui-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Button ---------- */
+
+[data-theme] [data-slot='button'] {
+  color: var(--future-ui-text);
+}
+
+[data-theme] [data-slot='button'][data-variant='outline'] {
+  border-color: var(--future-ui-border);
+  background-color: var(--future-ui-surface);
+}
+
+[data-theme] [data-slot='button'][data-variant='outline']:hover {
+  background-color: var(--future-ui-accent);
+  color: var(--future-ui-accent-text);
+}
+
+[data-theme] [data-slot='button'][data-variant='default'] {
+  background-color: var(--future-ui-primary);
+  color: var(--future-ui-primary-text);
+}
+
+[data-theme] [data-slot='button'][data-variant='destructive'] {
+  background-color: var(--future-ui-danger);
+  color: #ffffff;
+}
+
+[data-theme] [data-slot='button']:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--future-ui-focus) 40%, transparent);
+  outline-offset: 1px;
+  border-color: var(--future-ui-focus);
+}
+
+/* ---------- Input ---------- */
+
+[data-theme] [data-slot='input'] {
+  border-color: var(--future-ui-border);
+  color: var(--future-ui-text);
+  background-color: var(--future-ui-surface);
+}
+
+[data-theme] [data-slot='input']::placeholder {
+  color: var(--future-ui-muted);
+}
+
+[data-theme] [data-slot='input']:focus-visible {
+  border-color: var(--future-ui-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--future-ui-focus) 30%, transparent);
+  outline: none;
+}
+
+/* 字段标签继承 Dialog 文本色即可；错误/提示色已由 text-destructive 覆盖。 */

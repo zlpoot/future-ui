@@ -3,13 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "R2-A1 (#96): 素材编辑同源声明 → React UI + dev-only Agent 只读投影（同一字段表；敏感字段不投影；0 capability 时业务工具数 0）",
+  "description": "R2-A1 (#96)+R2-A2 (#98): 素材编辑同源声明 → React UI + dev-only Agent 只读投影 + Light/Dark 受控换肤（同一字段表与 Action；敏感字段不投影；主题是宿主视觉偏好）",
   "scripts": {
     "demo": "vitest run tests/material-editor.test.tsx",
     "dev": "vite --host 127.0.0.1 --port 5175"
   },
   "dependencies": {
-    "@future-ui/shadcn-adapter": "workspace:*"
+    "@future-ui/shadcn-adapter": "workspace:*",
+    "@future-ui/theme": "workspace:*"
   },
   "devDependencies": {
     "@future-ui/ai-contract-core": "workspace:*",
