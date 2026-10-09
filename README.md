@@ -48,6 +48,30 @@ corepack pnpm --filter @future-ui/rc-consumer demo
 Project Profile（`r1-edit-dialog-reference`）→ 读取 AI View（`buildShadcnProjectView`）→ 运行一个 UI 组件
 （EditDialog 渲染证据）。stdout 存档：`docs/r1-rc/evidence/rc-consumer-demo-stdout.txt`。
 
+### 业务接入速记 · 素材信息编辑（v0.1）
+
+**EditDialog 一句话语义：** 宿主持有 `open` 和业务数据；组件在打开时初始化表单，pending 期间阻止重复保存，并在 `onSave` 成功后**发出关闭请求**，不会替宿主持久化、更新列表或修改 `open`。
+
+1. **字段键映射**：`fields[].name` 必须和 `onSave(values: Record<string,string>)` 返回对象的键一致，后端字段映射由宿主完成。
+2. **预填语义**：打开时按 `field.value ?? field.defaultValue ?? ''` 初始化；这是打开瞬间的 seed，**不是**父组件持续受控值。切换编辑对象请先关闭再重新打开。
+3. **保存与关闭**：`onSave` 成功后 EditDialog 触发 `onOpenChange({ open: false, reason: 'save' })`；宿主更新业务状态并把 `open` 设为 false。保存失败应抛错，组件继续打开显示错误；pending 防重复提交不替代后端业务幂等。
+
+```tsx
+<EditDialog
+  open={editingMaterial !== null}
+  label="编辑素材"
+  fields={[{ name: 'name', label: '名称', value: editingMaterial?.name ?? '' }]}
+  onSave={async ({ name }) => {
+    // persistMaterial / setMaterials 由实际业务应用实现；这里是接入示意，不执行外部请求。
+    await persistMaterial(editingMaterial!.id, { name });
+    setMaterials((rows) => rows.map((r) => r.id === editingMaterial!.id ? { ...r, name } : r));
+  }}
+  onOpenChange={({ open }) => { if (!open) setEditingMaterial(null); }}
+/>
+```
+
+完整可运行的仓库内 Consumer 路径：`examples/rc-consumer/src/consumer-demo.tsx`。上例中的业务持久化与状态由宿主提供，不属于 Future UI 框架或这次演示的数据写入。
+
 人工验收：按 [MANUAL_CHECKLIST.md](MANUAL_CHECKLIST.md) 操作并分层记录证据（declared / rendered / interaction-verified / not-covered；未测写 NOT-TESTED）。实现说明与证据见 `docs/r1-rc/rc86-v01-manual-host.md`。
 
 > 该 host 是 **dev-only 工具**：`vite` / `@vitejs/plugin-react` 仅作为开发依赖进入 lockfile，不进入任何运行时 / 发布图；不复制组件、不新建 UI 框架、不改公共契约。
