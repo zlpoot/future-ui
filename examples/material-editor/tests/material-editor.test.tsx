@@ -331,4 +331,27 @@ describe('R2-A2 双主题换肤（状态保持 + 事件次数）', () => {
     expect(afterProjection.map((f) => f.name)).toEqual(['displayName', 'description']);
     expect(projectSaveAction().ref).toBe(MATERIAL_SAVE_ACTION.ref);
   });
+
+  test('P1-2 键盘路径：按键 T 切换主题，但焦点在输入框内时不触发（输入守卫）', () => {
+    render(<MaterialEditorPage />);
+    const html = () => document.documentElement;
+    expect(html().getAttribute('data-theme')).toBe('light');
+
+    // 焦点在非输入元素（如取消按钮）→ 按 T 切换
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    const cancelBtn = screen.getByRole('button', { name: '取消' });
+    cancelBtn.focus();
+    fireEvent.keyDown(cancelBtn, { key: 't' });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+
+    // 焦点在输入框内 → 按 T 不切换（避免打断输入）
+    const input = screen.getByDisplayValue('春日山景.mp4') as HTMLInputElement;
+    input.focus();
+    fireEvent.keyDown(input, { key: 't' });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+    // 输入框里实际输入 t 也属于正常输入，不触发切换
+    fireEvent.change(input, { target: { value: '春日山景-t.mp4' } });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByDisplayValue('春日山景-t.mp4')).toBeTruthy();
+  });
 });

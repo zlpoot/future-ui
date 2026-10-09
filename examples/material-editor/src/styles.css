@@ -59,12 +59,16 @@ body {
   font-size: 20px;
 }
 
-/* 主题切换浮层：fixed + z-60，高于 Dialog overlay（z-50），弹窗打开时仍可点击 */
+/* 主题切换浮层：fixed + z-60，高于 Dialog overlay（z-50）。注意：Radix
+   modal 打开时会把 body 置为 pointer-events:none（外部子树不可命中），
+   仅靠 z-index 无法解除；示例端显式恢复 pointer-events:auto，使浮层在
+   弹窗打开时仍可被真实指针点击（不改任何公共契约）。 */
 .me-theme-float {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 60;
+  pointer-events: auto;
 }
 
 .me-note {
@@ -130,6 +134,143 @@ body {
 
 [data-theme] .text-destructive {
   color: var(--future-ui-danger);
+}
+
+/* ============================================================
+ * P1-1 修复：vendored shadcn 布局工具类（fixed/居中/网格/内边距
+ * 等）在仓库内无编译 CSS，示例端在 [data-slot] 上补齐必要布局，
+ * 使 Dialog 呈现真正的模态弹窗（遮罩 + 居中 + 层级 + 关闭按钮 +
+ * 表单/按钮布局）。不改公共契约、不改 vendored 组件。
+ * ============================================================ */
+
+[data-slot='dialog-overlay'] {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+[data-slot='dialog-content'] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: 100%;
+  max-width: calc(100% - 2rem);
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  outline: none;
+}
+
+@media (min-width: 640px) {
+  [data-slot='dialog-content'] {
+    max-width: 32rem;
+  }
+}
+
+[data-slot='dialog-header'] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  [data-slot='dialog-header'] {
+    text-align: left;
+  }
+}
+
+[data-slot='dialog-title'] {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+[data-slot='dialog-description'] {
+  font-size: 0.875rem;
+}
+
+[data-slot='dialog-close'] {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  opacity: 0.7;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+[data-slot='dialog-close'] svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+[data-slot='dialog-footer'] {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  [data-slot='dialog-footer'] {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+[data-slot='button'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-slot='input'] {
+  height: 2.25rem;
+  width: 100%;
+  min-width: 0;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+[data-testid='edit-dialog-fields'] {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-testid='edit-dialog-fields'] > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+[data-testid='edit-dialog-fields'] label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+[data-testid='edit-dialog-pending-confirm'] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+}
+
+[data-testid='edit-dialog-pending-confirm'] div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ---------- Dialog（含 Portal 内） ---------- */

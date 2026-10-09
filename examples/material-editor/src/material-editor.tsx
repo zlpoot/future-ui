@@ -41,6 +41,22 @@ export function MaterialEditorPage(): ReactElement {
     applyThemeToRoot(activeTheme);
   }, [activeTheme]);
 
+  // P1-2 键盘路径：模态 Dialog 的 Radix FocusScope 会把 Tab 限制在弹窗内
+  // （标准模态语义），右上角浮层在弹窗打开时不可 Tab 到达；示例端提供
+  // 按键 T 切换主题。焦点在输入框/文本域内时不触发（避免打断输入）。
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 't' && event.key !== 'T') return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      setThemeName((prev) => (prev === 'light' ? 'dark' : 'light'));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const editing = materials.find((m) => m.id === editingId) ?? null;
   const pushLog = (line: string): void => setLog((prev) => [...prev, line]);
 
@@ -67,7 +83,9 @@ export function MaterialEditorPage(): ReactElement {
           <h1>素材信息编辑（R2-A2 双主题换肤）</h1>
         </div>
         {/* 主题切换为 fixed 浮层（z-60 > Dialog overlay z-50）：Dialog 打开时
-            仍可真实点击换肤；主题只是宿主视觉偏好，不触碰业务状态。 */}
+            仍可真实指针点击换肤；键盘路径见按键 T（FocusScope 将 Tab 限制在
+            弹窗内，故浮层不可 Tab 到达——标准模态语义）。主题只是宿主视觉
+            偏好，不触碰业务状态。 */}
         <div className="me-theme-float">
           <ShadcnButton
             type="button"
@@ -82,7 +100,8 @@ export function MaterialEditorPage(): ReactElement {
         <p className="me-note">
           同一份 <code>MATERIAL_FIELDS</code> 声明驱动 UI 与 dev-only Agent 只读投影；复用
           <code> r1-edit-dialog-reference</code> Profile；敏感字段 <code>secretNote</code> 仅 UI 可见。
-          Light/Dark 为宿主视觉偏好，不改变业务状态、语义与投影。
+          Light/Dark 为宿主视觉偏好，不改变业务状态、语义与投影。切换：右上角按钮，或按键
+          <code> T</code>（弹窗内焦点不在输入框时也可用）。
         </p>
 
         <ul className="me-list" data-testid="me-list">

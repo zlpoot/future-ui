@@ -1,10 +1,61 @@
 # R2-A2 · #98 同一素材编辑页双主题换肤（Light/Dark）
 
-**状态：** 实现完成 · 停在 `AWAITING_INDEPENDENT_REVIEW`（Draft PR，交 ChatGPT 独立 Review）
+**状态：** 实现 + 首轮 Review（#99 独立 Review 5470176256）已完成；**P1 修复轮已交付**，
+停在 `AWAITING_INDEPENDENT_REVIEW`（Draft PR，等负责人/用户增量复审）
 **授权：** #4 Current Grant R2-A2-001（ACTIVE，#6077486895）；#98 交接评论 #6077510419
 **执行者：** 豆包（用户指定接替 Windows Codex）
 **基线（main）：** `cec1a1aeaf220624a3211b7d5e3ff773625ba7ea`（= PR #97 squash merge）
 **分支/worktree：** `feat/r2-a2-98-theming` @ `E:\projects\future-ui-r2a2`
+**P1 修复轮 HEAD：** `2f25774`（前一轮 HEAD `e01decedc1fd9305c87cfe93d796446a79cc4e27`）
+
+---
+
+## 0. P1 修复轮（Review 5470176256 → 增量复审）
+
+Review 结论两项 P1（+ 一项不阻塞技术债），本轮在**同一 Draft PR #99** 最小修复：
+
+### P1-1：Dialog 视觉/模态未达验收 → 已修
+- **根因**：`main.tsx` 只导入 `styles.css`，vendored shadcn 的 Tailwind 布局工具类
+  （`fixed inset-0 z-50`、`top-[50%] left-[50%]`、`grid/p-6/rounded-lg` 等）在仓库内无
+  编译 CSS，全部不生效 → Dialog 呈现为页面中间横贯的普通区块、无遮罩、Close 在左下。
+- **最小修复**：`styles.css` 新增 P1-1 布局块（仅 example 范围，`[data-slot=…]` 定向）：
+  - `dialog-overlay`：fixed inset-0 z-50（可见遮罩）；
+  - `dialog-content`：fixed top/left 50% + translate(-50%,-50%) 居中、z-50、宽度受控
+    （max-width 100%-2rem / sm 32rem）、grid gap、padding、圆角、outline none；
+  - `dialog-header/footer/title/description/close`：header 布局、footer 右对齐
+    （sm 行内）、close absolute top/right、去边框、svg 尺寸；
+  - `button/input`：基础布局（inline-flex、居中、圆角、高度、宽度、内边距）；
+  - 表单（`edit-dialog-fields`）与 pending 容器布局。
+- **新证据**：`rc98-material-editor-{light-dialog,dark-dialog}.png` 已替换为真实 Chrome
+  同场景截图：浅/深 Dialog 均**居中模态**（视口 1383×1243 下 content 位于 412,390 · 560×464，
+  中心 ≈ 视口中心）、全屏遮罩可见、Close 在弹窗右上、表单/按钮布局正常、输入框焦点环可见。
+
+### P1-2：模态期间主题按钮真实可操作性缺证明 → 已修并验证
+- **真实缺陷（审查预判成立）**：Radix modal 打开时把 `body` 置为 `pointer-events:none`
+  （外部子树不可命中），**仅 z-60 不解除限制**——真实指针点击浮层被 overlay 拦截
+  （`elementFromPoint` 实测命中 overlay，浮层不在命中栈）。jsdom `fireEvent.click` 不建模
+  该行为，故此前测试无法发现。
+- **最小修复**：`.me-theme-float` 显式 `pointer-events: auto`（仅 example 范围，不改公共
+  契约、不改 vendored 组件）。修复后 `elementFromPoint(浮层中心)` 实测命中切换按钮。
+- **真实交互验证（非强制点击、非 JS dispatch，全部真实输入事件）**：
+  | 状态 | 输入路径 | 结果 |
+  | --- | --- | --- |
+  | Dialog 打开 + 草稿未保存 | 真实指针点击（CDP mouse → `bu.click`）浮层 | dark 生效：页面/dialog/overlay 全部换色；Dialog 不关闭、草稿保持、日志零新增 |
+  | 同上（键盘） | 焦点在弹窗内「保存并关闭」，真实按键 `t`（CDP keyDown/keyUp） | 切换 dark→…：主题切换、焦点保持在按钮、无字符插入 |
+  | 输入守卫 | 焦点在输入框，真实按键 `t` | 主题**不**切换（避免打断输入） |
+  | Tab 陷阱 | 焦点在弹窗内按钮，真实 Tab | 焦点移到弹窗内另一元素（Close），**仍在 Dialog 内**——浮层不可 Tab 到达，属标准模态语义（FocusScope），如实记录 |
+  | pending（保存中） | 真实指针点击浮层 | busy/disabled 保持、`reason=save` 恰好一次、列表更新一次、Dialog 正常关闭 |
+- **键盘可操作性说明**：弹窗内键盘用户无法 Tab 到弹窗外浮层（模态 FocusScope 有意限制），
+  示例端提供按键 `T`（焦点不在输入框时）作为弹窗内键盘路径；页面说明文案已同步。
+
+### 不阻塞项（如实标记，未扩大范围）
+- `@future-ui/theme` 公共包入口 `node:fs` 技术债仍以示例 source alias 绕过，**不改公共包**；
+- 未重跑模型矩阵/跨浏览器；本轮仅跑 typecheck ×7 / eslint / 全量 vitest / 一次真实 Chrome。
+
+### P1 修复轮验证
+- 定向 jsdom：**14/14**（新增 1 例键盘路径：按键 T 切换 + 输入守卫）。
+- 既有 CI：typecheck ×7 **0**、eslint **0**、全量 vitest **55 files / 515 passed / 4 skipped**。
+- 真实 Chrome：上述交互矩阵全通过；证据 4 张已更新/新增（见 §5）。
 
 ---
 
@@ -58,29 +109,35 @@
    `packages/theme/src/provider.tsx`（其只依赖 react，即 D08 data-theme + token 表面的
    真实实现），实现真正的 ThemeProvider 复用且浏览器安全；`package.json` 仍声明该依赖
    以保留类型解析。
-2. **Modal 与主题切换入口冲突**：Radix Dialog overlay 为 fixed inset-0 z-50，会盖住页面
-   头部按钮。核实 radix-ui 1.7.0 该版本不对外部子树 inert/aria-hidden（仅 overlay + 焦点
-   陷阱），因此主题切换做成 fixed z-60 浮层，Dialog 打开时真实可点击。
+2. **Modal 与主题切换入口冲突（P1-2，审查后确认并修复）**：Radix Dialog overlay 为
+   fixed inset-0 z-50；真实 Chrome 实测**仅 z-60 不够**——modal 打开时 `body` 被置为
+   `pointer-events:none`，外部浮层不可命中，真实点击被 overlay 拦截。修复：`.me-theme-float`
+   显式 `pointer-events:auto`；键盘路径为弹窗内按键 `T`（FocusScope 将 Tab 限制在弹窗内，
+   属标准模态语义）。见 §0。
 3. **NOT-TESTED / 已知限制**：
    - 键盘 Escape 关闭仍受既有主机焦点策略拦截（#96 已记录，非本轮范围）；
+   - 浮层在 Dialog 打开时不可 Tab 到达（Radix FocusScope 模态焦点陷阱，标准行为）；
+     弹窗内键盘切换用按键 `T` 代替；
    - jsdom 不做真实 CSS 计算，视觉证据以 Chrome 截图为准；
    - 未做跨浏览器/跨 UI 库矩阵（#98 明确不要求）；
    - `packages/theme` 的 `useTheme/useVariantTokens` 本轮未使用（保留扩展位）。
 
 ## 5. 验证结果
 
-- 定向 jsdom（`corepack pnpm --filter @future-ui-examples/material-editor demo`）：**13/13 通过**
-  （R2-A1 9 例 + R2-A2 4 例）。
-- 既有 CI：typecheck ×7 **0 错误**；eslint **0**；全量 vitest **55 files / 514 passed / 4 skipped**。
-- 真实 Chrome smoke（loopback `127.0.0.1:5176`，受控一次）：
-  浅色初始 → 打开 Dialog + 草稿 + 焦点 → **Dialog 打开时切深色**（DOM：dlgBg `rgb(16,26,44)`、
-  border `rgb(42,58,86)`、text `rgb(230,237,247)`、overlay `rgba(0,0,0,.65)`；草稿/焦点保持、
-  日志无新增）→ 深色下保存 → pending 中切回浅色（busy 保持、无重复 pending）→ 保存完成
-  `reason=save` 一次、列表更新一次、日志仅含 Action 引用（无字段值）；0 console error/warning、
-  0 外部请求、0 HTTP 错误。
+- 定向 jsdom（`corepack pnpm --filter @future-ui-examples/material-editor demo`）：**14/14 通过**
+  （R2-A1 9 例 + R2-A2 5 例：换肤状态保持、事件次数、键盘 T + 输入守卫）。
+- 既有 CI：typecheck ×7 **0 错误**；eslint **0**；全量 vitest **55 files / 515 passed / 4 skipped**。
+- 真实 Chrome（loopback `127.0.0.1:5176`）：
+  - **P1-1 模态呈现**：浅/深 Dialog 均居中模态 + 全屏遮罩 + Close 右上 + 焦点可见
+    （同场景截图 `rc98-material-editor-{light-dialog,dark-dialog}.png`）；
+  - **P1-2 真实交互**：Dialog 打开/草稿/pending 三态，真实指针点击与真实按键 `t` 均可
+    切换主题；输入守卫、Tab 陷阱符合预期；pending 中切换不重复保存（`reason=save` 一次、
+    列表更新一次）；日志仅含 Action 引用；0 console error/warning、0 外部请求。
 - 证据：`docs/r1-rc/evidence/rc98-material-editor-{light,light-dialog,dark-dialog,after-save}.png`。
 
 ## 6. 停止门
 
-- 中文 Draft PR **Refs #98**，base `cec1a1ae` / head 见 PR；未 merge / close / tag / release / publish。
-- 交给 ChatGPT 独立 Review；负责人决定合并。
+- 中文 Draft PR **Refs #98**，base `cec1a1ae` / head 见 PR（P1 修复轮已 push 同一分支）；
+  未 merge / close / tag / release / publish。
+- 停在 `AWAITING_INDEPENDENT_REVIEW`：等负责人/用户增量复审；通过后再交 ChatGPT
+  正式确认合并。
