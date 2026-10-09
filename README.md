@@ -15,18 +15,38 @@ v0.1 是**本地可人工测试的最小版本**：一条启动路径 + 真实�
 - Windows + Node `>=24.21.0`（`engines` 字段）
 - pnpm `11.28.4`（`packageManager` 字段；经 corepack 使用）
 
-实际可运行命令：
+实际可运行命令（本机无全局 pnpm 时统一用 `corepack pnpm ...`；有全局 pnpm 时可直接 `pnpm ...`）：
 
 ```bash
-pnpm install --frozen-lockfile   # 冻结 lockfile 安装（含 dev-only vite 依赖）
-pnpm dev                         # 启动本地验收 host（本机无全局 pnpm 时：corepack pnpm dev）
+corepack pnpm install --frozen-lockfile        # 冻结 lockfile 安装（含 dev-only vite 依赖）
+corepack pnpm --filter @future-ui/rc-manual-host dev   # 启动本地验收 host（强制 loopback）
 ```
 
 启动地址：**http://127.0.0.1:5173**（dev server 强制只监听 127.0.0.1，strictPort 失败即报错，不会跳端口）。
 
 停止方式：终端 `Ctrl+C`。
 
-页面内容：shadcn EditDialog 与 Ark Dialog / Button / TextInput 的可点击对照、同一 Contract 的 supported / partial / unsupported 能力矩阵（真实 mapping 数据）、Project AI View（浏览器安全静态视图；现场有界校验为 Node-only，页面如实标注 NOT-RUNNABLE，行为由 vitest 覆盖）、独立 UI-only 样本（无 Agent / MCP，业务工具数 = 0）。
+页面内容：shadcn EditDialog 与 Ark Dialog / Button / TextInput 的可点击对照、同一 Contract 的 supported / partial / unsupported 能力矩阵（真实 mapping 数据）、Project AI View（浏览器安全静态视图；现场有界校验为 Node-only，页面如实标注 NOT-RUNNABLE，行为由下方 Node 命令覆盖）、独立 UI-only 样本（无 Agent / MCP，业务工具数 = 0）。
+
+### 开发期 AI 命令（P1 · 真实输出，Node-only）
+
+```bash
+corepack pnpm --filter @future-ui/rc-manual-host ai-view
+```
+
+复用 `@future-ui/ai-dev`：打印真实 Project AI View（组件 definitions / 版本摘要 / 映射限制）与 Validator
+正例 `PASS`、负例 `FAIL` 的 `ruleId/status/reason/repairHint`（不是硬编码假数据）。完整 stdout 存档：
+`docs/r1-rc/evidence/ai-view-command-stdout.txt`。
+
+### 最小 Consumer 示例（P1 · 一条命令）
+
+```bash
+corepack pnpm --filter @future-ui/rc-consumer demo
+```
+
+仓库内 `examples/rc-consumer` 演示四步接入：选一个已支持 Adapter（shadcn `/browser` 面）→ 复用同一
+Project Profile（`r1-edit-dialog-reference`）→ 读取 AI View（`buildShadcnProjectView`）→ 运行一个 UI 组件
+（EditDialog 渲染证据）。stdout 存档：`docs/r1-rc/evidence/rc-consumer-demo-stdout.txt`。
 
 人工验收：按 [MANUAL_CHECKLIST.md](MANUAL_CHECKLIST.md) 操作并分层记录证据（declared / rendered / interaction-verified / not-covered；未测写 NOT-TESTED）。实现说明与证据见 `docs/r1-rc/rc86-v01-manual-host.md`。
 

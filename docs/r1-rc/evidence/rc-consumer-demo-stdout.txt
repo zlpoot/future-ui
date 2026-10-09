@@ -1,0 +1,184 @@
+﻿corepack : $ vitest run tests/consumer-demo.test.tsx
+所在位置 行:1 字符: 98
++ ...  $env:PATH; corepack pnpm --filter @future-ui/rc-consumer demo *> doc ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ vitest run te...r-demo.test.tsx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90mE:/projects/future-ui-r1rc86/examples/rc-consumer[39m
+
+[90mstdout[2m | tests/consumer-demo.test.tsx[2m > [22m[2mconsumer: adapter + profile + AI view + one UI component (deterministic)
+[22m[39m
+===== STEP 1/2 · ADAPTER + PROFILE =====
+{
+  "adapter": "shadcn (browser-safe surface)",
+  "profileId": "r1-edit-dialog-reference",
+  "profileVersion": "1.0.0",
+  "scope": "R1-02 (#68) in-repo reference only; not a real-project profile (TBD)",
+  "explicitCloseEntries": [
+    "cancel-action",
+    "x-control"
+  ],
+  "escapeAndOverlayAreAdditionalOnly": true
+}
+
+===== STEP 3 · AI VIEW (real definitions / limits) =====
+{
+  "projectName": "future-ui/r1-reference",
+  "definitions": [
+    {
+      "componentType": "future-ui.dialog",
+      "mappingStatus": "supported",
+      "identity": {
+        "adapterId": "shadcn-react",
+        "adapterVersion": "0.0.0",
+        "contractVersion": "1.0.0",
+        "profileId": "r1-edit-dialog-reference",
+        "profileVersion": "1.0.0",
+        "upstream": {
+          "library": "shadcn/ui",
+          "base": "radix-ui@1.7.0",
+          "sourceCommit": "7ff7dbf8669fa3392c294ee745dc8d8c3cee842c",
+          "style": "new-york-v4",
+          "runtimePackages": [
+            {
+              "name": "radix-ui",
+              "version": "1.7.0"
+            },
+            {
+              "name": "cn",
+              "version": "0.4.0"
+            },
+            {
+              "name": "class-variance-authority",
+              "version": "0.7.1"
+            },
+            {
+              "name": "lucide-react",
+              "version": "1.52.0"
+            }
+          ]
+        }
+      },
+      "limits": []
+    },
+    {
+      "componentType": "future-ui.button",
+      "mappingStatus": "partial",
+      "identity": {
+        "adapterId": "shadcn-react",
+        "adapterVersion": "0.0.0",
+        "contractVersion": "1.0.0",
+        "profileId": "r1-edit-dialog-reference",
+        "profileVersion": "1.0.0",
+        "upstream": {
+          "library": "shadcn/ui",
+          "base": "radix-ui@1.7.0",
+          "sourceCommit": "7ff7dbf8669fa3392c294ee745dc8d8c3cee842c",
+          "style": "new-york-v4",
+          "runtimePackages": [
+            {
+              "name": "radix-ui",
+              "version": "1.7.0"
+            },
+            {
+              "name": "cn",
+              "version": "0.4.0"
+            },
+            {
+              "name": "class-variance-authority",
+              "version": "0.7.1"
+            },
+            {
+              "name": "lucide-react",
+              "version": "1.52.0"
+            }
+          ]
+        }
+      },
+      "limits": [
+        {
+          "member": "features.loading",
+          "status": "unsupported",
+          "reason": "shadcn Button exposes no loading prop and never sets aria-busy; the vendored component is a native button + cva variants only.",
+          "impact": "Pending/duplicate-submit behavior for EditDialog is realized in composition (disabled + aria-busy in the reference); the upstream feature itself does not exist, so Button cannot be \"supported\"."
+        },
+        {
+          "member": "props.loading",
+          "status": "unsupported",
+          "reason": "no loading prop upstream",
+          "impact": "composition supplies aria-busy/disabled while pending"
+        },
+        {
+          "member": "state.loading",
+          "status": "unsupported",
+          "reason": "no busy/loading state upstream",
+          "impact": "represented in composition during pending only"
+        }
+      ]
+    },
+    {
+      "componentType": "future-ui.text-input",
+      "mappingStatus": "partial",
+      "identity": {
+        "adapterId": "shadcn-react",
+        "adapterVersion": "0.0.0",
+        "contractVersion": "1.0.0",
+        "profileId": "r1-edit-dialog-reference",
+        "profileVersion": "1.0.0",
+        "upstream": {
+          "library": "shadcn/ui",
+          "base": "radix-ui@1.7.0",
+          "sourceCommit": "7ff7dbf8669fa3392c294ee745dc8d8c3cee842c",
+          "style": "new-york-v4",
+          "runtimePackages": [
+            {
+              "name": "radix-ui",
+              "version": "1.7.0"
+            },
+            {
+              "name": "cn",
+              "version": "0.4.0"
+            },
+            {
+              "name": "class-variance-authority",
+              "version": "0.7.1"
+            },
+            {
+              "name": "lucide-react",
+              "version": "1.52.0"
+            }
+          ]
+        }
+      },
+      "limits": [
+        {
+          "member": "accessibility.role",
+          "status": "unsupported",
+          "reason": "The frozen contract declares accessibility.role=\"textbox\" for the whole TextInput while props.type enum allows text/email/password/number/search/tel/url. Native implicit ARIA roles differ by type: text/email/tel/url map to textbox, number maps to spinbutton, search maps to searchbox, and password has NO implicit ARIA role at all (it stays a non-generic element without a role). A single native <input> therefore cannot satisfy role=textbox for every contracted type, and the frozen contract cannot be changed in this PR.",
+          "impact": "TextInput is partial: types text/email/tel/url meet role=textbox; number/search/password do not. Callers needing the textbox role guarantee must constrain type to the textbox set; full coverage would require a future contract version that declares the role per type (or an explicit role policy), which is out of scope here."
+        }
+      ]
+    }
+  ]
+}
+
+===== STEP 4 · RUN ONE UI COMPONENT (EditDialog rendered evidence) =====
+{
+  "role": "dialog",
+  "ariaModal": "true",
+  "labelledbyText": "成员编辑 (DialogTitle)",
+  "explicitCloseEntries": [
+    "cancel (取消)",
+    "save (保存并关闭)"
+  ]
+}
+
+ [32m✓[39m tests/consumer-demo.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 76[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 12:02:44
+[2m   Duration [22m 3.28s[2m (import 62%, environment 23%, transform 12%, tests 2%)[22m
+

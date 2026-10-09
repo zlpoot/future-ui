@@ -1,5 +1,6 @@
 packages:
   - 'packages/*'
+  - 'examples/*'
 
 # pnpm 11 settings live here (the "pnpm" key in package.json is no longer read).
 # esbuild's postinstall is required by vite's build pipeline (dev-only tooling);

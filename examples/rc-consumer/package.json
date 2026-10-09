@@ -1,0 +1,23 @@
+{
+  "name": "@future-ui/rc-consumer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R1-RC-001 (#86): in-repo minimal Consumer example — pick a supported Adapter, reuse the Project Profile, read the AI View, run one UI component. One command: pnpm --filter @future-ui/rc-consumer demo",
+  "scripts": {
+    "demo": "vitest run tests/consumer-demo.test.tsx"
+  },
+  "dependencies": {
+    "@future-ui/shadcn-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@future-ui/ai-dev": "workspace:*",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "^26.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vitest": "^5.0.3"
+  }
+}

@@ -65,6 +65,7 @@ export function TextInputSection(): ReactElement {
           <div className="row">
             <label htmlFor="ark-controlled">受控：</label>
             <ArkTextInput
+              id="ark-controlled"
               name="ark-controlled"
               value={arkValue}
               onValueChange={(e) => setArkValue(e.value)}
@@ -74,27 +75,27 @@ export function TextInputSection(): ReactElement {
           </div>
           <div className="row">
             <label htmlFor="ark-uncontrolled">非受控：</label>
-            <ArkTextInput name="ark-uncontrolled" defaultValue="默认值" />
+            <ArkTextInput id="ark-uncontrolled" name="ark-uncontrolled" defaultValue="默认值" />
           </div>
           <div className="row">
             <label htmlFor="ark-error">error：</label>
-            <ArkTextInput name="ark-error" error description="invalid → aria-invalid" />
+            <ArkTextInput id="ark-error" name="ark-error" error description="invalid → aria-invalid" />
           </div>
           <div className="row">
             <label htmlFor="ark-disabled">disabled：</label>
-            <ArkTextInput name="ark-disabled" disabled defaultValue="只读不可编辑" />
+            <ArkTextInput id="ark-disabled" name="ark-disabled" disabled defaultValue="只读不可编辑" />
           </div>
           <div className="row">
             <label htmlFor="ark-readonly">readOnly：</label>
-            <ArkTextInput name="ark-readonly" readOnly defaultValue="只读可聚焦" />
+            <ArkTextInput id="ark-readonly" name="ark-readonly" readOnly defaultValue="只读可聚焦" />
           </div>
           <div className="row">
             <label htmlFor="ark-number">type=number：</label>
-            <ArkTextInput name="ark-number" type="number" defaultValue="3" />
+            <ArkTextInput id="ark-number" name="ark-number" type="number" defaultValue="3" />
             <label htmlFor="ark-search">type=search：</label>
-            <ArkTextInput name="ark-search" type="search" />
+            <ArkTextInput id="ark-search" name="ark-search" type="search" />
             <label htmlFor="ark-password">type=password：</label>
-            <ArkTextInput name="ark-password" type="password" />
+            <ArkTextInput id="ark-password" name="ark-password" type="password" />
           </div>
           <p className="kv">
             <b>诚实限制：</b>number/search/password 隐式角色 ≠ textbox（accessibility.role unsupported），

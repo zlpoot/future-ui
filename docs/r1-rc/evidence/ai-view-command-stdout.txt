@@ -1,0 +1,268 @@
+﻿corepack : $ vitest run tests/ai-view-command.test.tsx
+所在位置 行:1 字符: 98
++ ...  $env:PATH; corepack pnpm --filter @future-ui/rc-manual-host ai-view  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ vitest run te...ommand.test.tsx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90mE:/projects/future-ui-r1rc86/packages/rc-manual-host[39m
+
+[90mstdout[2m | tests/ai-view-command.test.tsx[2m > [22m[2mprints real Project AI View and validator PASS/FAIL output (deterministic)
+[22m[39m
+===== AI VIEW · shadcn (r1-edit-dialog-reference) =====
+{
+  "projectName": "future-ui/r1-reference",
+  "adapterId": "shadcn-react",
+  "profileId": "r1-edit-dialog-reference",
+  "upstreamArtifacts": [],
+  "components": [
+    {
+      "componentType": "future-ui.dialog",
+      "mappingStatus": "supported",
+      "limits": []
+    },
+    {
+      "componentType": "future-ui.button",
+      "mappingStatus": "partial",
+      "limits": [
+        {
+          "member": "features.loading",
+          "status": "unsupported",
+          "reason": "shadcn Button exposes no loading prop and never sets aria-busy; the vendored component is a native button + cva variants only.",
+          "impact": "Pending/duplicate-submit behavior for EditDialog is realized in composition (disabled + aria-busy in the reference); the upstream feature itself does not exist, so Button cannot be \"supported\"."
+        },
+        {
+          "member": "props.loading",
+          "status": "unsupported",
+          "reason": "no loading prop upstream",
+          "impact": "composition supplies aria-busy/disabled while pending"
+        },
+        {
+          "member": "state.loading",
+          "status": "unsupported",
+          "reason": "no busy/loading state upstream",
+          "impact": "represented in composition during pending only"
+        }
+      ]
+    },
+    {
+      "componentType": "future-ui.text-input",
+      "mappingStatus": "partial",
+      "limits": [
+        {
+          "member": "accessibility.role",
+          "status": "unsupported",
+          "reason": "The frozen contract declares accessibility.role=\"textbox\" for the whole TextInput while props.type enum allows text/email/password/number/search/tel/url. Native implicit ARIA roles differ by type: text/email/tel/url map to textbox, number maps to spinbutton, search maps to searchbox, and password has NO implicit ARIA role at all (it stays a non-generic element without a role). A single native <input> therefore cannot satisfy role=textbox for every contracted type, and the frozen contract cannot be changed in this PR.",
+          "impact": "TextInput is partial: types text/email/tel/url meet role=textbox; number/search/password do not. Callers needing the textbox role guarantee must constrain type to the textbox set; full coverage would require a future contract version that declares the role per type (or an explicit role policy), which is out of scope here."
+        }
+      ]
+    }
+  ]
+}
+
+===== AI VIEW · mv-auto-editor (read-only sample) =====
+{
+  "projectName": "mv-auto-editor",
+  "adapterId": "shadcn-react",
+  "profileId": "mv-auto-editor",
+  "upstreamArtifacts": [
+    {
+      "locator": "web/canvas.html",
+      "contentHash": "52aa42c8ad7dc5217bafb7653dcc0e47ee175131"
+    },
+    {
+      "locator": "web/keyframes.html",
+      "contentHash": "c8522aaca047e9fd8c2b08c3584d35a61ced9bc9"
+    },
+    {
+      "locator": "web/shots.html",
+      "contentHash": "64f8cd2864d3f7addc17531b24788a352b9d7823"
+    }
+  ],
+  "components": [
+    {
+      "componentType": "future-ui.dialog",
+      "mappingStatus": "partial",
+      "limits": [
+        {
+          "member": "accessibility.role",
+          "status": "unsupported",
+          "reason": "资产编辑器是常驻 <aside id=\"inspector\">，无 role=\"dialog\" / aria-modal",
+          "impact": "与 EditDialog 的模态语义不同；屏幕阅读器不按对话框处理"
+        },
+        {
+          "member": "close.visibility",
+          "status": "unsupported",
+          "reason": "#closeInspector 在桌面端（>900px、非 embedded）CSS display:none",
+          "impact": "R1-DLG-02 的桌面端渲染检查将失败（真实缺口，Phase A 不改产品代码）"
+        },
+        {
+          "member": "focus.trap",
+          "status": "unsupported",
+          "reason": "无焦点陷阱与关闭后焦点还原",
+          "impact": "focusEnterAndRestore 语义不成立"
+        }
+      ]
+    },
+    {
+      "componentType": "future-ui.button",
+      "mappingStatus": "partial",
+      "limits": [
+        {
+          "member": "features.loading",
+          "status": "unsupported",
+          "reason": "生成/保存/上传进行中仅使用 disabled + 文本状态，无 aria-busy",
+          "impact": "pending 状态的辅助技术可访问性弱于契约；disabled 是渲染事实，不是重入守卫的 interaction 证据"
+        },
+        {
+          "member": "accessibility.action-role",
+          "status": "unsupported",
+          "reason": "P4/P5 审核动作语义只挂在 data-action/data-candidate/data-job 自定义属性上，无稳定 aria-label/role 契约，整页应用也不是模态",
+          "impact": "候选通过/淘汰/选用、重试、锁定等动作角色只能按真实 data-* 与文案识别；冻结规则集无 button 级 action/pending 规则，相关语义为 not-covered"
+        }
+      ]
+    },
+    {
+      "componentType": "future-ui.text-input",
+      "mappingStatus": "partial",
+      "limits": [
+        {
+          "member": "features.validation",
+          "status": "unsupported",
+          "reason": "字段无内联校验消息；shots 页校验只在保存时由后端抛出",
+          "impact": "与 EditDialog 字段校验语义不同"
+        }
+      ]
+    }
+  ]
+}
+
+[90mstdout[2m | tests/ai-view-command.test.tsx[2m > [22m[2mprints real Project AI View and validator PASS/FAIL output (deterministic)
+[22m[39m
+===== VALIDATOR · POSITIVE (real EditDialog rendered evidence) =====
+{
+  "evidence": {
+    "role": "dialog",
+    "ariaModal": true,
+    "closeAffordances": [
+      "/dialog[0]/[data-slot=dialog-close]",
+      "/dialog[0]/button[edit-dialog-cancel]"
+    ],
+    "resolutionAffordances": [
+      "/dialog[0]/button[edit-dialog-save]"
+    ],
+    "rootPath": "/dialog[0]"
+  },
+  "findings": [
+    {
+      "ruleId": "R1-PRJ-IDENTITY",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-PRJ-CAPABILITY",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "no explicit capability → zero business tools generated",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-PRJ-DRAFT-HIDDEN",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "draft/sensitive state is withheld by the explicit allowlist",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-DLG-02",
+      "status": "pass",
+      "tier": "rendered",
+      "reason": "",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-DLG-04",
+      "status": "not-covered",
+      "tier": "rendered",
+      "reason": "pending behavior needs TRUSTED interaction-verified evidence from the controlled driver; rendered/declared evidence cannot prove it",
+      "repairHint": "drive the pending flow in jsdom (duplicate submit / stop-wait) via the controlled driver and seal the evidence"
+    },
+    {
+      "ruleId": "R1-DLG-05",
+      "status": "not-covered",
+      "tier": "rendered",
+      "reason": "pending behavior needs TRUSTED interaction-verified evidence from the controlled driver; rendered/declared evidence cannot prove it",
+      "repairHint": "drive the pending flow in jsdom (duplicate submit / stop-wait) via the controlled driver and seal the evidence"
+    }
+  ],
+  "toolCount": 0
+}
+
+[90mstdout[2m | tests/ai-view-command.test.tsx[2m > [22m[2mprints real Project AI View and validator PASS/FAIL output (deterministic)
+[22m[39m
+===== VALIDATOR · NEGATIVE (no explicit close entry) =====
+{
+  "evidence": {
+    "role": "dialog",
+    "ariaModal": true,
+    "closeAffordances": [],
+    "resolutionAffordances": [],
+    "rootPath": "/dialog[0]"
+  },
+  "findings": [
+    {
+      "ruleId": "R1-PRJ-IDENTITY",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-PRJ-CAPABILITY",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "no explicit capability → zero business tools generated",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-PRJ-DRAFT-HIDDEN",
+      "status": "pass",
+      "tier": "declared",
+      "reason": "draft/sensitive state is withheld by the explicit allowlist",
+      "repairHint": ""
+    },
+    {
+      "ruleId": "R1-DLG-02",
+      "status": "fail",
+      "tier": "rendered",
+      "reason": "dialog provides no explicit close entry (X / cancel / ESC)",
+      "repairHint": "render an explicit close control or declare the dialog blocking and provide a resolution path"
+    },
+    {
+      "ruleId": "R1-DLG-04",
+      "status": "not-covered",
+      "tier": "rendered",
+      "reason": "pending behavior needs TRUSTED interaction-verified evidence from the controlled driver; rendered/declared evidence cannot prove it",
+      "repairHint": "drive the pending flow in jsdom (duplicate submit / stop-wait) via the controlled driver and seal the evidence"
+    },
+    {
+      "ruleId": "R1-DLG-05",
+      "status": "not-covered",
+      "tier": "rendered",
+      "reason": "pending behavior needs TRUSTED interaction-verified evidence from the controlled driver; rendered/declared evidence cannot prove it",
+      "repairHint": "drive the pending flow in jsdom (duplicate submit / stop-wait) via the controlled driver and seal the evidence"
+    }
+  ],
+  "toolCount": 0
+}
+
+ [32m✓[39m tests/ai-view-command.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 77[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 12:12:33
+[2m   Duration [22m 3.78s[2m (import 64%, environment 20%, transform 14%, tests 2%)[22m
+

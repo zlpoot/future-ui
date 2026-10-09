@@ -33,8 +33,10 @@ export function DialogSection(): ReactElement {
     <section className="section" data-testid="section-dialog">
       <h2>1 · Dialog 对照</h2>
       <p className="section-note">
-        左侧：shadcn EditDialog（Radix，参考实例，含 blocking 变体）；右侧：Ark Dialog
-        （@ark-ui/react@5.39.3 真实 primitive + opt-in CloseTrigger）。focus trap / Escape / 焦点归还需在真实浏览器验证。
+        左侧：shadcn EditDialog（Radix，参考实例，含 blocking 变体）——Escape 与遮罩点击
+        有意**始终阻断**（R1-DLG-02：显式关闭入口优先），非 blocking 经 X/取消/保存关闭，
+        blocking 仅 保存/放弃；右侧：Ark Dialog（@ark-ui/react@5.39.3 真实 zag 机器，
+        Escape 与 CloseTrigger 可用）。焦点 trap / 焦点归还 / Tab 需真实浏览器验证。
       </p>
       <div className="columns">
         <div className="card">
@@ -49,8 +51,10 @@ export function DialogSection(): ReactElement {
             </ShadcnButton>
           </div>
           <p className="kv">
-            <b>blocking 变体：</b>
-            {shadcnBlocking ? '启用（仅 保存/放弃 可终结，Esc/遮罩不可关）' : '未启用'}
+            <b>关闭策略（两变体一致）：</b>
+            {shadcnBlocking
+              ? 'blocking 启用：仅 保存并关闭 / 放弃变更并关闭 可终结；Escape 与遮罩始终阻断'
+              : '非 blocking：X / 取消 / 保存并关闭；Escape 与遮罩始终阻断（R1-DLG-02）'}
           </p>
           <EditDialog
             open={shadcnOpen}

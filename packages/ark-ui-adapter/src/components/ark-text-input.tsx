@@ -30,6 +30,8 @@ export interface ArkTextInputValueChange {
  * component does not override the implicit role to fake conformance.
  */
 export interface ArkTextInputProps {
+  /** Local id passthrough so a host <label htmlFor> can associate with the real Field.Input (no public Contract change). */
+  id?: string;
   value?: string;
   defaultValue?: string;
   disabled?: boolean;
@@ -43,6 +45,7 @@ export interface ArkTextInputProps {
 }
 
 export function ArkTextInput({
+  id,
   value,
   defaultValue,
   disabled = false,
@@ -64,6 +67,7 @@ export function ArkTextInput({
     <Field.Root disabled={disabled} readOnly={readOnly} invalid={error}>
       {helper}
       <Field.Input
+        id={id}
         data-part="root"
         {...(controlled ? { value } : { defaultValue })}
         type={type}

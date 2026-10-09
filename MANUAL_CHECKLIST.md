@@ -15,7 +15,9 @@
 
 - [ ] 标题/描述可见（role=dialog、aria-modal=true、aria-labelledby/aria-describedby 关联）。
 - [ ] 显式关闭入口可点：shadcn 的 X 与「取消」；Ark 的「关闭」（CloseTrigger）。
-- [ ] 非 blocking 时 Escape 可关闭、遮罩点击关闭（shadcn blocking 开启后 Escape/遮罩**不**关闭，仅 保存/放弃 可终结）。
+- [ ] **shadcn EditDialog（两变体一致）**：Escape 与遮罩点击**始终被阻断**（R1-DLG-02：显式关闭入口优先，Esc/遮罩永不作为唯一关闭通道）。
+      非 blocking 经 X / 取消 / 保存并关闭 关闭；blocking 无 X，仅 保存并关闭 / 放弃变更并关闭。
+- [ ] **Ark Dialog（真实 zag 机器，与 shadcn 不同源）**：Escape 与 CloseTrigger 可用（zag 默认语义，非 blocking）；遮罩点击行为单独实测后再记录；blocking 为 shadcn 参考实例独有，Ark 侧无此变体。
 - [ ] 打开后焦点进入对话框；关闭后焦点归还触发按钮；Tab 不逃逸（真实浏览器验证；jsdom 不替代）。
 - [ ] 保存为 1.2s 异步：pending 期间再次点保存不重复提交（R1-DLG-04）；pending 中点取消出现「停止等待并关闭」确认（R1-DLG-05）。
 - [ ] Ark 对话框内容区输入、关闭日志更新。
@@ -42,9 +44,15 @@
       Ark headless 视觉 token unsupported 已公告；不宣称跨库像素一致。
 - [ ] Project AI View 显示真实身份（shadcn adapter `shadcn-react` / profile `r1-edit-dialog-reference`、upstream files
       3 个；Ark adapter `ark-ui-react` / `@ark-ui/react@5.39.3` / `@zag-js@1.45.0`）。
+- [ ] **P1 · AI 开发命令（真实输出）**：执行 `corepack pnpm --filter @future-ui/rc-manual-host ai-view`，
+      输出真实组件 definitions/limits、正例 `R1-DLG-02 PASS`、负例 `R1-DLG-02 FAIL` 的
+      `ruleId/status/reason/repairHint`（完整 stdout 见 `docs/r1-rc/evidence/ai-view-command-stdout.txt`）。
+- [ ] **P1 · Consumer 示例（一条命令）**：执行 `corepack pnpm --filter @future-ui/rc-consumer demo`，
+      展示选 Adapter / 复用 Profile / 读 AI View / 运行一个 UI 组件（stdout 见
+      `docs/r1-rc/evidence/rc-consumer-demo-stdout.txt`）。
 - [ ] 现场有界校验与 MV Project View 如实标注 **NOT-RUNNABLE（Node-only）**——ai-dev validator 依赖 node:fs
-      （contracts/validate.ts 模块加载期读 schema），浏览器不可运行；确定性行为（正例 R1-DLG-02 PASS / 负例
-      确定性 FAIL）由 vitest `validator-demo.test.tsx`（Node 侧）覆盖。
+      （contracts/validate.ts 模块加载期读 schema），浏览器不可运行；确定性行为由上述 `ai-view` 命令（真实输出）
+      覆盖（正例 PASS / 负例 FAIL）。
 - [ ] MV upstream drift 门禁标注 **Node-only / 浏览器 NOT-RUNNABLE**（Node 侧由 ai-dev 测试覆盖）。
 
 ## 5 · UI-only 样本（~1 min）
@@ -84,3 +92,23 @@
 | Escape / 遮罩 / blocking / 焦点 | NOT-TESTED | 自动化键盘被主机焦点策略拦截（合成事件无法触达 React 根）；留人工清单执行 |
 
 以上自动化结果**不替代**人工清单：第 1、3 节的焦点/Escape/ARIA 关联项请按清单逐项人工确认。
+
+---
+
+## 附二 · 2026-10-09 四项最小修复轮记录（P1×2 / P2×2，PR #93 评论 6073860420）
+
+环境同上（Node v24.21.0 · pnpm v11.28.4 · worktree `E:\projects\future-ui-r1rc86`）。新命令真实 stdout 已入库：
+`docs/r1-rc/evidence/ai-view-command-stdout.txt`、`docs/r1-rc/evidence/rc-consumer-demo-stdout.txt`；截图
+`docs/r1-rc/evidence/browser-fixes-sections.png`。自动化基线（本提交 HEAD 实测）：frozen-lockfile install exit 0；
+typecheck ×6 全 0；eslint exit 0；`vitest run` 54 files / **501 passed / 4 skipped**（首轮基线 497 passed + 新增 4）。
+
+| 修复 | 结果 | 证据 |
+| --- | --- | --- |
+| P1 · AI View/Validator 命令 | passed + 真实 stdout 入库 | `ai-view` 命令：shadcn/mv definitions+limits、正例 R1-DLG-02 PASS（tier=rendered）、负例 R1-DLG-02 FAIL（reason/repairHint）、toolCount=0 |
+| P1 · Consumer 示例 | passed + 真实 stdout 入库 | `rc-consumer` demo：Adapter/browser + profileId=r1-edit-dialog-reference + AI View + EditDialog 渲染证据（role=dialog/aria-modal/cancel+save） |
+| P2 · Dialog 清单/页面说明 | 校准完成 | EditDialog 两变体一律阻断 Escape/遮罩（代码事实）；清单第 1 节与页面说明已对齐；Ark 真实 zag 分别说明 |
+| P2 · Ark 标签关联 | interaction-verified | 真实 Chrome 点击 Ark「受控：」label → activeElement=`input#ark-controlled`；jsdom 定向测试 2/2（id 渲染 + htmlFor 关联/可聚焦） |
+| 受影响浏览器回归 | interaction-verified | 更新后页面加载无 error；shadcn 打开→取消（reason=cancel open=false）、Ark 打开→CloseTrigger（open=false） |
+| 旧 NOT-TESTED 项 | 保持 | Escape 键/遮罩/blocking/焦点/Tab 等仍 NOT-TESTED（见第 1 节清单与主附表） |
+
+以上结果**不替代**人工清单与独立 Review；Draft PR #93 停在 AWAITING_INDEPENDENT_REVIEW。
