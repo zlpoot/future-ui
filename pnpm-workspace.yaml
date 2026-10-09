@@ -1,6 +1,12 @@
 packages:
   - 'packages/*'
 
+# pnpm 11 settings live here (the "pnpm" key in package.json is no longer read).
+# esbuild's postinstall is required by vite's build pipeline (dev-only tooling);
+# every other dependency keeps pnpm's default "ignore build scripts" policy.
+allowBuilds:
+  esbuild: true
+
 # Scoped allow-list for pnpm's built-in minimumReleaseAge supply-chain policy.
 # The radix-ui@1.7.0 umbrella (and its @radix-ui/react-* 1.2 line pulled by the
 # official shadcn new-york-v4 registry) was published 2026-10-05, inside the

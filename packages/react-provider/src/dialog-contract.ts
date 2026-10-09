@@ -1,6 +1,6 @@
 import { validateComponent, type ComponentContract, type Diagnostic } from '@future-ui/contracts';
-
-export const DIALOG_COMPONENT_TYPE = 'future-ui.dialog';
+import { DIALOG_COMPONENT_TYPE } from './component-types.js';
+export { DIALOG_COMPONENT_TYPE } from './component-types.js';
 
 /**
  * Public Dialog contract instance (D05 M0 field families), consumed by the

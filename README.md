@@ -6,6 +6,32 @@ future-ui 不重新实现一套 UI 库。它连接现有 UI 库，把组件、�
 
 > 方向来源：负责人 2026-10-05 确认。本轮是定位、文档与后续计划整理，不是产品代码开发。新的具体 API、依赖与执行范围仍按目标 Issue 和 [#4](https://github.com/zlpoot/future-ui/issues/4) 确认。
 
+## 快速启动（v0.1 · R1-RC-001 #86）
+
+v0.1 是**本地可人工测试的最小版本**：一条启动路径 + 真实可操作的 UI 示例（shadcn / Ark）+ 只读 Project AI View / Validator + 独立 UI-only 样本。
+
+前置版本：
+
+- Windows + Node `>=24.21.0`（`engines` 字段）
+- pnpm `11.28.4`（`packageManager` 字段；经 corepack 使用）
+
+实际可运行命令：
+
+```bash
+pnpm install --frozen-lockfile   # 冻结 lockfile 安装（含 dev-only vite 依赖）
+pnpm dev                         # 启动本地验收 host（本机无全局 pnpm 时：corepack pnpm dev）
+```
+
+启动地址：**http://127.0.0.1:5173**（dev server 强制只监听 127.0.0.1，strictPort 失败即报错，不会跳端口）。
+
+停止方式：终端 `Ctrl+C`。
+
+页面内容：shadcn EditDialog 与 Ark Dialog / Button / TextInput 的可点击对照、同一 Contract 的 supported / partial / unsupported 能力矩阵（真实 mapping 数据）、Project AI View（浏览器安全静态视图；现场有界校验为 Node-only，页面如实标注 NOT-RUNNABLE，行为由 vitest 覆盖）、独立 UI-only 样本（无 Agent / MCP，业务工具数 = 0）。
+
+人工验收：按 [MANUAL_CHECKLIST.md](MANUAL_CHECKLIST.md) 操作并分层记录证据（declared / rendered / interaction-verified / not-covered；未测写 NOT-TESTED）。实现说明与证据见 `docs/r1-rc/rc86-v01-manual-host.md`。
+
+> 该 host 是 **dev-only 工具**：`vite` / `@vitejs/plugin-react` 仅作为开发依赖进入 lockfile，不进入任何运行时 / 发布图；不复制组件、不新建 UI 框架、不改公共契约。
+
 ## 要解决的问题
 
 Model Hub、bilibili docs、MV 制作等工程都可以由 AI 做到能用，但弹窗关闭入口、按钮位置、表单间距、pending 状态等经常各不相同。目标不是证明 AI 能完成以前完成不了的复杂任务，而是减少同类 UI 决策的重复发挥与人工纠正。

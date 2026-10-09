@@ -1,6 +1,6 @@
 import { validateComponent, type ComponentContract, type Diagnostic } from '@future-ui/contracts';
-
-export const BUTTON_COMPONENT_TYPE = 'future-ui.button';
+import { BUTTON_COMPONENT_TYPE } from './component-types.js';
+export { BUTTON_COMPONENT_TYPE } from './component-types.js';
 
 /**
  * Public Button contract instance (D05 M0 field families), consumed by the

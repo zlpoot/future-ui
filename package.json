@@ -9,8 +9,9 @@
     "node": ">=24.21.0"
   },
   "scripts": {
+    "dev": "pnpm --filter @future-ui/rc-manual-host dev",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit && tsc -p packages/ark-ui-adapter/tsconfig.json --noEmit && tsc -p packages/ai-dev/tsconfig.json --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit && tsc -p packages/ark-ui-adapter/tsconfig.json --noEmit && tsc -p packages/ai-dev/tsconfig.json --noEmit && tsc -p packages/rc-manual-host/tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {

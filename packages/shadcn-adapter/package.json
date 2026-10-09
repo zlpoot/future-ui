@@ -5,7 +5,8 @@
   "type": "module",
   "description": "R1-02 (#68): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
   },
   "dependencies": {
     "@future-ui/contracts": "workspace:*",

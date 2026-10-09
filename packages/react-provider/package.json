@@ -5,7 +5,8 @@
   "type": "module",
   "description": "React framework adapter/provider — first public UI surface, Button as first contract consumer (M1-01A)",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./component-types": "./src/component-types.ts"
   },
   "dependencies": {
     "@future-ui/contracts": "workspace:*"
