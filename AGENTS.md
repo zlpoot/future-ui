@@ -1,6 +1,17 @@
 # future-ui · Agent 工作入口
 
-## 当前执行边界：R1-RC-001 · #86 ONLY
+## 当前执行边界（2026-10-09，最新）
+
+- **#86 已完成：** [PR #93](https://github.com/zlpoot/future-ui/pull/93) 已 squash merge，main `f6f7b04640758c8ecc2b19e55856a34196b3953a`，负责人实际试用，[#86](https://github.com/zlpoot/future-ui/issues/86) 已 completed/closed。这是 v0.1 本地源码试用闭环，不代表 Tag/Release/npm 发布或完整浏览器矩阵。
+- **当前补口：** [#94](https://github.com/zlpoot/future-ui/issues/94) 三条最短接入语义 + Ark UI-only 标签关联/定向测试，保持轻量，独立 PR/Review。
+- **下一阶段准备：** [#91](https://github.com/zlpoot/future-ui/issues/91) 允许做最新 main 的复用能力盘点和一个窄子 Issue；业务 Action、换肤、WebMCP runtime 不得混进 #94。是否 Coding 按 #91 子项和 [#4 最新 Current Grant](https://github.com/zlpoot/future-ui/issues/4)。
+- **仍有效：** 不修改公共 Contract/Schema、真实外部业务、账号、付费模型、强制覆盖用户文件；无 Tag/Release/npm publish/deploy 授权。Review 与 Worker 使用不同执行会话；未经独立 Review 不合并新产品 PR。
+
+以下 #86 的原执行边界作为**历史归档**保留，旧的“#86 ONLY/不准 Merge”不覆盖 2026-10-09 的最新负责人授权。
+
+---
+
+## 历史执行边界：R1-RC-001 · #86 ONLY（已完成）
 
 负责人于 2026-10-08 明确指示「启动下一步」，目标为 [#86：第一版可人工测试交付](https://github.com/zlpoot/future-ui/issues/86)。唯一活动授权：[**#4 Current Grant = R1-RC-001**](https://github.com/zlpoot/future-ui/issues/4)。它不覆盖 #71、#66 其他任务或任何历史 #70 实施。
 
