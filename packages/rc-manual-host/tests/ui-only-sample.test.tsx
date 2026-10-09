@@ -37,6 +37,10 @@ describe('UI-only sample (jsdom)', () => {
 
     const nameInput = document.querySelector('#uio-name') as HTMLInputElement;
     const noteInput = Array.from(document.querySelectorAll('input')).find((i) => i.name === 'uio-note') as HTMLInputElement;
+    const noteLabel = container.querySelector('label[for="uio-note"]') as HTMLLabelElement;
+    expect(noteLabel).not.toBeNull();
+    expect(noteLabel.htmlFor).toBe('uio-note');
+    expect(noteInput.id).toBe('uio-note');
     act(() => {
       fireEvent.change(nameInput, { target: { value: '小明' } });
       fireEvent.change(noteInput, { target: { value: '第一条备注' } });
