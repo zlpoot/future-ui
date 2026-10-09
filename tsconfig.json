@@ -30,6 +30,7 @@
     "dist",
     "packages/shadcn-adapter",
     "packages/ark-ui-adapter",
-    "packages/ai-dev"
+    "packages/ai-dev",
+    "packages/rc-manual-host"
   ]
 }

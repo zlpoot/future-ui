@@ -1,6 +1,6 @@
 import { validateComponent, type ComponentContract, type Diagnostic } from '@future-ui/contracts';
-
-export const TEXT_INPUT_COMPONENT_TYPE = 'future-ui.text-input';
+import { TEXT_INPUT_COMPONENT_TYPE } from './component-types.js';
+export { TEXT_INPUT_COMPONENT_TYPE } from './component-types.js';
 
 /**
  * Public TextInput contract instance (D05 M0 field families), consumed by the

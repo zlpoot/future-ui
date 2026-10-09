@@ -2,7 +2,7 @@ import {
   BUTTON_COMPONENT_TYPE,
   DIALOG_COMPONENT_TYPE,
   TEXT_INPUT_COMPONENT_TYPE,
-} from '@future-ui/react-provider';
+} from '@future-ui/react-provider/component-types';
 
 import {
   CONTRACT_VERSION,

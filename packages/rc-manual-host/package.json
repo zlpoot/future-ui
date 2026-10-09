@@ -1,0 +1,32 @@
+{
+  "name": "@future-ui/rc-manual-host",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R1-RC-001 (#86): thinnest private local demo host — real shadcn/Ark Dialog/Button/TextInput side by side, honest supported/partial/unsupported matrix, dev-only Project AI View / Validator panel, independent UI-only sample. Dev-only tooling; never published, never part of the UI runtime graph.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "ai-view": "vitest run tests/ai-view-command.test.tsx"
+  },
+  "dependencies": {
+    "@future-ui/ark-ui-adapter": "workspace:*",
+    "@future-ui/react-provider": "workspace:*",
+    "@future-ui/shadcn-adapter": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@future-ui/ai-dev": "workspace:*",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "jsdom": "^26.0.0",
+    "vite": "7.3.7",
+    "vitest": "^5.0.3"
+  }
+}
