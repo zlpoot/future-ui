@@ -52,7 +52,7 @@ export function UiOnlySample(): ReactElement {
             description="shadcn 输入"
           />
           <label htmlFor="uio-note">备注：</label>
-          <ArkTextInput name="uio-note" value={note} onValueChange={(e) => setNote(e.value)} />
+          <ArkTextInput id="uio-note" name="uio-note" value={note} onValueChange={(e) => setNote(e.value)} />
           <ArkButton type="button" onClick={register}>
             登记
           </ArkButton>
