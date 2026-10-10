@@ -15,7 +15,8 @@
     "node": ">=24.21.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "tsc -p tsconfig.build.json"
   },
   "dependencies": {},
   "devDependencies": {

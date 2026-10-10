@@ -9,7 +9,8 @@
  * 校验失败时给出可理解错误并安全退出（不写入任何文件）。
  */
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { CreateError } from './template.js';
 import { RC_CANDIDATES, VENDOR_REL_DIR } from './constants.js';
@@ -38,6 +39,23 @@ export interface VendoredTarball {
   fileName: string;
   /** 相对生成工程根的 file: 引用 */
   fileRef: string;
+  /** 归档 SHA-256（应与 #105 rc-dist/SHA256SUMS.txt 冻结清单一致） */
+  sha256: string;
+}
+
+function sha256Of(filePath: string): string {
+  const hash = createHash('sha256');
+  const buf = Buffer.alloc(256 * 1024);
+  const fd = openSync(filePath, 'r');
+  try {
+    let bytes = 0;
+    while ((bytes = readSync(fd, buf, 0, buf.length, null)) > 0) {
+      hash.update(buf.subarray(0, bytes));
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return hash.digest('hex');
 }
 
 /** 校验 rc 目录并返回 4 个归档的 vendoring 计划；任一不匹配即抛错。 */
@@ -69,16 +87,18 @@ export function planRcVendoring(rcDir: string): VendoredTarball[] {
       sourcePath: src,
       fileName: cand.tarballName,
       fileRef: `${VENDOR_REL_DIR}/${cand.tarballName}`,
+      sha256: sha256Of(src),
     });
   }
   return planned;
 }
 
-/** 把 4 个归档拷入目标项目 vendor 目录。 */
+/** 把 4 个归档拷入目标项目 vendor 目录，并打印参与 pilot 的 SHA-256 证据。 */
 export function vendorRcTarballs(projectDir: string, planned: VendoredTarball[]): void {
   const vendorDir = join(projectDir, VENDOR_REL_DIR);
   mkdirSync(vendorDir, { recursive: true });
   for (const t of planned) {
     copyFileSync(t.sourcePath, join(vendorDir, t.fileName));
+    console.log(`  ${t.sha256}  ${t.fileName}`);
   }
 }

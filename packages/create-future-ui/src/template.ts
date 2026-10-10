@@ -66,10 +66,9 @@ export const BASE_PACKAGE_JSON: RenderedPackageJson = {
   },
 };
 
-/** 目标目录校验：不存在 → 可创建；存在且空 → 可写；存在且非空 → 拒绝（不覆盖未知文件）。 */
-export function assertTargetUsable(targetDir: string): void {
+/** 目标目录只读预检：不存在或空目录 → 可写；存在且非空 → 拒绝（不覆盖未知文件）。不产生任何写入。 */
+export function checkTargetUsable(targetDir: string): void {
   if (!existsSync(targetDir)) {
-    mkdirSync(targetDir, { recursive: true });
     return;
   }
   const entries = readdirSync(targetDir);
@@ -78,7 +77,12 @@ export function assertTargetUsable(targetDir: string): void {
       `目标目录已存在且非空，拒绝覆盖：${targetDir}\n请选择空目录或不存在的目录名（不会删除/覆盖任何现有文件）。`,
     );
   }
-  // 空目录：直接使用
+  // 空目录：可写
+}
+
+/** 创建目标目录（仅在全部预检通过后调用）。 */
+export function ensureTargetDir(targetDir: string): void {
+  mkdirSync(targetDir, { recursive: true });
 }
 
 /** 递归渲染模板（.tmpl 占位替换）到目标目录。 */

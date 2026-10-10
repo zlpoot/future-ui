@@ -16,8 +16,16 @@ import { join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { assertTargetUsable, CreateError, renderPackageJson, rewriteDepsToVendor, writeTemplate } from './template.js';
+import {
+  checkTargetUsable,
+  CreateError,
+  ensureTargetDir,
+  renderPackageJson,
+  rewriteDepsToVendor,
+  writeTemplate,
+} from './template.js';
 import { planRcVendoring, vendorRcTarballs } from './rc-vendor.js';
+import type { VendoredTarball } from './rc-vendor.js';
 import { RC_CANDIDATES, TEMPLATE_NAME, VENDOR_REL_DIR, DEFAULT_DEV_PORT } from './constants.js';
 
 /** 生成工程自带的 .gitignore（模板归档不含 dotfiles）。 */
@@ -89,12 +97,45 @@ export function parseArgs(argv: string[]): CliOptions | null {
     throw new CreateError(`只接受一个 <project-name>，收到：${positional.join(', ')}`);
   }
   const projectName = positional[0]!;
-  if (!/^[A-Za-z0-9._-]+$/.test(projectName)) {
-    throw new CreateError(
-      `无效的 <project-name>：${projectName}\n只允许字母、数字、点、下划线、连字符（npm 包名校验）。`,
-    );
+  const nameError = validateProjectName(projectName);
+  if (nameError !== null) {
+    throw new CreateError(`无效的 <project-name>：${projectName}\n${nameError}`);
   }
   return { projectName, localRcDir };
+}
+
+/** Windows 保留设备名（含带扩展名形态，如 CON.txt 在 Windows 上同样被保留）。 */
+const WINDOWS_DEVICE_NAME_RE = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$/i;
+
+/**
+ * 校验项目名（目录名 = npm package name）：
+ * 拒绝 "."、".."、Windows 设备名、以 "."/"_" 开头、以 "."/"_"/"-" 结尾、
+ * 超长或含非 URL 安全字符（validate-npm-package-name 的 new-package 规则子集）。
+ * 返回错误描述；合法返回 null。
+ */
+export function validateProjectName(name: string): string | null {
+  if (name === '.' || name === '..') {
+    return '不能是 "." 或 ".."';
+  }
+  if (name.length === 0) {
+    return '不能为空';
+  }
+  if (name.length > 214) {
+    return '长度超过 214 字符上限';
+  }
+  if (/^[._]/.test(name)) {
+    return '不能以 "." 或 "_" 开头（npm 包名规则）';
+  }
+  if (/[._-]$/.test(name)) {
+    return '不能以 "."、"_" 或 "-" 结尾（npm 包名规则）';
+  }
+  if (!/^[A-Za-z0-9._~-]+$/.test(name)) {
+    return '只能包含字母、数字、点、下划线、波浪线（~）与连字符（npm 包名规则）';
+  }
+  if (WINDOWS_DEVICE_NAME_RE.test(name)) {
+    return 'Windows 保留设备名，不能用作目录名';
+  }
+  return null;
 }
 
 function printNextSteps(projectDir: string, localRcDir?: string): void {
@@ -136,13 +177,20 @@ export function run(argv: string[]): number {
 
   const projectDir = resolve(options.projectName);
   try {
-    assertTargetUsable(projectDir);
-    // 模板渲染（package.json 由本脚本生成，模板中不含该文件）
+    // 阶段 1 · 只读预检：目标目录可用性 + RC 资产完整性。任何失败都不产生写入，
+    // 同名重试前工作区保持原状（#107 安全失败要求）。
+    checkTargetUsable(projectDir);
+    let planned: VendoredTarball[] | undefined;
+    if (options.localRcDir) {
+      planned = planRcVendoring(resolve(options.localRcDir));
+    }
+
+    // 阶段 2 · 全部预检通过后才开始写入。
+    ensureTargetDir(projectDir);
     writeTemplate(projectDir, templateDir, options.projectName);
     const manifest = renderPackageJson(options.projectName);
 
-    if (options.localRcDir) {
-      const planned = planRcVendoring(resolve(options.localRcDir));
+    if (planned !== undefined && options.localRcDir) {
       vendorRcTarballs(projectDir, planned);
       const fileRefByName = new Map(RC_CANDIDATES.map((c, i) => [c.packageName, planned[i]!.fileRef]));
       rewriteDepsToVendor(manifest, (pkg) => fileRefByName.get(pkg) ?? pkg);

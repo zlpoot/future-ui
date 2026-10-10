@@ -4,6 +4,7 @@
 - 授权：Issue #4 Current Grant = R3-WIN-01 / #107 IMPLEMENTATION_READY（ACTIVE）
 - Base SHA：`48ad9733c49202bc878c6159929a37073efbbee1`（fetch 核对一致）
 - 本地环境：Windows；Node v22.23.2（低于 engines 24.21.0，如实记录；CI node24 为权威）；pnpm 11.28.4；npm 10.9.8
+- **Review 增量轮（PR #110）补充：Windows Node 24.21.0 权威验证**（系统 `C:\Program Files\nodejs\node.exe` + npm 11.19.0，见下文）
 
 ## 交付产物
 
@@ -15,9 +16,41 @@
 
 `create-future-ui-0.1.0-rc.1.tgz`
 
-SHA-256：`1F86A5AEF4D63EA8DBD9E44517884BE8069A1370C7EBDE1CC59D8A3250FB0838`
+SHA-256：`FC7650056596C227AD0EAE40700CBDB0A5B449F014A8FF707F501D9407307507`（Review 修复后新 HEAD 重新打包；历史值 `1F86A5AE…` 标记为已废弃，不再与最终候选混淆）
 
 归档内容：`dist/*.js|.d.ts|.map` + `templates/react-vite-ts/**`（含 index.html.tmpl、README.md.tmpl、src/{main,App,theme.tsx,fixture.test.tsx,styles.css}、vite.config.ts、tsconfig.json）。
+
+## Review 增量修复（PR #110，P1×2 + P2×2）
+
+| 项 | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| P1-1 | `writeTemplate` 在 `planRcVendoring()` 之前执行；缺归档失败后留下非空工程，无法同名重试 | `run()` 拆为两阶段：先只读预检（`checkTargetUsable` + `planRcVendoring`），全部通过后才 `ensureTargetDir` + 写入 | 单测：坏 rc 失败 → 目标目录不存在 → 同名重试成功（工程完整、vendor 4 个 tgz 就位）✓ |
+| P1-2 | `dist/` 被 gitignore，仅 `build` 无 prepack/发布前构建门；CI 未真实 build/pack | package.json 加 `prepack: tsc`；CI 加 create-future-ui build + pack smoke（`pnpm pack` 后校验归档含 `dist/cli.js` 与模板，并 `node dist/cli.js --help`） | 本地 `pnpm pack` 触发 prepack 成功；归档内容已校验 ✓ |
+| P2-1 | 仅查 name/version 无法证明与 #105 四份冻结 tgz 同一内容 | `planRcVendoring` 为每个归档记录并打印 SHA-256；验收记录实际参与 pilot 的四包 SHA 并与 #105 `SHA256SUMS.txt` 对照 | 4/4 完全一致（见下表）✓ |
+| P2-2 | 项目名正则接受 `.`/`..`、Windows 设备名（CON 等）与非 npm 名 | 新增 `validateProjectName`：拒绝 `.`/`..`、Windows 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9，含 `CON.txt` 形态）、以 `.`/`_` 开头、以 `.`/`_`/`-` 结尾、超长与非 URL 安全字符 | 单测 12 组用例全过 ✓ |
+
+### P2-1：pilot 四包 SHA-256 与 #105 冻结清单对照（实际参与本次 pilot 的归档）
+
+| 包 | 归档 | SHA-256 | #105 SHA256SUMS.txt |
+|---|---|---|---|
+| @future-ui/contracts | future-ui-contracts-1.0.0.tgz | `c4e21549…d8afbeb` | 一致 |
+| @future-ui/react-provider | future-ui-react-provider-0.1.0-rc.1.tgz | `32a02079…8e17671` | 一致 |
+| @future-ui/shadcn-adapter | future-ui-shadcn-adapter-0.1.0-rc.1.tgz | `4ffc55ab…d08e2ce3` | 一致 |
+| @future-ui/theme | future-ui-theme-0.1.0-rc.1.tgz | `94d22ced…580533945` | 一致 |
+
+### Windows Node 24 最小 npm 离仓验证（全新目录 `E:\projects\cfu-accept\node24-accept\`，全程系统 Node 24.21.0）
+
+执行方式（绝对路径固定，不依赖 PATH 里的 sandbox Node22）：
+`$node24 = 'C:\Program Files\nodejs\node.exe'`（v24.21.0）；`$npmCli = 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'`（npm 11.19.0）；一律 `& $node24 $npmCli …`。
+
+| 步骤 | 命令 | 退出码 |
+|---|---|---|
+| 安装 CLI 归档 | `& $node24 $npmCli install <cli.tgz> --prefix installer` | 0（added 1 package） |
+| 生成 pilot 工程 | `& $node24 installer\node_modules\create-future-ui\dist\cli.js my-node24 --local-rc-dir <rc-dist>` | 0（vendor 4 tgz 就位） |
+| 安装生成工程 | `& $node24 $npmCli install`（my-node24 内） | 0（added 243 packages；npm11 拦截 esbuild postinstall，`install-scripts approve esbuild` 后放行） |
+| 构建 | `& $node24 node_modules\vite\bin\vite.js build` | 0（CSS 20.46 kB，与 pnpm 产物一致） |
+| typecheck | `& $node24 node_modules\typescript\bin\tsc --noEmit` | 0 |
+| fixture 测试 | `& $node24 node_modules\vitest\vitest.mjs run` | 0（5/5） |
 
 ## 离仓初始化验收（全新空目录、源仓库外）
 
@@ -59,15 +92,17 @@ SHA-256：`1F86A5AEF4D63EA8DBD9E44517884BE8069A1370C7EBDE1CC59D8A3250FB0838`
 5. **fixture DOM 累积**：vitest 未开 globals、@testing-library 无自动 cleanup → 显式 `afterEach(cleanup)`。
 6. **stash 事故**：排查 typecheck 时 stash/pop 冲突导致 tsconfig 回退，已恢复 exclude 并重新全量通过。
 7. **webmcp-adapter 模块缺失**：为增量 install 布局差异导致；`pnpm install --frozen-lockfile` 重装后消失（pre-existing，非本轮改动）。
+8. **Review P1-2 首次 typecheck 失败（TS2575）**：`readSync` 4 参数 overload 在 @types/node 24 不存在 → 改 5 参数形式（offset/length/position）后通过。
+9. **Review P1-1 重试测试构造**：合法候选 tgz 由测试内 `tar -czf` 构造（package/package.json 含 name/version），验证 planRcVendoring 全链路，不依赖真实 rc-dist。
 
 ## 未测范围（如实记录）
 
 - **macOS：MAC_NOT_TESTED**（当前无 Mac 访问；资产与命令保留，等待独立执行者验证）。
 - **npm registry 公网**：`@future-ui/*` 未发布，`npm create future-ui@latest` 不可用（模板默认保留版本引用的 registry 形态仅为未来占位，本地验收一律走 `--local-rc-dir` pilot）。
 - **Dialog 打开期间物理换肤**：NOT-VERIFIED（Radix Modal 边界，见上）。
-- **Node 24 权威环境**：本机 Node 22 下 `tests/toolchain.test.ts`（Node major=24 断言）失败为 pre-existing 环境差异；CI（node 24）为权威。
+- **Node 22 本地环境**：本机 PATH 首位为 sandbox Node 22，`tests/toolchain.test.ts`（Node major=24 断言）在 Node 22 下失败为 pre-existing 环境差异；本轮已用系统 **Node 24.21.0** 完成权威 npm 离仓验证，CI（node 24）亦为权威。
 - 不扩大公共 Contract/Schema/Profile 语义；未调用付费模型；未发布 npm/Tag/Release。
 
 ## 结论
 
-`create-future-ui` 可独立 pack、可离仓安装、可生成完整可安装/运行/构建/测试的 React 工程；Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，交 ChatGPT 对 exact HEAD 独立 Review。
+`create-future-ui` 可独立 pack（prepack 构建门）、可离仓安装（Node 22 pnpm 与 Node 24 npm 双通道）、可生成完整可安装/运行/构建/测试的 React 工程；Review 四项（P1×2、P2×2）已修复并补充 Node 24 权威证据。Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，等待增量 Review。
