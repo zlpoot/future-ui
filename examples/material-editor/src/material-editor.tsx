@@ -9,7 +9,7 @@
  * 人类 UI 与 dev-only 程序化 Agent 共用同一 handler/同一权威状态；UI 通过
  * store 订阅直接呈现权威结果，Agent 通过获准的 committed-state 只读 API 回读。
  */
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 import { ThemeProvider } from '@future-ui/theme';
 import { EditDialog, ShadcnButton, editDialogProfile } from '@future-ui/shadcn-adapter/browser';
