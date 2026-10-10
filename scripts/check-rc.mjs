@@ -11,7 +11,7 @@
  * 任一失败 exit 1。不解析依赖图，不做跨平台矩阵。
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
