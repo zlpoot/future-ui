@@ -10,9 +10,10 @@
  */
 // @vitest-environment jsdom
 import { describe, expect, test } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { executeProjectTool } from '@future-ui/ai-dev';
-import { MaterialEditorPage } from '../src/material-editor.js';
+import { createMaterialEditorApp, MaterialEditorPage } from '../src/material-editor.js';
+import { createDevAgent } from '../src/dev-agent-entry.js';
 import {
   createMaterialEditorContext,
   registerMaterialEditorInstances,
@@ -353,5 +354,299 @@ describe('R2-A2 双主题换肤（状态保持 + 事件次数）', () => {
     fireEvent.change(input, { target: { value: '春日山景-t.mp4' } });
     expect(html().getAttribute('data-theme')).toBe('dark');
     expect(screen.getByDisplayValue('春日山景-t.mp4')).toBeTruthy();
+  });
+});
+
+describe('R2-A3 业务 Action 双入口 + 权威状态回读', () => {
+  type AgentInvokeResult = Awaited<ReturnType<ReturnType<typeof createDevAgent>['invokeSave']>>;
+
+  function setup(): { app: ReturnType<typeof createMaterialEditorApp>; agent: ReturnType<typeof createDevAgent> } {
+    const app = createMaterialEditorApp();
+    const agent = createDevAgent(app.bridge);
+    return { app, agent };
+  }
+
+  test('UI 保存 → 权威 version 更新一次 → Agent authorized committed read 看见修改后公开字段；secretNote 不可见', async () => {
+    const { app, agent } = setup();
+    render(<MaterialEditorPage app={app} />);
+
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    fireEvent.change(screen.getByDisplayValue('春日山景.mp4'), { target: { value: '春日山景-改.mp4' } });
+    fireEvent.change(screen.getByDisplayValue('8K 航拍镜头，10 秒'), { target: { value: '8K 航拍镜头，12 秒' } });
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
+
+    // 权威状态更新一次（version 0 → 1）
+    expect(app.store.getVersion()).toBe(1);
+    expect(screen.getByTestId('me-version').textContent).toContain('version=1');
+
+    // Agent 获准的 committed-state 回读：可见修改后公开字段，secretNote 不可见
+    const read = agent.committedRead({ materialId: 'm1' });
+    expect(read.status).toBe('completed');
+    if (read.status === 'completed') {
+      expect(read.values['displayName']).toBe('春日山景-改.mp4');
+      expect(read.values['description']).toBe('8K 航拍镜头，12 秒');
+      expect(Object.keys(read.values)).toEqual(['displayName', 'description']);
+      expect(JSON.stringify(read.values)).not.toContain('secretNote');
+      expect(JSON.stringify(read.values)).not.toContain('版权归属');
+    }
+  });
+
+  test('dev-only Agent invoke → 权威状态更新一次 → 已挂载 UI 列表可见变化（无刷新、无 DOM 回读/模拟点击）', async () => {
+    const { app, agent } = setup();
+    render(<MaterialEditorPage app={app} />);
+    expect(screen.getByTestId('me-name-m2').textContent).toBe('城市夜景延时.mov');
+
+    let outcome: AgentInvokeResult;
+    await act(async () => {
+      outcome = await agent.invokeSave({
+        materialId: 'm2',
+        values: { displayName: 'Agent-提交的夜景.mov', description: '4K 延时摄影，45 秒' },
+        idempotencyKey: 'agent-m2-1',
+      });
+    });
+    expect(outcome!.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    // UI 直接呈现权威结果（store 订阅），无刷新、无 DOM 点击
+    await waitFor(() => expect(screen.getByTestId('me-name-m2').textContent).toBe('Agent-提交的夜景.mov'));
+    expect(screen.getByTestId('me-desc-m2').textContent).toBe('4K 延时摄影，45 秒');
+    expect(screen.getByTestId('me-version').textContent).toContain('version=1');
+    // UI 无任何保存事件日志（程序化入口不产生 UI 交互痕迹）
+    expect(screen.getByTestId('me-log').textContent).toBe('(尚无事件)');
+  });
+
+  test('负例：未注册 handler / 未授权 caller → rejected 且 0 business write', async () => {
+    const { app } = setup();
+    const unregistered = await app.bridge.invoke({
+      caller: 'dev-agent',
+      actionRef: 'material/edit#ghost',
+      materialId: 'm1',
+      values: { displayName: 'x' },
+    });
+    expect(unregistered.status).toBe('rejected');
+    if (unregistered.status === 'rejected') expect(unregistered.code).toBe('unregistered');
+
+    const unauthorized = await app.bridge.invoke({
+      caller: 'admin' as never,
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 'x' },
+    });
+    expect(unauthorized.status).toBe('rejected');
+    if (unauthorized.status === 'rejected') expect(unauthorized.code).toBe('unauthorized-caller');
+
+    const ghostRead = app.bridge.committedRead({ caller: 'admin' as never, materialId: 'm1' });
+    expect(ghostRead.status).toBe('rejected');
+    if (ghostRead.status === 'rejected') expect(ghostRead.code).toBe('unauthorized-caller');
+
+    expect(app.store.getVersion()).toBe(0);
+    expect(app.store.find('m1')!.values['displayName']).toBe('春日山景.mp4');
+  });
+
+  test('负例：Agent 对 secretNote 读写 → 拒绝且 0 write；错误不含值，UI 渲染不含敏感字段', async () => {
+    const { app, agent } = setup();
+    const before = app.store.find('m1')!.values['secretNote'];
+
+    const write = await agent.invokeSave({ materialId: 'm1', values: { secretNote: '恶意改写' } });
+    expect(write.status).toBe('rejected');
+    if (write.status === 'rejected') {
+      expect(write.code).toBe('field-not-allowed');
+      expect(write.reason).not.toContain('恶意改写');
+    }
+    // 0 write：version 与 secretNote 均不变
+    expect(app.store.getVersion()).toBe(0);
+    expect(app.store.find('m1')!.values['secretNote']).toBe(before);
+
+    // committedRead 绝不返回 secretNote
+    const read = agent.committedRead({ materialId: 'm1' });
+    expect(read.status).toBe('completed');
+    if (read.status === 'completed') {
+      expect(Object.keys(read.values)).toEqual(['displayName', 'description']);
+      expect(JSON.stringify(read.values)).not.toContain('secretNote');
+      expect(JSON.stringify(read.values)).not.toContain('版权归属');
+    }
+
+    // UI 渲染（列表/日志/版本）不含敏感字段值
+    render(<MaterialEditorPage app={app} />);
+    const pageText = (screen.getByTestId('material-editor-page').textContent ?? '') + screen.getByTestId('me-log').textContent!;
+    expect(pageText).not.toContain('恶意改写');
+  });
+
+  test('负例：未知素材 / 陈旧版本 / 无效输入 → 拒绝且 0 write', async () => {
+    const { app, agent } = setup();
+    const unknown = await agent.invokeSave({ materialId: 'ghost', values: { displayName: 'x' } });
+    expect(unknown.status).toBe('failed');
+    if (unknown.status === 'failed') expect(unknown.code).toBe('unknown-material');
+
+    const stale = await agent.invokeSave({ materialId: 'm1', values: { displayName: 'x' }, expectedVersion: 99 });
+    expect(stale.status).toBe('failed');
+    if (stale.status === 'failed') expect(stale.code).toBe('stale-version');
+
+    const invalid = await app.bridge.invoke({
+      caller: 'dev-agent',
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 123 as unknown as string },
+    });
+    expect(invalid.status).toBe('rejected');
+    if (invalid.status === 'rejected') expect(invalid.code).toBe('invalid-input');
+
+    expect(app.store.getVersion()).toBe(0);
+  });
+
+  test('负例：pending 冲突——UI 保存进行中，Agent 保存同素材被拒（0 write）；UI 结果不被覆盖', async () => {
+    const { app, agent } = setup();
+    render(<MaterialEditorPage app={app} />);
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    fireEvent.change(screen.getByDisplayValue('春日山景.mp4'), { target: { value: 'UI-保存中.mp4' } });
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+    await screen.findByRole('button', { name: '保存中…' }, { timeout: 2500 });
+
+    // UI 保存进行中（handler 1.2s 模拟延迟）：Agent 并发保存同素材 → pending-conflict
+    let outcome: AgentInvokeResult;
+    await act(async () => {
+      outcome = await agent.invokeSave({ materialId: 'm1', values: { displayName: 'Agent-并发.mp4' } });
+    });
+    expect(outcome!.status).toBe('rejected');
+    if (outcome!.status === 'rejected') expect(outcome!.code).toBe('pending-conflict');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
+    // 权威结果 = UI 的保存，未被 Agent 盲覆盖；version 只 +1
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m1')!.values['displayName']).toBe('UI-保存中.mp4');
+    expect(screen.getByTestId('me-name-m1').textContent).toBe('UI-保存中.mp4');
+  });
+
+  test('幂等：同 idempotencyKey 完全相同请求重复提交 → 第二次为重放，本次 writeCount=0、返回历史版本，不再写第二次', async () => {
+    const { app, agent } = setup();
+    const first = await agent.invokeSave({ materialId: 'm3', values: { description: '描述-v1' }, idempotencyKey: 'k-dup-1' });
+    expect(first.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    const second = await agent.invokeSave({ materialId: 'm3', values: { description: '描述-v1' }, idempotencyKey: 'k-dup-1' });
+    expect(second.status).toBe('completed');
+    if (second.status === 'completed') {
+      expect(second.idempotentReplay).toBe(true);
+      // 本次未产生新写入；version 为重放的历史版本
+      expect(second.writeCount).toBe(0);
+      expect(second.version).toBe(1);
+    }
+    expect(app.store.getVersion()).toBe(1);
+  });
+
+  test('幂等冲突：同 idempotencyKey 用于不同请求（不同素材 / 同素材不同值）→ idempotency-conflict 且 0 write', async () => {
+    const { app, agent } = setup();
+    const first = await agent.invokeSave({ materialId: 'm1', values: { displayName: '键-第一次' }, idempotencyKey: 'k-conflict-1' });
+    expect(first.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    // 同键、不同素材 → 冲突，m2 未被修改
+    const conflictMaterial = await agent.invokeSave({ materialId: 'm2', values: { displayName: '不应写入' }, idempotencyKey: 'k-conflict-1' });
+    expect(conflictMaterial.status).toBe('failed');
+    if (conflictMaterial.status === 'failed') expect(conflictMaterial.code).toBe('idempotency-conflict');
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m2')!.values['displayName']).toBe('城市夜景延时.mov');
+
+    // 同键、同素材但不同值 → 同样视为不同请求 → 冲突，m1 保持第一次结果
+    const conflictValue = await agent.invokeSave({ materialId: 'm1', values: { displayName: '另一个值' }, idempotencyKey: 'k-conflict-1' });
+    expect(conflictValue.status).toBe('failed');
+    if (conflictValue.status === 'failed') expect(conflictValue.code).toBe('idempotency-conflict');
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m1')!.values['displayName']).toBe('键-第一次');
+  });
+
+  test('幂等键按 caller 作用域隔离：UI 与 dev-only Agent 同键互不干扰（各自成功）', async () => {
+    const { app } = setup();
+    const ui = await app.bridge.invoke({
+      caller: 'ui',
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 'UI-同键' },
+      idempotencyKey: 'k-scope-1',
+    });
+    expect(ui.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    const agent = await app.bridge.invoke({
+      caller: 'dev-agent',
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 'Agent-同键' },
+      idempotencyKey: 'k-scope-1',
+    });
+    // 不同 caller 作用域 → 不冲突，独立成功
+    expect(agent.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(2);
+    expect(app.store.find('m1')!.values['displayName']).toBe('Agent-同键');
+  });
+
+  test('UI 在过时快照上保存 → stale-version 拒绝：失败显示在 Dialog、不覆盖 Agent 已提交的权威结果', async () => {
+    const { app, agent } = setup();
+    render(<MaterialEditorPage app={app} />);
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    fireEvent.change(screen.getByDisplayValue('春日山景.mp4'), { target: { value: 'UI-过时编辑.mp4' } });
+
+    // Agent 抢先提交同一素材（version 0 → 1），UI 直接呈现权威结果
+    let agentOutcome: AgentInvokeResult;
+    await act(async () => {
+      agentOutcome = await agent.invokeSave({
+        materialId: 'm1',
+        values: { displayName: 'Agent-抢先.mp4' },
+        idempotencyKey: 'agent-race-1',
+      });
+    });
+    expect(agentOutcome!.status).toBe('completed');
+    await waitFor(() => expect(screen.getByTestId('me-name-m1').textContent).toBe('Agent-抢先.mp4'));
+
+    // UI 基于打开时的快照（version 0）保存 → 与当前权威版本（1）冲突 → stale-version 拒绝
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+    await waitFor(() => expect(screen.getByTestId('edit-dialog-save-error')).toBeTruthy(), { timeout: 2500 });
+
+    // 失败显示失败：Dialog 保持打开、错误可见，不标成功
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByTestId('edit-dialog-save-error').textContent).toContain('stale-version');
+    // 0 write：权威结果仍是 Agent 提交的，version 仍为 1
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m1')!.values['displayName']).toBe('Agent-抢先.mp4');
+    expect(screen.getByTestId('me-name-m1').textContent).toBe('Agent-抢先.mp4');
+  });
+
+  test('Agent 提交后主题切换正常；A1 公开字段元数据/顺序与只读投影不变', async () => {
+    const { app, agent } = setup();
+    render(<MaterialEditorPage app={app} />);
+    const before = publicFieldMetadata(MATERIAL_FIELDS).map((f) => ({
+      name: f.name,
+      order: f.order,
+      actionRef: f.actionRef,
+    }));
+
+    let outcome: AgentInvokeResult;
+    await act(async () => {
+      outcome = await agent.invokeSave({
+        materialId: 'm1',
+        values: { displayName: 'Agent-主题.mp4' },
+        idempotencyKey: 'agent-theme-1',
+      });
+    });
+    expect(outcome!.status).toBe('completed');
+    await waitFor(() => expect(screen.getByTestId('me-name-m1').textContent).toBe('Agent-主题.mp4'));
+
+    // 主题切换仍正常（宿主视觉偏好与业务状态无关）
+    fireEvent.click(screen.getByTestId('theme-toggle'));
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByTestId('me-name-m1').textContent).toBe('Agent-主题.mp4');
+
+    const after = publicFieldMetadata(MATERIAL_FIELDS).map((f) => ({
+      name: f.name,
+      order: f.order,
+      actionRef: f.actionRef,
+    }));
+    expect(after).toEqual(before);
+    expect(after.map((f) => f.name)).toEqual(['displayName', 'description']);
+    expect(projectSaveAction().ref).toBe(MATERIAL_SAVE_ACTION.ref);
   });
 });
