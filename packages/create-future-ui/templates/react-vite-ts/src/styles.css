@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@future-ui/theme/theme.css";
+
+/*
+ * Tailwind CSS v4 显式源扫描：
+ * shadcn-adapter 的组件类名（bg-primary、text-foreground、border-border 等）
+ * 在 node_modules 的打包产物里，默认自动扫描不会覆盖，必须用 @source 显式声明，
+ * 否则编辑弹窗等组件样式在构建产物中缺失（不能只以 React 渲染通过即宣称 PASS）。
+ */
+@source "../node_modules/@future-ui/shadcn-adapter/dist";
