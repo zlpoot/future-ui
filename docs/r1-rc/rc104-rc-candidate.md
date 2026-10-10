@@ -1,9 +1,10 @@
 # R3-RC-001 · 首个可离仓安装 RC 候选（Issue #104）
 
-- 状态：**AWAITING_INDEPENDENT_REVIEW**（Reviewer: ChatGPT，独立 exact-head 只读审查）
+- 状态：**AWAITING_INDEPENDENT_REVIEW**（Reviewer: ChatGPT，独立 exact-head 只读审查；首轮
+  REQUEST_CHANGES 已按 P1-01/P1-02/P1-03/P2-01/P2-02 修复，见第六节 7–11）
 - 执行者：doubao-work（Worker）；授权：#4 = R3-RC-001 / #104 IMPLEMENTATION_READY（ACTIVE）
 - Base SHA：`0fc68b1cb4457c7458bb5002879158419f25d555`（origin/main，fetch 核对一致，非过期快照）
-- Head SHA：见 PR（分支 `feat/r3-rc-001-publishable-packages`）
+- Head SHA：以 Push 后 PR 远端读取为准（避免自引用更新循环；本文件不硬编码构成自身的 head）
 - 环境：Windows 宿主；Node v22.23.2（低于 engines >=24.21.0，如实记录；CI node 24 为门禁权威）；pnpm 11.28.4（corepack）；Vite 7.3.7
 - 隔离 worktree：`E:\projects\future-ui-r3rc`（HEAD 0fc68b1 起，干净）
 
@@ -21,19 +22,23 @@ Merge/Close；浏览器图不混入 Node-only `ai-dev` 等开发期包。
 
 | 文件 | 说明 |
 |---|---|
-| `packages/contracts/package.json` | 候选公开：`private:false`、`main/module/types`、exports 指向 `dist/`（`./schemas/*` 保持包根 schemas） |
-| `packages/react-provider/package.json` | 候选公开 v0.1.0-rc.1；exports `.` + `./component-types` → dist |
-| `packages/theme/package.json` | 候选公开 v0.1.0-rc.1；exports `.`（Node 面）、`./browser`（provider 面）、`./theme.css` |
-| `packages/shadcn-adapter/package.json` | 候选公开 v0.1.0-rc.1；exports `.`（Node 面）、`./browser`（浏览器面） |
+| `packages/{contracts,react-provider,theme,shadcn-adapter}/package.json` | 候选公开（`private:false` + 版本）；**仓库内保持 src/workspace 开发形态**（exports→src、`@future-ui/*`→dependencies `workspace:*`），发布面由 build-rc.mjs 打包时改写 |
 | `packages/{contracts,react-provider,theme,shadcn-adapter}/tsconfig.build.json` | 新增：局部 build 配置（tsc 产 JS+.d.ts 到各包 `dist/`） |
 | `packages/theme/src/theme.css` | 新增：Light/Dark `--future-ui-*` token（数据源 = examples/material-editor/src/themes.ts，同一 D08 视觉源）+ tailwind v4 `@theme inline` 语义映射 |
-| `scripts/build-rc.mjs` | 新增：RC 构建/打包脚本（build → alias 归一化 → staging(workspace:*→版本) → pack → SHA-256） |
-| `package.json` / `eslint.config.mjs` / `.gitignore` | 根脚本 `build:rc`；eslint 忽略构建产物；`.gitignore` 忽略 `rc-dist/`（产物不提交，只提交构建配置与源码） |
-| `docs/r1-rc/evidence/rc104-consumer-{light,dark}.png` | 离仓 Consumer 真实浏览器截图证据 |
+| `packages/shadcn-adapter/THIRD_PARTY_LICENSES.md` | 新增（P1-03）：vendored shadcn/ui 的 MIT 许可全文 + 直接运行时依赖许可表；随归档发布 |
+| `scripts/build-rc.mjs` | 新增：RC 构建/打包脚本（build → alias 归一化（相对路径 + `.js` 扩展名，P1-01）→ dist 产物校验 → staging 改写 → pack → SHA-256） |
+| `scripts/check-rc.mjs` | 新增（P2-01）：归档内容检查门（无 `workspace:*`、无 src 发布入口、exports 目标存在、License 存在、SHA256SUMS 一致） |
+| `scripts/check-theme-consistency.mjs` | 新增（P2-02）：theme.css 与 themes.ts 的 Light/Dark token 最小一致性检查 |
+| `.github/workflows/ci.yml` | 新增 `build:rc` + `check:rc` + `check:theme` 步骤（P2-01/P2-02） |
+| `package.json` / `eslint.config.mjs` / `.gitignore` | 根脚本 `build:rc`/`check:rc`/`check:theme`；eslint 忽略构建产物；`.gitignore` 忽略 `rc-dist/` |
+| `docs/r1-rc/evidence/rc104-consumer-{light,dark}.png`、`rc104-rv-dark-saved.png` | 离仓 Consumer 真实浏览器截图证据（本轮新增保存后 dark 截图） |
 
 ## 三、最小公开包、版本、exports 与依赖闭包
 
 ### 候选公开包（4 个）
+
+> exports 列展示的是**打包后归档形态**（build-rc.mjs staging 改写）；仓库内 manifest 为
+> src/workspace 开发形态（见第二节）。
 
 | 包 | 版本 | exports | 说明 |
 |---|---|---|---|
@@ -58,14 +63,28 @@ Merge/Close；浏览器图不混入 Node-only `ai-dev` 等开发期包。
 
 ## 四、构建产物清单与 SHA-256（rc-dist/）
 
+**最终候选（本轮 Review 修复后重建，check:rc 校验一致）：**
+
 ```
 c4e21549cd9c6ba53bcd6ad9edef4b3a622e0e30ef4a70d02a8fa5255d8afbeb  future-ui-contracts-1.0.0.tgz
 32a020793604d6b818ef2f33424e14f30e4ed17891f6976003730006e8e17671  future-ui-react-provider-0.1.0-rc.1.tgz
-0d2569184f219dd5d373dad8aa1ef668b7a558545b88e7ec9c34774c3c327cde  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
+4ffc55abbfd83ae8a4916a108307cba6fb5295fa542bbf053be9dd00d08e2ce3  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
 94d22cedf12462f373ec7d5b9140366c8ac834245404a8a44f3f924580533945  future-ui-theme-0.1.0-rc.1.tgz
 ```
 
-（`rc-dist/` 为本地产物，不入库；上述哈希可复现：`corepack pnpm run build:rc`。
+**历史版本（不再使用，仅保留可追溯记录；与最终候选明确区分）：**
+
+```
+6b11edea489229e0ffc94059210db73608c17371af35d42f4cf72a052c4dc104  future-ui-contracts-1.0.0.tgz   （首次 build）
+1eecb0fa2c2fcb2132c078616605324382ad8c7f26d83e305f76651745071a57  future-ui-react-provider-0.1.0-rc.1.tgz（首次 build）
+90e37092bcbaf7a19413d007adaa74d341e819714ba8fb298814b9efdb10b8da  future-ui-shadcn-adapter-0.1.0-rc.1.tgz（首次 build）
+2b86f43e1a97ee9366cdd8e1e6091077db7878ce64ab375dcc6c244f715a984c  future-ui-theme-0.1.0-rc.1.tgz（首次 build）
+0d2569184f219dd5d373dad8aa1ef668b7a558545b88e7ec9c34774c3c327cde  future-ui-shadcn-adapter-0.1.0-rc.1.tgz（CI 404 修复后）
+```
+
+（`rc-dist/` 为本地产物，不入库；最终哈希可复现：`corepack pnpm run build:rc`（确定性产物：
+contracts/react-provider/theme 与上一版本一致，shadcn-adapter 因 P1-01 `.js` 扩展名修复与
+P1-03 License 加入而更新）。
 归档 manifest 由 build-rc.mjs 在 staging 阶段改写：exports→dist、`@future-ui/*` 依赖→peer、
 `workspace:*`→显式版本、补 main/module/types；仓库内 manifest 保持 src/workspace 开发形态。）
 
@@ -92,10 +111,14 @@ corepack pnpm exec vite --port 5180 --strictPort
 | 离仓安装 + 页面渲染（light/dark） | PASS（截图见 evidence/rc104-consumer-*.png） |
 | EditDialog 打开与预填（r1-edit-dialog-reference Profile 默认字段） | PASS（title="夏日主视觉"/description="本地素材，等待编辑"） |
 | 修改 → 取消 → 列表不变 | PASS（Dialog 关闭，列表标题未变） |
-| 修改 → 保存 → pending（"保存中…"、按钮 disabled、重复提交被阻止）→ 完成后关闭 → 列表更新 | PASS（列表标题更新为修改值） |
-| Dialog 打开期间切换主题 → 输入草稿与业务状态保留 | PASS（data-theme dark/light 切换后 draft="换肤草稿测试" 仍在；切换路径为程序化 click，见"真实鼠标换肤"项） |
+| 修改 → 保存 → pending（"保存中…"、按钮 disabled、重复提交被阻止）→ 完成后关闭 → 列表更新 | PASS（本轮 ref 真实点击："保存中…"+disabled → 自动关闭 → 列表更新为"Review 修复后草稿"） |
+| Dialog 打开期间切换主题 → 输入草稿与业务状态保留 | PASS（修改后的草稿经 light→dark 切换后仍保留；切换路径为程序化 click，见"真实鼠标换肤"项） |
 | Light/Dark token 生效（HTML data-theme + --future-ui-bg 等 CSS 变量） | PASS（light bg #ffffff / dark bg #0b1220） |
-| **真实鼠标点击换肤（Dialog 打开期间）** | **NOT-VERIFIED**（见下） |
+| **真实鼠标点击换肤（Dialog 打开期间）** | **NOT-VERIFIED**（见下；本轮 elementFromPoint 证实顶部按钮被 Modal 遮罩覆盖，物理点击被模态边界阻止） |
+| Node 原生 ESM 根入口导入（P1-01，仓库外） | PASS（`verify-esm.mjs`：contracts 7 / react-provider 18 / theme 6 / shadcn-adapter 44 / `/browser` 16 exports 全部 importable） |
+| TypeScript 类型解析（P1-01，仓库外 tsc nodenext strict） | PASS（`verify-types.ts` 引用 4 包公开类型零错误） |
+| 归档内容检查（P2-01：无 workspace:*、无 src 发布入口、exports 目标存在、License 存在、SHA256SUMS 一致） | PASS（`check:rc` 4 归档全过） |
+| theme.css 与 themes.ts token 一致性（P2-02） | PASS（`check:theme`：light 12 + dark 12 全部一致） |
 
 ### 真实鼠标换肤 NOT-VERIFIED 说明（如实记录）
 
@@ -131,7 +154,32 @@ corepack pnpm exec vite --port 5180 --strictPort
    同时 `@future-ui/*` 依赖 peer 化导致 CI frozen-lockfile 无链接记录。修复：仓库内 manifest 恢复
    src/workspace 开发形态（exports→src、`@future-ui/*`→dependencies workspace:*），发布面
    （dist exports、`@future-ui/*`→peer、`workspace:*`→版本、main/module/types）全部由
-   build-rc.mjs 在打包阶段对 staging 副本改写。本地 typecheck 恢复通过，CI 复跑待观察。
+   build-rc.mjs 在打包阶段对 staging 副本改写。本地 typecheck 恢复通过，CI 复跑通过。
+
+## 六之二、独立 Review（ChatGPT REQUEST_CHANGES）修复记录
+
+7. **P1-01 · Node ESM 发布入口缺 `.js` 扩展名**：build-rc.mjs 的 alias 改写把
+   `@/registry/new-york-v4/ui/button` 改写为 `../ui/button`（无扩展名），原生 Node ESM 不做扩展名
+   猜测，无法保证解析。修复：改写规则生成相对路径 + 显式 `.js`（`from "../ui/button.js"`），并新增
+   `verifyDist()` 防回归门——dist 无 `@/registry/` 残留、相对导入均带 `.js` 且目标文件真实存在，
+   任一违规构建即失败。实测：`dist/upstream/registry/new-york-v4/ui/dialog.js` 含
+   `from "../ui/button.js"`；仓库外 Consumer 用 `node --input-type=module` 原生 import 五个入口
+   全部成功；Vite 浏览器入口同时保持正常（不修改冻结的 vendored 源码，provenance 指纹不变）。
+8. **P1-02 · SHA-256 证据不一致 / 旧 HEAD 硬编码**：统一最终 SHA（见第四节）；旧哈希保留但明确
+   标注"历史版本"；`pr-body-rc104.md` 这类含旧 HEAD 的临时交接文件从仓库移除（PR body 才是交接
+   载体）；构成 HEAD 的文件不再硬编码自身 head SHA，以 Push 后 PR 远端读取为准。
+9. **P1-03 · 第三方 License 缺失**：vendored shadcn/ui 组件来自上游仓库 MIT（commit
+   `7ff7dbf8669fa3392c294ee745dc8d8c3cee842c`，LICENSE.md：MIT，Copyright (c) 2023 shadcn）。
+   新增 `packages/shadcn-adapter/THIRD_PARTY_LICENSES.md`（MIT 全文 + 直接运行时依赖许可表），
+   `files` 加入该文件；`check:rc` 验证归档内实际存在且含 MIT 声明；冻结源码与 provenance 指纹未改。
+10. **P2-01 · CI 未覆盖发布构建**：`ci.yml` 在既有四步后新增 `pnpm build:rc` + `pnpm check:rc`
+    （+ `check:theme`）；`check-rc.mjs` 逐包验证无 `workspace:*`、exports 无 `src/` 入口、
+    exports 目标文件存在（glob 如 `./schemas/*` 按匹配判定）、shadcn-adapter 带 License、
+    SHA256SUMS 与实际哈希一致。仓库内 manifest 保持 src/workspace 开发形态，不引入干净 CI
+    找不到 dist 的问题；未扩大跨平台 CI 矩阵。
+11. **P2-02 · Theme 数据源重复**：`check-theme-consistency.mjs` 解析 theme.css 与 themes.ts 的
+    Light/Dark token（各 12 个）逐项比对，防止静默漂移（本轮 PASS）。不重构 Theme 系统；更完整的
+    单一数据源重构记为后续 P2，不阻塞本 RC。
 
 ## 七、Windows / macOS 跨平台消费
 
@@ -147,13 +195,16 @@ corepack pnpm exec vite --port 5180 --strictPort
 - 主题机制一致：`--future-ui-*` token 值来自 R2 #98 示例同一数据源（themes.ts），Light/Dark
   视觉与 R2 验收一致。
 - 仓库内回归：vitest 532 passed / 1 failed（唯一失败 = toolchain.test 本地 Node 版本断言，
-  CI node 24 通过）；typecheck 通过；lint 通过。
+  CI node 24 通过）；typecheck 通过；lint 通过；`check:rc` 4 归档 PASS；`check:theme` PASS。
 - 公共 Contract/Schema/Profile 语义：未修改（若需修改将触发 BLOCKED: CONTRACT_GAP，未触发）。
 
 ## 九、未测试范围与缺口
 
-- 真实鼠标点击换肤（Dialog 打开期间）：NOT-VERIFIED（原因见第五节）。
-- macOS 离仓 smoke：MAC_NOT_TESTED。
+- 真实鼠标点击换肤（Dialog 打开期间）：NOT-VERIFIED（模态边界 + bu 工具顶部坐标不稳定；程序化
+  换肤验证正常，二者明确区分，不以程序化 click 冒充真实鼠标）。
+- macOS 离仓 smoke：MAC_NOT_TESTED（同一组归档 + 安装命令已保留，待后续独立执行者验证）。
+- Theme 单一数据源重构（消除 theme.css 与 themes.ts 双载体）：记为后续 P2，本轮以一致性检查
+  防漂移，不阻塞 RC。
 - 生产 WebMCP、正式 npm 安装、付费模型 API：不在 R3-RC-001 范围。
 - Consumer 仅覆盖 Windows 本地 loopback；正式发布前的最终冒烟建议由 Owner/ChatGPT 复核后单独授权。
 

@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc -p packages/shadcn-adapter/tsconfig.json --noEmit && tsc -p packages/ark-ui-adapter/tsconfig.json --noEmit && tsc -p packages/ai-dev/tsconfig.json --noEmit && tsc -p packages/rc-manual-host/tsconfig.json --noEmit && tsc -p examples/rc-consumer/tsconfig.json --noEmit && tsc -p examples/material-editor/tsconfig.json --noEmit",
     "test": "vitest run",
-    "build:rc": "node scripts/build-rc.mjs"
+    "build:rc": "node scripts/build-rc.mjs",
+    "check:rc": "node scripts/check-rc.mjs",
+    "check:theme": "node scripts/check-theme-consistency.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

@@ -126,6 +126,43 @@ function walkJs(dir) {
   return out;
 }
 
+/**
+ * P1-01 · 构建产物校验（防回归门）：
+ *   - dist 中不得残留 tsconfig 别名（@/registry/...）——别名无法在仓库外解析；
+ *   - 每个相对导入（./ ../ 开头）的目标文件必须真实存在，且带 .js 扩展名
+ *     （原生 Node ESM 不做扩展名猜测）。
+ * 任一违规即失败，防止"缺扩展名/别名"再次进入归档。
+ */
+function verifyDist(dir) {
+  const problems = [];
+  const files = walkJs(dir);
+  for (const f of files) {
+    const src = readFileSync(join(dir, f), 'utf8');
+    if (src.includes('@/registry/')) {
+      problems.push(`${f}: 残留 tsconfig 别名 import（@/registry/...）`);
+    }
+    const dirOf = dirname(f);
+    for (const m of src.matchAll(/(?:from|import\()\s*(['"])(\.{1,2}\/[^'"]+)\1/g)) {
+      const spec = m[2];
+      if (spec.endsWith('.css') || spec.endsWith('.json') || spec.endsWith('.node')) continue;
+      if (!spec.endsWith('.js')) {
+        problems.push(`${f}: 相对导入缺少 .js 扩展名 -> ${spec}`);
+        continue;
+      }
+      const resolved = join(dir, dirOf, spec);
+      if (!existsSync(resolved)) {
+        problems.push(`${f}: 相对导入目标不存在 -> ${spec} (${resolved})`);
+      }
+    }
+  }
+  if (problems.length > 0) {
+    console.error('\n=== dist 校验失败（P1-01 防回归门）===');
+    for (const p of problems) console.error(' - ' + p);
+    process.exit(1);
+  }
+  console.log(`[verifyDist] ${dir}: ${files.length} 个 .js 文件通过（无别名残留、相对导入均带 .js 且存在）`);
+}
+
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
@@ -142,10 +179,11 @@ for (const pkg of CANDIDATE_PACKAGES) {
 }
 
 // 1b) dist postprocess: rewrite tsconfig path-alias imports (e.g.
-//     "@/registry/new-york-v4/ui/button") to relative paths so the published
-//     dist can be consumed outside the monorepo. tsc does not rewrite paths;
-//     the vendored upstream sources stay immutable (digest/provenance intact).
-//     Only the emitted dist is normalized.
+//     "@/registry/new-york-v4/ui/button") to relative paths + explicit `.js`
+//     extension so the published dist can be consumed by native Node ESM
+//     outside the monorepo. tsc does not rewrite paths; the vendored upstream
+//     sources stay immutable (digest/provenance intact). Only the emitted dist
+//     is normalized.
 //     The alias "@/registry/new-york-v4/*" maps to src/upstream/registry/new-york-v4/*;
 //     in dist the same tree lives under dist/upstream/registry/new-york-v4, so the
 //     prefix is resolved as a relative path from the importing file's directory.
@@ -163,12 +201,14 @@ for (const pkg of CANDIDATE_PACKAGES) {
       const registryIdx = relParts.indexOf('new-york-v4');
       const depth = registryIdx >= 0 ? relParts.length - registryIdx - 1 : 0;
       const prefix = '../'.repeat(depth);
-      src = src.replaceAll('from "@/registry/new-york-v4/', `from "${prefix}`);
-      src = src.replaceAll("from '@/registry/new-york-v4/", `from '${prefix}`);
+      // bare alias -> relative specifier + .js extension (Node ESM)
+      src = src.replace(/from (['"])@\/registry\/new-york-v4\/([^'"]+)\1/g, (m, q, p) => `from ${q}${prefix}${p}.js${q}`);
       writeFileSync(file, src);
       console.log(`[postprocess] ${pkg}: ${f} -> ${prefix}…`);
     }
   }
+  // P1-01 gate: alias-free + resolvable relative imports with .js extension
+  verifyDist(distDir);
 }
 
 // 2) staging copy with workspace:* resolved
@@ -181,6 +221,10 @@ for (const pkg of CANDIDATE_PACKAGES) {
   cpSync(join(dir, 'dist'), join(stage, 'dist'), { recursive: true });
   if (existsSync(join(dir, 'schemas'))) {
     cpSync(join(dir, 'schemas'), join(stage, 'schemas'), { recursive: true });
+  }
+  // P1-03: vendored upstream license/attribution must ship in the archive
+  if (existsSync(join(dir, 'THIRD_PARTY_LICENSES.md'))) {
+    cpSync(join(dir, 'THIRD_PARTY_LICENSES.md'), join(stage, 'THIRD_PARTY_LICENSES.md'));
   }
   const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
   stageManifest(manifest, versions);

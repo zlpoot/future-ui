@@ -21,3 +21,11 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # R3-RC-001 (#104 / P2-01): 最小发布构建检查 — 构建四个候选归档，
+      # 验证归档 manifest（无 workspace:*、无 src/ 发布入口、exports 目标存在、
+      # shadcn-adapter 携带第三方 License）与 SHA256SUMS 一致。仓库内 manifest
+      # 保持 src/workspace 开发形态（不引入 dist 依赖问题）。
+      - run: pnpm build:rc
+      - run: pnpm check:rc
+      # P2-02: theme.css 与 themes.ts 的 Light/Dark token 最小一致性检查
+      - run: pnpm check:theme
