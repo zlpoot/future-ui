@@ -112,7 +112,9 @@ export function MaterialEditorPage({ app }: { app?: MaterialEditorApp } = {}): R
       // 日志只写 code 与 Action 引用，不携带字段名/值（避免间接泄露敏感字段）。
       const detail = outcome.status === 'rejected' ? outcome.reason : outcome.message;
       pushLog(`save rejected code=${outcome.code} action=${action.ref}`);
-      throw new Error(`${outcome.code}: ${detail}`);
+      // 陈旧版本属于可恢复状态：提示用户关闭并重新打开以读取最新权威版本。
+      const hint = outcome.code === 'stale-version' ? '（请关闭并重新打开以读取最新版本）' : '';
+      throw new Error(`${outcome.code}: ${detail}${hint}`);
     }
     pushLog(`saved id=${editingId} action=${action.ref} version=${outcome.version}`);
   };

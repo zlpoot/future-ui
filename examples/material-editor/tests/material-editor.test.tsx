@@ -520,7 +520,7 @@ describe('R2-A3 业务 Action 双入口 + 权威状态回读', () => {
     expect(screen.getByTestId('me-name-m1').textContent).toBe('UI-保存中.mp4');
   });
 
-  test('幂等：同 idempotencyKey 重复提交 → 第二次为重放，不再写第二次（version 不再 +1）', async () => {
+  test('幂等：同 idempotencyKey 完全相同请求重复提交 → 第二次为重放，本次 writeCount=0、返回历史版本，不再写第二次', async () => {
     const { app, agent } = setup();
     const first = await agent.invokeSave({ materialId: 'm3', values: { description: '描述-v1' }, idempotencyKey: 'k-dup-1' });
     expect(first.status).toBe('completed');
@@ -530,8 +530,57 @@ describe('R2-A3 业务 Action 双入口 + 权威状态回读', () => {
     expect(second.status).toBe('completed');
     if (second.status === 'completed') {
       expect(second.idempotentReplay).toBe(true);
+      // 本次未产生新写入；version 为重放的历史版本
+      expect(second.writeCount).toBe(0);
+      expect(second.version).toBe(1);
     }
     expect(app.store.getVersion()).toBe(1);
+  });
+
+  test('幂等冲突：同 idempotencyKey 用于不同请求（不同素材 / 同素材不同值）→ idempotency-conflict 且 0 write', async () => {
+    const { app, agent } = setup();
+    const first = await agent.invokeSave({ materialId: 'm1', values: { displayName: '键-第一次' }, idempotencyKey: 'k-conflict-1' });
+    expect(first.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    // 同键、不同素材 → 冲突，m2 未被修改
+    const conflictMaterial = await agent.invokeSave({ materialId: 'm2', values: { displayName: '不应写入' }, idempotencyKey: 'k-conflict-1' });
+    expect(conflictMaterial.status).toBe('failed');
+    if (conflictMaterial.status === 'failed') expect(conflictMaterial.code).toBe('idempotency-conflict');
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m2')!.values['displayName']).toBe('城市夜景延时.mov');
+
+    // 同键、同素材但不同值 → 同样视为不同请求 → 冲突，m1 保持第一次结果
+    const conflictValue = await agent.invokeSave({ materialId: 'm1', values: { displayName: '另一个值' }, idempotencyKey: 'k-conflict-1' });
+    expect(conflictValue.status).toBe('failed');
+    if (conflictValue.status === 'failed') expect(conflictValue.code).toBe('idempotency-conflict');
+    expect(app.store.getVersion()).toBe(1);
+    expect(app.store.find('m1')!.values['displayName']).toBe('键-第一次');
+  });
+
+  test('幂等键按 caller 作用域隔离：UI 与 dev-only Agent 同键互不干扰（各自成功）', async () => {
+    const { app } = setup();
+    const ui = await app.bridge.invoke({
+      caller: 'ui',
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 'UI-同键' },
+      idempotencyKey: 'k-scope-1',
+    });
+    expect(ui.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(1);
+
+    const agent = await app.bridge.invoke({
+      caller: 'dev-agent',
+      actionRef: 'material/edit#save',
+      materialId: 'm1',
+      values: { displayName: 'Agent-同键' },
+      idempotencyKey: 'k-scope-1',
+    });
+    // 不同 caller 作用域 → 不冲突，独立成功
+    expect(agent.status).toBe('completed');
+    expect(app.store.getVersion()).toBe(2);
+    expect(app.store.find('m1')!.values['displayName']).toBe('Agent-同键');
   });
 
   test('UI 在过时快照上保存 → stale-version 拒绝：失败显示在 Dialog、不覆盖 Agent 已提交的权威结果', async () => {

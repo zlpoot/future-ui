@@ -34,8 +34,25 @@ export type MaterialCommitResult =
 
 interface MaterialOpRecord {
   status: 'completed';
+  /** 历史版本号：重放时返回此版本（而非当前版本）。 */
   version: number;
+  /** 原请求素材：判定同一请求的身份。 */
+  materialId: string;
+  /** 原请求字段/值（冻结快照）：同键不同请求 → 冲突。 */
   values: Record<string, string>;
+  /** 历史结果值：重放时原样返回。 */
+  resultValues: Record<string, string>;
+}
+
+/** 请求参数完全一致判定（键集合 + 值均相等，顺序无关）。 */
+function sameRequestValues(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
 }
 
 export type MaterialStoreListener = () => void;
@@ -92,11 +109,24 @@ export class MaterialStoreService {
     if (input.idempotencyKey !== undefined) {
       const existing = this.opLog.get(input.idempotencyKey);
       if (existing !== undefined) {
+        // 同键必须对应同一请求（同一素材 + 相同字段/值）；否则视为键被错误重用 → 冲突，0 write。
+        const sameRequest =
+          existing.materialId === input.materialId && sameRequestValues(existing.values, input.values);
+        if (!sameRequest) {
+          return {
+            status: 'failed',
+            code: 'idempotency-conflict',
+            message: `idempotency key already used for a different request (material ${existing.materialId})`,
+            materialId: input.materialId,
+            writeCount: 0,
+          };
+        }
+        // 相同请求：重放历史结果与历史版本，不产生新写入。
         return {
           status: 'completed',
-          version: this.version,
-          materialId: input.materialId,
-          result: { values: { ...existing.values }, version: existing.version },
+          version: existing.version,
+          materialId: existing.materialId,
+          result: { values: { ...existing.resultValues }, version: existing.version },
           idempotentReplay: true,
         };
       }
@@ -127,7 +157,13 @@ export class MaterialStoreService {
     this.rows = this.rows.map((r) => (r.id === input.materialId ? { id: input.materialId, values: nextValues } : r));
     this.version += 1;
     if (input.idempotencyKey !== undefined) {
-      this.opLog.set(input.idempotencyKey, { status: 'completed', version: this.version, values: { ...nextValues } });
+      this.opLog.set(input.idempotencyKey, {
+        status: 'completed',
+        version: this.version,
+        materialId: input.materialId,
+        values: { ...input.values },
+        resultValues: { ...nextValues },
+      });
     }
     this.emit();
     return {

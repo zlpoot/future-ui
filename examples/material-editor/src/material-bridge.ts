@@ -43,7 +43,7 @@ export interface MaterialInvokeInput {
 }
 
 export type MaterialInvokeResult =
-  | { status: 'completed'; version: number; materialId: string; idempotentReplay?: boolean; writeCount: 1 }
+  | { status: 'completed'; version: number; materialId: string; idempotentReplay?: boolean; writeCount: 0 | 1 }
   | { status: 'rejected'; code: string; reason: string; writeCount: 0 }
   | { status: 'failed'; code: string; message: string; writeCount: 0 };
 
@@ -117,11 +117,13 @@ export function createSaveMaterialHandler(
     store.markInFlight(input.materialId);
     try {
       await new Promise((resolve) => setTimeout(resolve, saveDelayMs));
+      // 幂等键按 caller 作用域隔离：不同调用者的同键互不干扰（显式区分有效作用域）。
+      const scopedKey = input.idempotencyKey !== undefined ? `${ctx.caller}|${input.idempotencyKey}` : undefined;
       return store.commit({
         materialId: input.materialId,
         values: input.values,
         expectedVersion: input.expectedVersion,
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: scopedKey,
       });
     } finally {
       store.clearInFlight(input.materialId);
@@ -197,12 +199,13 @@ export class MaterialActionBridge {
     );
 
     if (outcome.status === 'completed') {
+      // 幂等重放不产生新写入：writeCount=0；version 为重放的历史版本。
       return {
         status: 'completed',
         version: outcome.version,
         materialId: outcome.materialId,
         ...(outcome.idempotentReplay === true ? { idempotentReplay: true } : {}),
-        writeCount: 1,
+        writeCount: outcome.idempotentReplay === true ? 0 : 1,
       };
     }
     if (outcome.status === 'rejected') {
