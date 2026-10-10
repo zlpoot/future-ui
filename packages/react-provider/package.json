@@ -1,12 +1,18 @@
 {
   "name": "@future-ui/react-provider",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "private": false,
   "type": "module",
-  "description": "React framework adapter/provider — first public UI surface, Button as first contract consumer (M1-01A)",
+  "description": "R3-RC-001 (#104): React framework adapter/provider — first public UI surface, Button as first contract consumer (M1-01A). Browser-safe component type constants at ./component-types.",
   "exports": {
     ".": "./src/index.ts",
     "./component-types": "./src/component-types.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "@future-ui/contracts": "workspace:*"

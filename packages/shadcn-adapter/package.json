@@ -1,12 +1,20 @@
 {
   "name": "@future-ui/shadcn-adapter",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "private": false,
   "type": "module",
-  "description": "R1-02 (#68): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference",
+  "description": "R1-02 (#68) / R3-RC-001 (#104): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference. Browser-safe surface at ./browser.",
   "exports": {
     ".": "./src/index.ts",
     "./browser": "./src/browser.ts"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "THIRD_PARTY_LICENSES.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "@future-ui/contracts": "workspace:*",

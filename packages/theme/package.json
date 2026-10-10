@@ -1,11 +1,19 @@
 {
   "name": "@future-ui/theme",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "private": false,
   "type": "module",
-  "description": "Optional first-round theme mechanism: public token/parts/variants consumed through public DOM contracts (data-part + CSS variables). Theme never changes structure/behavior semantics or business/capability state (D08 / #20).",
+  "description": "R3-RC-001 (#104): first-round theme mechanism — public token/parts/variants consumed through public DOM contracts (data-part + CSS variables). Browser-safe provider surface at ./browser; CSS tokens at ./theme.css. Theme never changes structure/behavior semantics or business/capability state (D08 / #20).",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./browser": "./src/provider.tsx",
+    "./theme.css": "./src/theme.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').copyFileSync('src/theme.css','dist/theme.css')\""
   },
   "dependencies": {
     "@future-ui/contracts": "workspace:*"
