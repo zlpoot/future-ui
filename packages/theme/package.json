@@ -4,19 +4,10 @@
   "private": false,
   "type": "module",
   "description": "R3-RC-001 (#104): first-round theme mechanism — public token/parts/variants consumed through public DOM contracts (data-part + CSS variables). Browser-safe provider surface at ./browser; CSS tokens at ./theme.css. Theme never changes structure/behavior semantics or business/capability state (D08 / #20).",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./browser": {
-      "types": "./dist/provider.d.ts",
-      "default": "./dist/provider.js"
-    },
-    "./theme.css": "./dist/theme.css"
+    ".": "./src/index.ts",
+    "./browser": "./src/provider.tsx",
+    "./theme.css": "./src/theme.css"
   },
   "files": [
     "dist"
@@ -24,8 +15,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node -e \"require('fs').copyFileSync('src/theme.css','dist/theme.css')\""
   },
+  "dependencies": {
+    "@future-ui/contracts": "workspace:*"
+  },
   "peerDependencies": {
-    "@future-ui/contracts": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

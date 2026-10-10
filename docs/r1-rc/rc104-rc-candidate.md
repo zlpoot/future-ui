@@ -46,9 +46,10 @@ Merge/Close；浏览器图不混入 Node-only `ai-dev` 等开发期包。
 
 - **dependencies（registry 可拉）**：cn 0.4.0、class-variance-authority 0.7.1、lucide-react 1.52.0、
   radix-ui 1.7.0（shadcn-adapter）；ajv 8.17.1（contracts）。
-- **peerDependencies（宿主提供）**：react/react-dom `^19.2.0`；`@future-ui/contracts`、
-  `@future-ui/react-provider`（shadcn-adapter/theme/react-provider 之间的 `@future-ui/*` 依赖全部
-  peer 化，浏览器 UI 生态由宿主显式安装）。
+- **peerDependencies（宿主提供）**：react/react-dom `^19.2.0`。候选包间的 `@future-ui/*` 依赖在
+  仓库内为 dependencies（workspace:*，保证开发/CI 解析）；**打包归档时由 build-rc.mjs 改写为
+  peerDependencies（显式版本）**——浏览器 UI 生态由离仓宿主显式安装，避免向 npm registry 请求
+  未发布的 `@future-ui/*`。
 - **交付归档内无 `workspace:*`**：build-rc.mjs 在 pack 前把 staging 副本中的 `workspace:*` 改写为
   workspace 内实际版本号（#4 授权要求）。
 - **浏览器图不加载 Node-only 包**：`ai-dev`、`ai-contract-core`、`conformance`、`ark-ui-adapter`、
@@ -58,13 +59,15 @@ Merge/Close；浏览器图不混入 Node-only `ai-dev` 等开发期包。
 ## 四、构建产物清单与 SHA-256（rc-dist/）
 
 ```
-6b11edea489229e0ffc94059210db73608c17371af35d42f4cf72a052c4dc104  future-ui-contracts-1.0.0.tgz
-1eecb0fa2c2fcb2132c078616605324382ad8c7f26d83e305f76651745071a57  future-ui-react-provider-0.1.0-rc.1.tgz
-90e37092bcbaf7a19413d007adaa74d341e819714ba8fb298814b9efdb10b8da  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
-2b86f43e1a97ee9366cdd8e1e6091077db7878ce64ab375dcc6c244f715a984c  future-ui-theme-0.1.0-rc.1.tgz
+c4e21549cd9c6ba53bcd6ad9edef4b3a622e0e30ef4a70d02a8fa5255d8afbeb  future-ui-contracts-1.0.0.tgz
+32a020793604d6b818ef2f33424e14f30e4ed17891f6976003730006e8e17671  future-ui-react-provider-0.1.0-rc.1.tgz
+0d2569184f219dd5d373dad8aa1ef668b7a558545b88e7ec9c34774c3c327cde  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
+94d22cedf12462f373ec7d5b9140366c8ac834245404a8a44f3f924580533945  future-ui-theme-0.1.0-rc.1.tgz
 ```
 
-（`rc-dist/` 为本地产物，不入库；上述哈希可复现：`corepack pnpm run build:rc`。）
+（`rc-dist/` 为本地产物，不入库；上述哈希可复现：`corepack pnpm run build:rc`。
+归档 manifest 由 build-rc.mjs 在 staging 阶段改写：exports→dist、`@future-ui/*` 依赖→peer、
+`workspace:*`→显式版本、补 main/module/types；仓库内 manifest 保持 src/workspace 开发形态。）
 
 ## 五、仓库外安装与运行（Windows 实测）
 
@@ -123,6 +126,12 @@ corepack pnpm exec vite --port 5180 --strictPort
 5. **lint 清理**：`rc-dist/` 构建产物被 eslint 扫描 + build-rc.mjs 未用变量 → eslint ignores 增加
    `rc-dist/**`、`packages/*/dist/**`；清理脚本未用变量。typecheck 通过（本地 node 22 仅
    toolchain.test 的 Node 版本断言失败，CI node 24 为门禁权威；非本 RC 回归）。
+6. **CI typecheck 404（push 后首轮 CI failure）**：候选包 exports 一度直接指向 `dist/`，而 dist 为
+   构建产物不入库，CI 干净环境下其他 workspace 包 import `@future-ui/*` 时无 dist 可解析；
+   同时 `@future-ui/*` 依赖 peer 化导致 CI frozen-lockfile 无链接记录。修复：仓库内 manifest 恢复
+   src/workspace 开发形态（exports→src、`@future-ui/*`→dependencies workspace:*），发布面
+   （dist exports、`@future-ui/*`→peer、`workspace:*`→版本、main/module/types）全部由
+   build-rc.mjs 在打包阶段对 staging 副本改写。本地 typecheck 恢复通过，CI 复跑待观察。
 
 ## 七、Windows / macOS 跨平台消费
 

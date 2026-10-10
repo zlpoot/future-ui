@@ -75,6 +75,43 @@ function resolveWorkspaceDeps(manifest, versions) {
   return manifest;
 }
 
+/**
+ * 归档 manifest 改写（staging 副本专用；仓库内 manifest 保持 src/workspace 开发形态）：
+ *   1) workspace:* → 实际版本号（所有依赖节）
+ *   2) dependencies 中的 @future-ui/* 移到 peerDependencies（浏览器 UI 生态由宿主显式安装，
+ *      离仓安装不向 registry 请求未发布的 @future-ui/*）
+ *   3) exports 的 src 路径 → dist 产物（types + default / 原样资源）
+ *   4) 补充 main/module/types
+ */
+function toDistExportSpec(p) {
+  if (p === './schemas/*.json') return './schemas/*.json';
+  if (p.endsWith('.css')) return p.replace('./src/', './dist/');
+  const base = p.replace('./src/', './dist/').replace(/\.(ts|tsx)$/, '');
+  return { types: `${base}.d.ts`, default: `${base}.js` };
+}
+
+function stageManifest(manifest, versions) {
+  resolveWorkspaceDeps(manifest, versions);
+  const uiPeers = {};
+  const deps = manifest.dependencies ?? {};
+  for (const name of Object.keys(deps)) {
+    if (name.startsWith('@future-ui/')) {
+      uiPeers[name] = deps[name];
+      delete deps[name];
+    }
+  }
+  manifest.peerDependencies = { ...uiPeers, ...(manifest.peerDependencies ?? {}) };
+  const stagedExports = {};
+  for (const [sub, spec] of Object.entries(manifest.exports ?? {})) {
+    stagedExports[sub] = typeof spec === 'string' ? toDistExportSpec(spec) : toDistExportSpec(spec.default);
+  }
+  manifest.exports = stagedExports;
+  manifest.main = './dist/index.js';
+  manifest.module = './dist/index.js';
+  manifest.types = './dist/index.d.ts';
+  return manifest;
+}
+
 /** 递归收集 dist 下 .js 文件（相对路径） */
 function walkJs(dir) {
   const out = [];
@@ -146,7 +183,7 @@ for (const pkg of CANDIDATE_PACKAGES) {
     cpSync(join(dir, 'schemas'), join(stage, 'schemas'), { recursive: true });
   }
   const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-  resolveWorkspaceDeps(manifest, versions);
+  stageManifest(manifest, versions);
   writeFileSync(join(stage, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   run('corepack', ['pnpm', 'pack', '--pack-destination', outDir], stage);
 }
