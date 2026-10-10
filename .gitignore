@@ -24,3 +24,6 @@ docs/benchmarks/d10-harness/runs/
 
 # AWH local verification and handoff records
 .handoff/
+
+# R3-RC-001 (#104) local pack archives and staging (never committed)
+rc-dist/

@@ -1,0 +1,66 @@
+/**
+ * @future-ui/theme · RC 视觉 token 资源（R3-RC-001 / #104）
+ *
+ * 数据源与 R2 已验收的示例一致（examples/material-editor/src/themes.ts 的
+ * Light/Dark ThemeDefinition 与 --future-ui-* tokens；同一 D08 视觉数据源，
+ * 不手填第二组色值）。
+ *
+ * 用法（Consumer）：
+ *   @import "@future-ui/theme/theme.css";
+ * 组件使用 shadcn/ui 语义类（bg-primary / text-foreground / border-input /
+ * ring-ring 等），由下方 tailwind v4 `@theme inline` 映射到 --future-ui-* token。
+ * 未使用 tailwind 的宿主可自行把语义变量映射到 token。
+ *
+ * 纯视觉资源：不改变组件结构/行为语义，不触碰业务状态（D08 约束）。
+ */
+
+/* ---- Light（默认） ---- */
+:root,
+[data-theme='light'] {
+  --future-ui-bg: #ffffff;
+  --future-ui-surface: #ffffff;
+  --future-ui-text: #1a1a1a;
+  --future-ui-muted: #555555;
+  --future-ui-border: #e2e8f0;
+  --future-ui-accent: #f1f5f9;
+  --future-ui-accent-text: #1e293b;
+  --future-ui-primary: #0f172a;
+  --future-ui-primary-text: #ffffff;
+  --future-ui-focus: #2563eb;
+  --future-ui-overlay: rgba(2, 6, 23, 0.5);
+  --future-ui-danger: #dc2626;
+}
+
+/* ---- Dark ---- */
+[data-theme='dark'] {
+  --future-ui-bg: #0b1220;
+  --future-ui-surface: #101a2c;
+  --future-ui-text: #e6edf7;
+  --future-ui-muted: #8fa3bf;
+  --future-ui-border: #2a3a56;
+  --future-ui-accent: #1c2b45;
+  --future-ui-accent-text: #f1f5f9;
+  --future-ui-primary: #3b82f6;
+  --future-ui-primary-text: #0b1220;
+  --future-ui-focus: #60a5fa;
+  --future-ui-overlay: rgba(0, 0, 0, 0.65);
+  --future-ui-danger: #f87171;
+}
+
+/* ---- tailwind v4 语义映射（shadcn/ui 类名 → 上述 token） ---- */
+@theme inline {
+  --color-background: var(--future-ui-bg);
+  --color-foreground: var(--future-ui-text);
+  --color-surface: var(--future-ui-surface);
+  --color-muted-foreground: var(--future-ui-muted);
+  --color-border: var(--future-ui-border);
+  --color-input: var(--future-ui-border);
+  --color-ring: var(--future-ui-focus);
+  --color-primary: var(--future-ui-primary);
+  --color-primary-foreground: var(--future-ui-primary-text);
+  --color-accent: var(--future-ui-accent);
+  --color-accent-foreground: var(--future-ui-accent-text);
+  --color-destructive: var(--future-ui-danger);
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}

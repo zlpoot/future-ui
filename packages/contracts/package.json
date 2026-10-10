@@ -1,18 +1,28 @@
 {
   "name": "@future-ui/contracts",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "type": "module",
-  "description": "framework-agnostic Component/Capability/Binding/Plugin contract schemas, validation and diagnostics (M0-02)",
+  "description": "framework-agnostic Component/Capability/Binding/Plugin contract schemas, validation and diagnostics (M0-02). R3-RC-001 (#104): first publishable candidate.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "engines": {
     "node": ">=24.21.0"
   },
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./schemas/*": "./schemas/*.json"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "ajv": "8.17.1"

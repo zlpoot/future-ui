@@ -1,22 +1,38 @@
 {
   "name": "@future-ui/shadcn-adapter",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "private": false,
   "type": "module",
-  "description": "R1-02 (#68): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference",
+  "description": "R1-02 (#68) / R3-RC-001 (#104): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference. Browser-safe surface at ./browser.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./browser": "./src/browser.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@future-ui/contracts": "workspace:*",
-    "@future-ui/react-provider": "workspace:*",
     "cn": "0.4.0",
     "class-variance-authority": "0.7.1",
     "lucide-react": "1.52.0",
     "radix-ui": "1.7.0"
   },
   "peerDependencies": {
+    "@future-ui/contracts": "workspace:*",
+    "@future-ui/react-provider": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
