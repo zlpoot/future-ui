@@ -1,10 +1,12 @@
 /**
- * R2-A1 (#96) · 定向测试：
+ * R2-A1 (#96) + R2-A2 (#98) · 定向测试：
  *   1) 交互闭环（jsdom）：预填 → 修改 → 异步保存 → 关闭 → 列表更新，保存中防重复提交；
  *   2) 同源性：UI 字段与 Agent 投影取自同一声明，改 label 双端变化，顺序/Action ref 一致；
  *   3) 注册表 + 工具安全面：显式实例、未注册 scope not-covered、0 capability → 业务工具数 0、
  *      secretNote 不出现在 listInstances；
- *   4) 负例投影：draft value 被 allowlist 拦截（withheld），敏感字段不注册不投影。
+ *   4) 负例投影：draft value 被 allowlist 拦截（withheld），敏感字段不注册不投影；
+ *   5) R2-A2 双主题换肤：Light/Dark 切换只改视觉（data-theme + token），不触发额外
+ *      onSave/onOpenChange；Dialog 打开/草稿/pending/aria-busy/焦点/投影均不受影响。
  */
 // @vitest-environment jsdom
 import { describe, expect, test } from 'vitest';
@@ -215,5 +217,141 @@ describe('R2-A1 负例：draft 值 / 敏感字段不泄露', () => {
     const list = executeProjectTool(ctx, 'project.listInstances', {});
     const rows = (list as { ok: true; data: { instances: Array<{ boundCapabilities?: string[] }> } }).data.instances;
     expect(rows.every((r) => (r.boundCapabilities ?? []).length === 0)).toBe(true);
+  });
+});
+
+describe('R2-A2 双主题换肤（状态保持 + 事件次数）', () => {
+  test('切换主题：ThemeProvider 表面与 <html>（Portal 作用域）同步更新 data-theme + token', () => {
+    render(<MaterialEditorPage />);
+
+    const surface = () => document.querySelector('.future-ui-theme-surface')!;
+    const html = () => document.documentElement;
+    const toggle = () => screen.getByTestId('theme-toggle');
+
+    // 初始 Light：表面与 <html> 均带 light；token 同步
+    expect(surface().getAttribute('data-theme')).toBe('light');
+    expect(html().getAttribute('data-theme')).toBe('light');
+    expect(html().style.getPropertyValue('--future-ui-bg')).toBe('#ffffff');
+
+    // 切到 Dark：两者一起变化（Portal 内 Dialog 继承 <html> token 才会真实换肤）
+    fireEvent.click(toggle());
+    expect(surface().getAttribute('data-theme')).toBe('dark');
+    expect(html().getAttribute('data-theme')).toBe('dark');
+    expect(html().style.getPropertyValue('--future-ui-bg')).toBe('#0b1220');
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+
+    // 切回 Light
+    fireEvent.click(toggle());
+    expect(surface().getAttribute('data-theme')).toBe('light');
+    expect(html().getAttribute('data-theme')).toBe('light');
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  test('Dialog 打开 + 未保存草稿：切换主题不关闭 Dialog、草稿与可编辑性保持、无额外事件', () => {
+    render(<MaterialEditorPage />);
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    const input = screen.getByDisplayValue('春日山景.mp4') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '草稿-未保存.mp4' } });
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    const logBefore = screen.getByTestId('me-log').textContent!;
+    fireEvent.click(screen.getByTestId('theme-toggle')); // Dialog 打开时切主题
+
+    // Dialog 仍打开；草稿值保持；输入仍可编辑；焦点仍在该输入框上
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByDisplayValue('草稿-未保存.mp4')).toBeTruthy();
+    fireEvent.change(screen.getByDisplayValue('草稿-未保存.mp4'), { target: { value: '草稿-仍可编辑.mp4' } });
+    expect(screen.getByDisplayValue('草稿-仍可编辑.mp4')).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByDisplayValue('草稿-仍可编辑.mp4'));
+    // 主题切换不触发额外 onSave/onOpenChange：日志无任何新增
+    expect(screen.getByTestId('me-log').textContent).toBe(logBefore);
+  });
+
+  test('保存 pending 时切换主题：aria-busy/disabled 保持、不重复保存、reason=save 恰好一次', async () => {
+    render(<MaterialEditorPage />);
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    fireEvent.change(screen.getByDisplayValue('春日山景.mp4'), { target: { value: '春日山景-改.mp4' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+    const pendingBtn = await screen.findByRole('button', { name: '保存中…' }, { timeout: 2500 });
+    expect((pendingBtn as HTMLButtonElement).disabled).toBe(true);
+    expect(pendingBtn.getAttribute('aria-busy')).toBe('true');
+
+    // pending 期间切换主题：保存不被打断、不重复
+    fireEvent.click(screen.getByTestId('theme-toggle'));
+    const pendingAfter = screen.getByRole('button', { name: '保存中…' });
+    expect((pendingAfter as HTMLButtonElement).disabled).toBe(true);
+    expect(pendingAfter.getAttribute('aria-busy')).toBe('true');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
+    const logText = screen.getByTestId('me-log').textContent!;
+    expect(logText.match(/save pending/g)!.length).toBe(1);
+    expect(logText.match(/saved id=m1/g)!.length).toBe(1);
+    expect(logText.match(/close reason=save/g)!.length).toBe(1);
+    expect(screen.getByTestId('me-name-m1').textContent).toBe('春日山景-改.mp4');
+  });
+
+  test('重复切换不触发任何业务事件；UI 字段顺序/标签与 Agent 投影换肤前后不变', () => {
+    render(<MaterialEditorPage />);
+
+    // 未打开 Dialog 时反复切换：日志保持为空占位，无 onSave/onOpenChange 痕迹
+    const toggle = screen.getByTestId('theme-toggle');
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('me-log').textContent).toBe('(尚无事件)');
+
+    // Dialog 字段（含 secretNote 仅 UI）顺序/标签换肤前后一致
+    fireEvent.click(screen.getByTestId('me-row-m2').querySelector('button')!);
+    const labelsBefore = Array.from(
+      document.querySelectorAll('[data-testid="edit-dialog-fields"] label'),
+    ).map((el) => el.textContent);
+    fireEvent.click(toggle);
+    const labelsAfter = Array.from(
+      document.querySelectorAll('[data-testid="edit-dialog-fields"] label'),
+    ).map((el) => el.textContent);
+    expect(labelsAfter).toEqual(labelsBefore);
+
+    // Agent 只读投影与主题无关：换肤前后字段元数据、Action 引用不变
+    const beforeProjection = publicFieldMetadata(MATERIAL_FIELDS).map((f) => ({
+      name: f.name,
+      order: f.order,
+      actionRef: f.actionRef,
+    }));
+    fireEvent.click(toggle);
+    const afterProjection = publicFieldMetadata(MATERIAL_FIELDS).map((f) => ({
+      name: f.name,
+      order: f.order,
+      actionRef: f.actionRef,
+    }));
+    expect(afterProjection).toEqual(beforeProjection);
+    expect(afterProjection.map((f) => f.name)).toEqual(['displayName', 'description']);
+    expect(projectSaveAction().ref).toBe(MATERIAL_SAVE_ACTION.ref);
+  });
+
+  test('P1-2 键盘路径：按键 T 切换主题，但焦点在输入框内时不触发（输入守卫）', () => {
+    render(<MaterialEditorPage />);
+    const html = () => document.documentElement;
+    expect(html().getAttribute('data-theme')).toBe('light');
+
+    // 焦点在非输入元素（如取消按钮）→ 按 T 切换
+    fireEvent.click(screen.getByTestId('me-row-m1').querySelector('button')!);
+    const cancelBtn = screen.getByRole('button', { name: '取消' });
+    cancelBtn.focus();
+    fireEvent.keyDown(cancelBtn, { key: 't' });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+
+    // 焦点在输入框内 → 按 T 不切换（避免打断输入）
+    const input = screen.getByDisplayValue('春日山景.mp4') as HTMLInputElement;
+    input.focus();
+    fireEvent.keyDown(input, { key: 't' });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+    // 输入框里实际输入 t 也属于正常输入，不触发切换
+    fireEvent.change(input, { target: { value: '春日山景-t.mp4' } });
+    expect(html().getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByDisplayValue('春日山景-t.mp4')).toBeTruthy();
   });
 });

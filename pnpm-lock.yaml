@@ -29,6 +29,9 @@ importers:
       '@future-ui/shadcn-adapter':
         specifier: workspace:*
         version: link:../../packages/shadcn-adapter
+      '@future-ui/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
     devDependencies:
       '@future-ui/ai-contract-core':
         specifier: workspace:*
