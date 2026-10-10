@@ -45,8 +45,10 @@ body {
   color: var(--future-ui-text);
 }
 
-/* ---------- 页面元素（me-*） ---------- */
+/* ---------- 页面元素（me-* 为页面 A 既有类名；fp-* 为共享配方类名，
+            两页共用同一份规则，B 引用 fp-*，A 保留 me-* 别名证明无退化） ---------- */
 
+.fp-page,
 .me-page {
   max-width: 720px;
   margin: 24px auto;
@@ -54,6 +56,7 @@ body {
   color: var(--future-ui-text);
 }
 
+.fp-header h1,
 .me-header h1 {
   margin: 0;
   font-size: 20px;
@@ -63,6 +66,7 @@ body {
    modal 打开时会把 body 置为 pointer-events:none（外部子树不可命中），
    仅靠 z-index 无法解除；示例端显式恢复 pointer-events:auto，使浮层在
    弹窗打开时仍可被真实指针点击（不改任何公共契约）。 */
+.fp-theme-float,
 .me-theme-float {
   position: fixed;
   top: 16px;
@@ -71,11 +75,38 @@ body {
   pointer-events: auto;
 }
 
+/* 演示 host 视图切换条（同一 Vite host 内 A/B 轻量切换；共享配方一部分）。 */
+.fp-host-nav {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--future-ui-border);
+  border-radius: 999px;
+  background-color: var(--future-ui-surface);
+  font-size: 13px;
+  z-index: 40;
+}
+
+.fp-host-nav a {
+  color: var(--future-ui-focus);
+  text-decoration: none;
+}
+
+.fp-host-nav a:hover {
+  text-decoration: underline;
+}
+
+.fp-note,
 .me-note {
   color: var(--future-ui-muted);
   font-size: 13px;
 }
 
+.fp-list,
 .me-list {
   list-style: none;
   padding: 0;
@@ -85,6 +116,7 @@ body {
   gap: 8px;
 }
 
+.fp-row,
 .me-row {
   display: flex;
   align-items: center;
@@ -96,17 +128,20 @@ body {
   background-color: var(--future-ui-surface);
 }
 
+.fp-text,
 .me-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
+.fp-text span,
 .me-text span {
   color: var(--future-ui-muted);
   font-size: 13px;
 }
 
+.fp-log,
 .me-log {
   background: var(--future-ui-accent);
   border: 1px solid var(--future-ui-border);
