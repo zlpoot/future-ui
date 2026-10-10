@@ -14,10 +14,11 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
+import type { ThemeDefinition } from '@future-ui/theme';
 import { ThemeProvider } from '@future-ui/theme';
 import { ShadcnButton } from '@future-ui/shadcn-adapter/browser';
 import { applyThemeToRoot, themes } from './themes.js';
-import type { ThemeDefinition, ThemeName } from './themes.js';
+import type { ThemeName } from './themes.js';
 
 export type { ThemeDefinition, ThemeName };
 
