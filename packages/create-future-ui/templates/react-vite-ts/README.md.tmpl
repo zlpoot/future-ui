@@ -1,0 +1,38 @@
+# {{projectName}}
+
+由 `create-future-ui`（R3-WIN-01 / Issue #107）生成的 Future UI Windows React 工程。
+
+> 当前状态：**本地候选**（local RC candidate），不是 npm 公开发行版。
+> `npm create future-ui@latest` 是未来公网形态；在 Future UI 正式发布 npm 之前，
+> 请使用 `--local-rc-dir` 的本地 pilot 模式（见下）。
+
+## 技术栈
+
+- React 19 + Vite 7 + TypeScript 6（严格模式）
+- Tailwind CSS v4（`@import "tailwindcss"` + `@source` 显式扫描组件类）
+- shadcn/Radix 适配组件：`ShadcnButton`、`ShadcnTextInput`、`EditDialog`
+- 主题资源：`@future-ui/theme/theme.css`（Light/Dark token 单一数据源，无第二份色值）
+
+## 开始
+
+```bash
+cd {{projectName}}
+pnpm install   # 或 npm install
+pnpm dev       # loopback 本地开发（默认仅本机，端口 5173）
+pnpm build
+pnpm typecheck # 严格 TypeScript 检查
+pnpm test      # 测试 fixture：Button / TextInput / EditDialog + Light/Dark
+```
+
+### 本地 RC pilot（脱离 monorepo）
+
+生成工程时使用 `--local-rc-dir <rc-dir>`：四个真实 `.tgz` 归档被拷入
+`vendor/future-ui/` 相对目录，`package.json` 依赖改写为
+`file:vendor/future-ui/<tgz>`。工程不依赖 monorepo workspace、源码 alias
+或任何开发机绝对路径，可整体迁移。
+
+## 说明
+
+- 仅本地内存演示数据，不预置管理页面；默认仅 loopback 本地开发。
+- 浏览器图只导入 `@future-ui/shadcn-adapter/browser` 等浏览器安全入口，
+  不触碰 `@future-ui/contracts` 的 Node-only 校验器或 ai-dev。

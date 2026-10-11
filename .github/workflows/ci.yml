@@ -21,6 +21,18 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # R3-WIN-01 (#107 / P2): create-future-ui 必须可独立构建（tsc → dist），
+      # 其模板由生成工程自身的 typecheck/build/test 覆盖（见 PR 验收）。
+      - run: pnpm --filter create-future-ui build
+      # R3-WIN-01 (#107 / P1-2): 真实 pack/bin smoke — prepack 保证 dist 新鲜，
+      # 归档必须含 dist/cli.js 与模板文件，且 bin 可直接运行（干净 checkout 风险门）。
+      - name: R3-WIN-01 create-future-ui pack smoke
+        run: |
+          cd packages/create-future-ui
+          pnpm pack --out /tmp/create-future-ui.tgz
+          test -n "$(tar -tzf /tmp/create-future-ui.tgz | grep -E 'dist/cli\.js$')" || { echo "missing dist/cli.js"; exit 1; }
+          test -n "$(tar -tzf /tmp/create-future-ui.tgz | grep -E 'templates/react-vite-ts/src/App\.tsx$')" || { echo "missing template"; exit 1; }
+          node dist/cli.js --help >/dev/null && echo "bin smoke OK"
       # R3-RC-001 (#104 / P2-01): 最小发布构建检查 — 构建四个候选归档，
       # 验证归档 manifest（无 workspace:*、无 src/ 发布入口、exports 目标存在、
       # shadcn-adapter 携带第三方 License）与 SHA256SUMS 一致。仓库内 manifest

@@ -1,0 +1,25 @@
+{
+  "name": "create-future-ui",
+  "version": "0.1.0-rc.1",
+  "private": false,
+  "type": "module",
+  "description": "R3-WIN-01 (#107): Windows React project initializer — scaffolds a React 19 + Vite + TypeScript + Tailwind CSS v4 app wired to the Future UI RC packages (contracts/react-provider/theme/shadcn-adapter). npm create future-ui@latest <name> is the future registry UX; this package is currently a local publishable candidate (not yet on the npm registry).",
+  "bin": {
+    "create-future-ui": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=24.21.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "24.19.1"
+  }
+}
