@@ -1,0 +1,73 @@
+﻿{
+  "schema": "future-ui.ai-doctor@1",
+  "project": "my-admin",
+  "status": "ok",
+  "checks": [
+    {
+      "id": "dep-@future-ui/contracts",
+      "verdict": "pass",
+      "detail": "@future-ui/contracts 声明 1.0.0 = 实际安装 1.0.0"
+    },
+    {
+      "id": "dep-@future-ui/react-provider",
+      "verdict": "pass",
+      "detail": "@future-ui/react-provider 声明 0.1.0-rc.1 = 实际安装 0.1.0-rc.1"
+    },
+    {
+      "id": "dep-@future-ui/theme",
+      "verdict": "pass",
+      "detail": "@future-ui/theme 声明 0.1.0-rc.1 = 实际安装 0.1.0-rc.1"
+    },
+    {
+      "id": "dep-@future-ui/shadcn-adapter",
+      "verdict": "pass",
+      "detail": "@future-ui/shadcn-adapter 声明 0.1.0-rc.1 = 实际安装 0.1.0-rc.1"
+    },
+    {
+      "id": "vendor-@future-ui/contracts",
+      "verdict": "pass",
+      "detail": "vendor 归档存在：vendor/future-ui/future-ui-contracts-1.0.0.tgz"
+    },
+    {
+      "id": "vendor-@future-ui/react-provider",
+      "verdict": "pass",
+      "detail": "vendor 归档存在：vendor/future-ui/future-ui-react-provider-0.1.0-rc.1.tgz"
+    },
+    {
+      "id": "vendor-@future-ui/theme",
+      "verdict": "pass",
+      "detail": "vendor 归档存在：vendor/future-ui/future-ui-theme-0.1.0-rc.1.tgz"
+    },
+    {
+      "id": "vendor-@future-ui/shadcn-adapter",
+      "verdict": "pass",
+      "detail": "vendor 归档存在：vendor/future-ui/future-ui-shadcn-adapter-0.1.0-rc.1.tgz"
+    },
+    {
+      "id": "browser-entry",
+      "verdict": "pass",
+      "detail": "@future-ui/shadcn-adapter/browser 可加载，导出 EditDialog/ShadcnButton/ShadcnTextInput"
+    },
+    {
+      "id": "profile",
+      "verdict": "pass",
+      "detail": "Profile r1-edit-dialog-reference@1.0.0"
+    },
+    {
+      "id": "browser-import",
+      "verdict": "pass",
+      "detail": "src 未导入 @future-ui/shadcn-adapter 根入口（Node-only 校验器未进浏览器）"
+    },
+    {
+      "id": "theme-css",
+      "verdict": "pass",
+      "detail": "@future-ui/theme/theme.css（dist/theme.css）已安装，Light/Dark token 单一数据源就绪"
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "pass": 12,
+    "diagnose": 0,
+    "notCovered": 0
+  }
+}

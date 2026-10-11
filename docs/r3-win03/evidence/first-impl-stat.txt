@@ -1,0 +1,15 @@
+﻿commit 18b8ad20df1d1783198ccf29f055912e19f81fc9
+Author: doubao-work <doubao-work@future-ui.local>
+Date:   Sun Oct 11 17:39:10 2026 +0800
+
+    feat: 成员管理后台首次 AI 实现（基于 ai:view 规范）
+    
+    - 依据 AI-AGENTS.md / ai:view（r1-edit-dialog-reference@1.0.0）自主设计
+    - src/members.ts: 本地模拟数据 + 统计口径 + 表单字段派生
+    - src/App.tsx: 左侧导航/页头/统计卡/搜索/语义表格/EditDialog 新增编辑
+    - 组件全部走 @future-ui/shadcn-adapter/browser；Light/Dark 用 theme.css + data-theme
+    - 首次实现，尚未经过修复；首次检查结果见 evidence/
+
+ src/App.tsx    | 313 ++++++++++++++++++++++++++++++++++++++-------------------
+ src/members.ts |  56 +++++++++++
+ 2 files changed, 267 insertions(+), 102 deletions(-)

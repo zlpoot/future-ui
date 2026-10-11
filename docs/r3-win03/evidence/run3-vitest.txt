@@ -1,0 +1,13 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90mE:/projects/cfu-accept109/my-admin[39m
+
+ [32m✓[39m src/fixture.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1592[2mms[22m[39m
+   [32m✓[39m 成员管理后台 fixture [2m(7)[22m
+     [33m[2m✓[22m[39m 新增成员：保存后列表与统计更新[33m 726[2mms[22m[39m
+     [33m[2m✓[22m[39m 保存进入 pending 并阻止重复提交，完成后更新列表[33m 676[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 17:41:43
+[2m   Duration [22m 2.74s[2m (tests 63%, import 17%, environment 17%, transform 3%)[22m
+

@@ -1,0 +1,720 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90mE:/projects/cfu-accept109/my-admin[39m
+
+ [31m❯[39m src/fixture.test.tsx [2m([22m[2m5 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 81[2mms[22m[39m
+   [31m❯[39m create-future-ui 模板 fixture [2m(5)[22m
+[31m     [31m×[31m ShadcnButton 默认按钮可点击并反映状态[39m[32m 40[2mms[22m[39m
+[31m     [31m×[31m ShadcnTextInput 受控输入同步回显[39m[32m 12[2mms[22m[39m
+[31m     [31m×[31m EditDialog 打开即预填，取消不保存[39m[32m 10[2mms[22m[39m
+[31m     [31m×[31m EditDialog 保存进入 pending 后关闭并更新列表[39m[32m 12[2mms[22m[39m
+     [32m✓[39m Light/Dark 切换同步 data-theme 到 html[32m 5[2mms[22m[39m
+node.exe : 
+所在位置 行:1 字符: 403
++ ... TCODE ==="; & $node24 "node_modules\vitest\vitest.mjs" run *> "E:\pro ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/fixture.test.tsx[2m > [22mcreate-future-ui 模板 fixture[2m > [22mShadcnButton 默认按钮可点击并反
+映状态
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="button-echo"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"min-h-screen bg-background text-foreground"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed right-4 top-4 z-50 pointer-events-auto"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium w
+hitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring
+/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 d
+ark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 
+border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hov
+er:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+          [33mdata-size[39m=[32m"default"[39m
+          [33mdata-slot[39m=[32m"button"[39m
+          [33mdata-testid[39m=[32m"theme-toggle"[39m
+          [33mdata-variant[39m=[32m"outline"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m切换到深色[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex min-h-screen"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"w-56 shrink-0 border-r border-border bg-surface"[39m
+        [36m>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"主导航"[39m
+            [33mclass[39m=[32m"px-3 py-6"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"px-2 text-xs font-medium text-muted-foreground"[39m
+            [36m>[39m
+              [0mFuture UI 后台[0m
+            [36m</p>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"mt-3 space-y-1"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"block rounded-md bg-primary/10 px-2 py-1.5 text-sm font-medium text-primary"[3
+9m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m数据看板[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m系统设置[0m
+                [36m</a>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</aside>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"min-w-0 flex-1 px-4 py-6"[39m
+          [33mid[39m=[32m"overview"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto max-w-7xl"[39m
+          [36m>[39m
+            [36m<header[39m
+              [33mclass[39m=[32m"flex items-start justify-between gap-4"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"text-2xl font-semibold text-foreground"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m本地模拟成员数据 · 不接后端/外部账户[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-me
+dium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:rin
+g-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructiv
+e/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:s
+ize-4 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+                [33mdata-size[39m=[32m"default"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mdata-testid[39m=[32m"open-create"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m新增成员[0m
+              [36m</button>[39m
+            [36m</header>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"成员统计"[39m
+              [33mclass[39m=[32m"mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m成员总数[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-total"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m管理员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-admins"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m活跃成员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl fon...
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/fixture.test.tsx:[2m35:19[22m[39m
+    [90m 33|[39m       </StrictMode>,
+    [90m 34|[39m     );
+    [90m 35|[39m     expect(screen.getByTestId('button-echo')).toHaveTextContent('未点击');
+    [90m   |[39m                   [31m^[39m
+    [90m 36|[39m     fireEvent.click(screen.getByTestId('button-default'));
+    [90m 37|[39m     expect(screen.getByTestId('button-echo')).toHaveTextContent('已点击');
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/fixture.test.tsx[2m > [22mcreate-future-ui 模板 fixture[2m > [22mShadcnTextInput 受控输入同步
+回显
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element with the placeholder text of: 输入内容…
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"min-h-screen bg-background text-foreground"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed right-4 top-4 z-50 pointer-events-auto"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium w
+hitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring
+/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 d
+ark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 
+border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hov
+er:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+          [33mdata-size[39m=[32m"default"[39m
+          [33mdata-slot[39m=[32m"button"[39m
+          [33mdata-testid[39m=[32m"theme-toggle"[39m
+          [33mdata-variant[39m=[32m"outline"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m切换到深色[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex min-h-screen"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"w-56 shrink-0 border-r border-border bg-surface"[39m
+        [36m>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"主导航"[39m
+            [33mclass[39m=[32m"px-3 py-6"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"px-2 text-xs font-medium text-muted-foreground"[39m
+            [36m>[39m
+              [0mFuture UI 后台[0m
+            [36m</p>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"mt-3 space-y-1"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"block rounded-md bg-primary/10 px-2 py-1.5 text-sm font-medium text-primary"[3
+9m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m数据看板[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m系统设置[0m
+                [36m</a>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</aside>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"min-w-0 flex-1 px-4 py-6"[39m
+          [33mid[39m=[32m"overview"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto max-w-7xl"[39m
+          [36m>[39m
+            [36m<header[39m
+              [33mclass[39m=[32m"flex items-start justify-between gap-4"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"text-2xl font-semibold text-foreground"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m本地模拟成员数据 · 不接后端/外部账户[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-me
+dium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:rin
+g-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructiv
+e/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:s
+ize-4 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+                [33mdata-size[39m=[32m"default"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mdata-testid[39m=[32m"open-create"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m新增成员[0m
+              [36m</button>[39m
+            [36m</header>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"成员统计"[39m
+              [33mclass[39m=[32m"mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m成员总数[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-total"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m管理员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-admins"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m活跃成员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl fon...
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/fixture.test.tsx:[2m46:26[22m[39m
+    [90m 44|[39m       </StrictMode>,
+    [90m 45|[39m     );
+    [90m 46|[39m     const input = screen.getByPlaceholderText('输入内容…');
+    [90m   |[39m                          [31m^[39m
+    [90m 47|[39m     fireEvent.change(input, { target: { value: 'hello' } });
+    [90m 48|[39m     expect(screen.getByTestId('standalone-echo')).toHaveTextContent('h…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/fixture.test.tsx[2m > [22mcreate-future-ui 模板 fixture[2m > [22mEditDialog 打开即预填，取消不保存
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="edit-demo-1"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"min-h-screen bg-background text-foreground"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed right-4 top-4 z-50 pointer-events-auto"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium w
+hitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring
+/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 d
+ark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 
+border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hov
+er:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+          [33mdata-size[39m=[32m"default"[39m
+          [33mdata-slot[39m=[32m"button"[39m
+          [33mdata-testid[39m=[32m"theme-toggle"[39m
+          [33mdata-variant[39m=[32m"outline"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m切换到深色[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex min-h-screen"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"w-56 shrink-0 border-r border-border bg-surface"[39m
+        [36m>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"主导航"[39m
+            [33mclass[39m=[32m"px-3 py-6"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"px-2 text-xs font-medium text-muted-foreground"[39m
+            [36m>[39m
+              [0mFuture UI 后台[0m
+            [36m</p>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"mt-3 space-y-1"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"block rounded-md bg-primary/10 px-2 py-1.5 text-sm font-medium text-primary"[3
+9m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m数据看板[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m系统设置[0m
+                [36m</a>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</aside>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"min-w-0 flex-1 px-4 py-6"[39m
+          [33mid[39m=[32m"overview"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto max-w-7xl"[39m
+          [36m>[39m
+            [36m<header[39m
+              [33mclass[39m=[32m"flex items-start justify-between gap-4"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"text-2xl font-semibold text-foreground"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m本地模拟成员数据 · 不接后端/外部账户[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-me
+dium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:rin
+g-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructiv
+e/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:s
+ize-4 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+                [33mdata-size[39m=[32m"default"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mdata-testid[39m=[32m"open-create"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m新增成员[0m
+              [36m</button>[39m
+            [36m</header>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"成员统计"[39m
+              [33mclass[39m=[32m"mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m成员总数[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-total"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m管理员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-admins"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m活跃成员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl fon...
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/fixture.test.tsx:[2m57:28[22m[39m
+    [90m 55|[39m       </StrictMode>,
+    [90m 56|[39m     );
+    [90m 57|[39m     fireEvent.click(screen.getByTestId('edit-demo-1'));
+    [90m   |[39m                            [31m^[39m
+    [90m 58|[39m     // Radix Dialog 渲染到 body Portal：等待对话框出现
+    [90m 59|[39m     const dialog = await screen.findByRole('dialog');
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/fixture.test.tsx[2m > [22mcreate-future-ui 模板 fixture[2m > [22mEditDialog 保存进入 pendin
+g 后关闭并更新列表
+[31m[1mTestingLibraryElementError[22m[39m: Unable to find an element by: [data-testid="edit-demo-1"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"min-h-screen bg-background text-foreground"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"fixed right-4 top-4 z-50 pointer-events-auto"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-pressed[39m=[32m"false"[39m
+          [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium w
+hitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring
+/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 d
+ark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 
+border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hov
+er:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+          [33mdata-size[39m=[32m"default"[39m
+          [33mdata-slot[39m=[32m"button"[39m
+          [33mdata-testid[39m=[32m"theme-toggle"[39m
+          [33mdata-variant[39m=[32m"outline"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m切换到深色[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex min-h-screen"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"w-56 shrink-0 border-r border-border bg-surface"[39m
+        [36m>[39m
+          [36m<nav[39m
+            [33maria-label[39m=[32m"主导航"[39m
+            [33mclass[39m=[32m"px-3 py-6"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"px-2 text-xs font-medium text-muted-foreground"[39m
+            [36m>[39m
+              [0mFuture UI 后台[0m
+            [36m</p>[39m
+            [36m<ul[39m
+              [33mclass[39m=[32m"mt-3 space-y-1"[39m
+            [36m>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"block rounded-md bg-primary/10 px-2 py-1.5 text-sm font-medium text-primary"[3
+9m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m数据看板[0m
+                [36m</a>[39m
+              [36m</li>[39m
+              [36m<li>[39m
+                [36m<a[39m
+                  [33mclass[39m=[32m"block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-str
+ong"[39m
+                  [33mhref[39m=[32m"#overview"[39m
+                [36m>[39m
+                  [0m系统设置[0m
+                [36m</a>[39m
+              [36m</li>[39m
+            [36m</ul>[39m
+          [36m</nav>[39m
+        [36m</aside>[39m
+        [36m<main[39m
+          [33mclass[39m=[32m"min-w-0 flex-1 px-4 py-6"[39m
+          [33mid[39m=[32m"overview"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-auto max-w-7xl"[39m
+          [36m>[39m
+            [36m<header[39m
+              [33mclass[39m=[32m"flex items-start justify-between gap-4"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"text-2xl font-semibold text-foreground"[39m
+                [36m>[39m
+                  [0m成员管理[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m本地模拟成员数据 · 不接后端/外部账户[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-me
+dium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:rin
+g-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructiv
+e/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:s
+ize-4 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"[39m
+                [33mdata-size[39m=[32m"default"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mdata-testid[39m=[32m"open-create"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 17:39:21
+[2m   Duration [22m 1.28s[2m (import 44%, environment 40%, tests 8%, transform 7%)[22m
+
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m新增成员[0m
+              [36m</button>[39m
+            [36m</header>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"成员统计"[39m
+              [33mclass[39m=[32m"mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m成员总数[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-total"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m管理员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl font-semibold"[39m
+                  [33mdata-testid[39m=[32m"stat-admins"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</p>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"rounded-lg border border-border bg-surface p-4"[39m
+              [36m>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+                [36m>[39m
+                  [0m活跃成员[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 text-2xl fon...
+[90m [2m❯[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:[2m37:19[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m76:38[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m52:17[22m[39m
+[90m [2m❯[22m node_modules/@testing-library/dom/dist/query-helpers.js:[2m95:19[22m[39m
+[36m [2m❯[22m src/fixture.test.tsx:[2m75:28[22m[39m
+    [90m 73|[39m       </StrictMode>,
+    [90m 74|[39m     );
+    [90m 75|[39m     fireEvent.click(screen.getByTestId('edit-demo-1'));
+    [90m   |[39m                            [31m^[39m
+    [90m 76|[39m     await screen.findByRole('dialog');
+    [90m 77|[39m     const titleInput = screen.getByLabelText('标题') as HTMLInputElement;
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯[22m[39m
+

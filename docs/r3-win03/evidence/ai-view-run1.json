@@ -1,0 +1,300 @@
+{
+  "schema": "future-ui.project-ai-view@1",
+  "kind": "project-ai-view",
+  "project": {
+    "name": "my-admin",
+    "contractMajor": "1"
+  },
+  "generatedFrom": {
+    "tool": "create-future-ui ai:view（R3-WIN-02 #108）",
+    "source": "已安装 RC 资产派生"
+  },
+  "viewStatus": "ok",
+  "warnings": [],
+  "packages": [
+    {
+      "name": "@future-ui/contracts",
+      "version": "1.0.0",
+      "declared": "file:vendor/future-ui/future-ui-contracts-1.0.0.tgz",
+      "installed": true,
+      "browserSafe": false,
+      "note": "Node-only（schema/validators，含 node:fs 读取）；浏览器不可导入，仅供 Node 工具读取契约元数据"
+    },
+    {
+      "name": "@future-ui/react-provider",
+      "version": "0.1.0-rc.1",
+      "declared": "file:vendor/future-ui/future-ui-react-provider-0.1.0-rc.1.tgz",
+      "installed": true,
+      "browserSafe": true
+    },
+    {
+      "name": "@future-ui/theme",
+      "version": "0.1.0-rc.1",
+      "declared": "file:vendor/future-ui/future-ui-theme-0.1.0-rc.1.tgz",
+      "installed": true,
+      "browserSafe": true
+    },
+    {
+      "name": "@future-ui/shadcn-adapter",
+      "version": "0.1.0-rc.1",
+      "declared": "file:vendor/future-ui/future-ui-shadcn-adapter-0.1.0-rc.1.tgz",
+      "installed": true,
+      "browserSafe": true
+    }
+  ],
+  "profile": {
+    "profileId": "r1-edit-dialog-reference",
+    "profileVersion": "1.0.0",
+    "scope": "R1-02 (#68) in-repo reference only; not a real-project profile (TBD)",
+    "identity": "r1-edit-dialog-reference@1.0.0 的适用边界：R1-02 (#68) in-repo reference（非真实业务项目 Profile）；新工程按同一 Profile 消费 token。"
+  },
+  "components": [
+    {
+      "componentType": "future-ui.dialog",
+      "importPath": "@future-ui/shadcn-adapter/browser",
+      "declaredExports": [
+        "EditDialog"
+      ],
+      "exportVerified": true,
+      "missingExports": [],
+      "example": "<EditDialog\n  open={open}\n  label=\"Edit member\"\n  fields={[{ name: \"displayName\", label: \"Name\", type: \"text\" }]}\n  onSave={async (values) => { await save(values); }}\n  onOpenChange={({ open: next }) => setOpen(next)}\n/>",
+      "mappingStatus": "supported",
+      "mapping": {
+        "derivedFrom": "D15 冻结映射（browser 导出）",
+        "domains": {
+          "features": {
+            "total": 5,
+            "unsupported": []
+          },
+          "props": {
+            "total": 3,
+            "unsupported": []
+          },
+          "events": {
+            "total": 1,
+            "unsupported": []
+          },
+          "state": {
+            "total": 2,
+            "unsupported": []
+          },
+          "parts": {
+            "total": 3,
+            "unsupported": []
+          },
+          "control": {
+            "total": 3,
+            "unsupported": []
+          },
+          "accessibility": {
+            "total": 4,
+            "unsupported": []
+          },
+          "lifecycle": {
+            "total": 1,
+            "unsupported": []
+          },
+          "token": {
+            "total": 8,
+            "unsupported": []
+          }
+        }
+      }
+    },
+    {
+      "componentType": "future-ui.button",
+      "importPath": "@future-ui/shadcn-adapter/browser",
+      "declaredExports": [
+        "ShadcnButton"
+      ],
+      "exportVerified": true,
+      "missingExports": [],
+      "example": "<ShadcnButton type=\"button\" variant=\"default\" onClick={(e) => handle(e)}>Save</ShadcnButton>",
+      "mappingStatus": "partial",
+      "mapping": {
+        "derivedFrom": "D15 冻结映射（browser 导出）",
+        "domains": {
+          "features": {
+            "total": 2,
+            "unsupported": [
+              {
+                "member": "loading",
+                "reason": "shadcn Button exposes no loading prop and never sets aria-busy; the vendored component is a native button + cva variants only."
+              }
+            ]
+          },
+          "props": {
+            "total": 3,
+            "unsupported": [
+              {
+                "member": "loading",
+                "reason": "no loading prop upstream"
+              }
+            ]
+          },
+          "events": {
+            "total": 1,
+            "unsupported": []
+          },
+          "state": {
+            "total": 3,
+            "unsupported": [
+              {
+                "member": "loading",
+                "reason": "no busy/loading state upstream"
+              }
+            ]
+          },
+          "parts": {
+            "total": 1,
+            "unsupported": []
+          },
+          "control": {
+            "total": 1,
+            "unsupported": []
+          },
+          "accessibility": {
+            "total": 4,
+            "unsupported": []
+          },
+          "lifecycle": {
+            "total": 1,
+            "unsupported": []
+          },
+          "token": {
+            "total": 8,
+            "unsupported": []
+          }
+        }
+      }
+    },
+    {
+      "componentType": "future-ui.text-input",
+      "importPath": "@future-ui/shadcn-adapter/browser",
+      "declaredExports": [
+        "ShadcnTextInput"
+      ],
+      "exportVerified": true,
+      "missingExports": [],
+      "example": "<ShadcnTextInput id=\"email\" name=\"email\" type=\"email\" onValueChange={(e) => setEmail(e.value)} />",
+      "mappingStatus": "partial",
+      "mapping": {
+        "derivedFrom": "D15 冻结映射（browser 导出）",
+        "domains": {
+          "features": {
+            "total": 6,
+            "unsupported": []
+          },
+          "props": {
+            "total": 9,
+            "unsupported": []
+          },
+          "events": {
+            "total": 1,
+            "unsupported": []
+          },
+          "state": {
+            "total": 2,
+            "unsupported": []
+          },
+          "parts": {
+            "total": 2,
+            "unsupported": []
+          },
+          "control": {
+            "total": 1,
+            "unsupported": []
+          },
+          "accessibility": {
+            "total": 4,
+            "unsupported": [
+              {
+                "member": "role",
+                "reason": "The frozen contract declares accessibility.role=\"textbox\" for the whole TextInput while props.type enum allows text/email/password/number/search/tel/url. Native implicit ARIA roles differ by type: text/email/tel/url map to textbox, number maps to spinbutton, search maps to searchbox, and password has NO implicit ARIA role at all (it stays a non-generic element without a role). A single native <input> therefore cannot satisfy role=textbox for every contracted type, and the frozen contract cannot be changed in this PR."
+              }
+            ]
+          },
+          "lifecycle": {
+            "total": 1,
+            "unsupported": []
+          },
+          "token": {
+            "total": 2,
+            "unsupported": []
+          }
+        }
+      }
+    }
+  ],
+  "theme": {
+    "cssEntry": "@future-ui/theme/theme.css",
+    "cssInstalled": true,
+    "lightDark": "支持：<html data-theme> + CSS 内置 [data-theme=\"dark\"] 规则；Dialog 走 body Portal，token 在 <html> 上，随主题一致换肤",
+    "integrationLimit": "模板 fixtures 提供 jsdom 交互证据；真实浏览器视觉以人工 Chrome 验收为准"
+  },
+  "pages": {
+    "adminList": {
+      "pageId": "future-ui.page.admin-list",
+      "status": "recipe",
+      "scope": "首个管理页的必要布局/视觉/交互组合约定（R3-WIN-02 #108）；完整成员管理业务页属于 #109，未授权。",
+      "layout": {
+        "shell": "左侧 Sidebar 导航（固定）+ 右侧内容区；Sidebar 为页面组合约定，不是通用 Sidebar 组件 Contract",
+        "container": "max-w-7xl mx-auto px-4 py-6"
+      },
+      "header": {
+        "title": "页面标题用 h1：text-2xl font-semibold text-foreground",
+        "hierarchy": "区块标题 h2：text-sm font-medium；说明文字：text-xs text-muted-foreground",
+        "actions": "页面右上角「新增成员」按钮（ShadcnButton type=\"button\"）"
+      },
+      "statCards": {
+        "grid": "grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+        "card": "rounded-lg border border-border bg-surface p-4（数值 text-2xl font-semibold，标签 text-sm text-muted-foreground）"
+      },
+      "toolbar": {
+        "search": "搜索框用 ShadcnTextInput（id + aria-label 必填，placeholder 明示）",
+        "filters": "筛选控件为未来扩展位；当前无 Select 组件 Contract，不得包装 HTML 冒充"
+      },
+      "table": {
+        "semantics": "语义表格：table > thead(tr>th[scope=col]) + tbody(tr>td)；行操作「编辑」用 ShadcnButton size=\"sm\" variant=\"outline\"",
+        "caveat": "本表是页面级语义组合，不是受支持的通用 Future UI Table 组件 Contract（尚未存在）"
+      },
+      "dialog": {
+        "component": "EditDialog（@future-ui/shadcn-adapter/browser）",
+        "prefill": "打开时预填行数据；取消不保存（onOpenChange close 时不提交）",
+        "save": "onSave 为 async；保存期间 EditDialog 呈现 pending（保存中… + 阻止重复提交），完成后自动关闭并刷新列表",
+        "duplicateSubmitBlocked": "由 EditDialog 的 pending 中间态保证（真实交互证据见 src/fixture.test.tsx 与人工 Chrome 验收）"
+      },
+      "theme": {
+        "lightDark": "Light/Dark 由 @future-ui/theme/theme.css token 单一数据源 + <html data-theme> 切换；Dialog 挂 body Portal，token 写在 <html> 上保证随主题一致换肤",
+        "tokens": [
+          "bg-background",
+          "bg-surface",
+          "text-foreground",
+          "text-muted-foreground",
+          "border-border"
+        ],
+        "radii": [
+          "radius.md（控件）",
+          "radius.lg（Dialog）"
+        ],
+        "spacing": [
+          "space.4（gap）",
+          "space.6（Dialog padding）",
+          "control.height.md（控件高度）"
+        ]
+      }
+    }
+  },
+  "statusBoundary": {
+    "supported": "D15 映射无 unsupported 成员的组件（EditDialog）",
+    "partial": "存在 unsupported 成员（Button：features.loading；TextInput：accessibility.role 等）",
+    "unsupported": "D15 冻结结论中标记 unsupported 的契约成员（见各组件 mapping.domains）",
+    "notCovered": [
+      "通用 Table / Sidebar / Forms 组件 Contract：不存在，普通 HTML+Tailwind 组合不声称正式支持",
+      "WebMCP Runtime 或业务能力：本工程无能力/无授权，按钮事件不是业务工具",
+      "@future-ui/ai-dev（私有 Node-only）：不进浏览器、不随新工程分发",
+      "npm 公网安装：Future UI 尚未 publish，当前为本地 RC 归档",
+      "完整成员管理业务页：属于 #109，未授权"
+    ]
+  }
+}
