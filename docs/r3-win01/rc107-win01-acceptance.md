@@ -16,9 +16,16 @@
 
 `create-future-ui-0.1.0-rc.1.tgz`
 
-SHA-256：`FC7650056596C227AD0EAE40700CBDB0A5B449F014A8FF707F501D9407307507`（Review 修复后新 HEAD 重新打包；历史值 `1F86A5AE…` 标记为已废弃，不再与最终候选混淆）
+SHA-256：`8A4A9E1716BF14A379D1C7370BFBEB58F14F8FA18FCE99B81DE5E45EB2F9E5FD`（二次 Review 修复后新 HEAD 重新打包；历史值 `FC7650AE…`、`1F86A5AE…` 均已标记废弃，不与最终候选混淆）
 
 归档内容：`dist/*.js|.d.ts|.map` + `templates/react-vite-ts/**`（含 index.html.tmpl、README.md.tmpl、src/{main,App,theme.tsx,fixture.test.tsx,styles.css}、vite.config.ts、tsconfig.json）。
+
+## 二次 Review 修复（Review #5481310333，两项 OPEN）
+
+| 项 | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| P1-1 事务性生成（阻断） | 预检虽提前，但写入仍在最终目标内进行；`copyFileSync`/写 manifest 中途失败会留非空半成品，同名重试被拒绝 | `run()` 改为三段式：只读预检 → **全部写入父目录下的暂存目录**（`.name.cfu-staging-<rand>`）→ 全部成功后 `renameSync` 一次性提交（同卷原子；目标存在且为空时仅移除空目录后 rename，不触碰未知文件）。任何失败 `rmSync` 清理暂存，最终目标保持原状 | 单测：注入“模板已写入后 vendor 拷贝故障”→ run 返回 1、最终目标不存在、无暂存残骸 → 修复后同名重试成功 ✓；目标存在且为空目录可生成 ✓ |
+| P2-2 npm 新包名规则缺口 | 仍允许 `MyApp`（大写）、`my~app`（~）、`node_modules`/`favicon.ico`（保留名） | `validateProjectName` 按 `validate-npm-package-name.validForNewPackages` 补齐：拒绝大写、`~ ' ! ( ) *` 等非 URL 安全字符、首尾空格、`node_modules`/`favicon.ico`；保留 Windows 设备名拒绝（前置检查）与末尾点（Windows 目录约束）；合法字符集收紧为 `[a-z0-9._-]` | 单测 14 组用例全过（含 `MyApp`/`my~app`/`node_modules`/`favicon.ico` 拒绝；`my_app`、`name-` 仍合法） |
 
 ## Review 增量修复（PR #110，P1×2 + P2×2）
 
@@ -94,6 +101,8 @@ SHA-256：`FC7650056596C227AD0EAE40700CBDB0A5B449F014A8FF707F501D9407307507`（R
 7. **webmcp-adapter 模块缺失**：为增量 install 布局差异导致；`pnpm install --frozen-lockfile` 重装后消失（pre-existing，非本轮改动）。
 8. **Review P1-2 首次 typecheck 失败（TS2575）**：`readSync` 4 参数 overload 在 @types/node 24 不存在 → 改 5 参数形式（offset/length/position）后通过。
 9. **Review P1-1 重试测试构造**：合法候选 tgz 由测试内 `tar -czf` 构造（package/package.json 含 name/version），验证 planRcVendoring 全链路，不依赖真实 rc-dist。
+10. **二次 Review P1-1 顺序缺陷**：设备名检查置于大写检查之后，`PRN` 等先命中“不能含大写”→ 将 Windows 设备名检查前置（本身大小写不敏感）后 21/21 全过。
+11. **二次 Review P2-2 事务回归测试注入**：`vi.mock` 包装 `vendorRcTarballs`（vi.hoisted 故障开关），模拟“模板已写入后复制故障”，验证暂存清理与同名重试。
 
 ## 未测范围（如实记录）
 
@@ -105,4 +114,4 @@ SHA-256：`FC7650056596C227AD0EAE40700CBDB0A5B449F014A8FF707F501D9407307507`（R
 
 ## 结论
 
-`create-future-ui` 可独立 pack（prepack 构建门）、可离仓安装（Node 22 pnpm 与 Node 24 npm 双通道）、可生成完整可安装/运行/构建/测试的 React 工程；Review 四项（P1×2、P2×2）已修复并补充 Node 24 权威证据。Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，等待增量 Review。
+`create-future-ui` 可独立 pack（prepack 构建门）、可离仓安装（Node 22 pnpm 与 Node 24 npm 双通道）、可生成完整可安装/运行/构建/测试的 React 工程；首次 Review 四项（P1×2、P2×2）与二次 Review 两项（P1-1 事务性生成、P2-2 npm 新包名规则）均已修复并补充 Node 24 权威证据。Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，等待增量 Review。

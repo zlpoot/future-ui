@@ -1,10 +1,10 @@
 # R3-WIN-01 (#107) · create-future-ui CLI + React 19 / Vite / TS / Tailwind v4 模板
 
 ## 状态
-Draft · 停 AWAITING_INDEPENDENT_REVIEW（Review 四项已修复 + Node 24 权威验证补充，交 ChatGPT 对 exact HEAD 增量复核）
+Draft · 停 AWAITING_INDEPENDENT_REVIEW（二次 Review #5481310333 两项已修复，交 ChatGPT 对 exact HEAD 增量复核）
 
 - Base SHA：`48ad9733c49202bc878c6159929a37073efbbee1`（main）
-- Head SHA：见本 PR 远端 HEAD（Review 修复后新 commit；原 `3ff3907` 已过时）
+- Head SHA：见本 PR 远端 HEAD（二次 Review 修复后新 commit；原 `6e911d2` / `3ff3907` 已过时）
 
 ## 目标
 建立第一个可离开 Future UI 源仓库使用的 React 新工程初始化器：
@@ -35,16 +35,14 @@ Draft · 停 AWAITING_INDEPENDENT_REVIEW（Review 四项已修复 + Node 24 权�
 
 `create-future-ui-0.1.0-rc.1.tgz`
 
-SHA-256：`FC7650056596C227AD0EAE40700CBDB0A5B449F014A8FF707F501D9407307507`（Review 修复后新 HEAD 重新打包；历史值 `1F86A5AE…` 已废弃）
+SHA-256：`8A4A9E1716BF14A379D1C7370BFBEB58F14F8FA18FCE99B81DE5E45EB2F9E5FD`（二次 Review 修复后新 HEAD 重新打包；历史值 `FC7650AE…`、`1F86A5AE…` 已废弃）
 
 内容：`dist/`（ESM JS + .d.ts + map）+ `templates/react-vite-ts/**`。
 
-## Review 增量修复（本轮）
+## 二次 Review 修复（#5481310333，P1-1 事务性生成 + P2-2 npm 规则）
 
-- **P1-1 安全失败**：`run()` 拆两阶段——先只读预检（目标目录 + RC 资产），全部通过后才写入；缺归档失败不再留下非空工程，同名重试可成功。新增 run() 级失败重试测试（真实构造 tgz）。
-- **P1-2 干净 checkout 打包风险**：package.json 增加 `prepack`（tsc 构建门）；CI 增加 `create-future-ui build` + pack/bin smoke（`pnpm pack` → 校验归档含 `dist/cli.js` 与模板 → `node dist/cli.js --help`）。
-- **P2-1 RC 资产完整性**：`planRcVendoring` 记录并打印每包 SHA-256；验收文档与 #105 `SHA256SUMS.txt` 对照 **4/4 一致**（见下表）。
-- **P2-2 项目名校验**：`validateProjectName` 拒绝 `.`/`..`、Windows 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9 含 `CON.txt`）、以 `.`/`_` 开头、以 `.`/`_`/`-` 结尾、超长与非 URL 安全字符；12 组回归用例。
+- **P1-1 事务性生成（阻断修复）**：`run()` 三段式——只读预检 → **全部写入父目录暂存目录**（`.name.cfu-staging-<rand>`）→ 全部成功后 `renameSync` 一次性提交（同卷原子；目标存在且为空仅移除空目录，不触碰未知文件）。中途任何失败 `rmSync` 清理暂存，最终目标保持原状，同名重试不被半成品阻塞。新增回归：注入“模板已写入后 vendor 拷贝故障”→ 目标无残留 → 同名重试成功；空目录目标可生成。
+- **P2-2 npm 新包名规则补齐**：拒绝大写（`MyApp`）、`~ ' ! ( ) *`（`my~app`）、首尾空格、npm 保留名 `node_modules`/`favicon.ico`；合法字符集收紧 `[a-z0-9._-]`；保留 Windows 设备名拒绝（前置，大小写不敏感）与末尾点约束；`my_app`、`name-` 仍合法。14 组用例。
 
 ### pilot 四包 SHA-256（与 #105 冻结清单对照）
 
@@ -54,6 +52,8 @@ c4e21549cd9c6ba53bcd6ad9edef4b3a622e0e30ef4a70d02a8fa5255d8afbeb  future-ui-cont
 4ffc55abbfd83ae8a4916a108307cba6fb5295fa542bbf053be9dd00d08e2ce3  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
 94d22cedf12462f373ec7d5b9140366c8ac834245404a8a44f3f924580533945  future-ui-theme-0.1.0-rc.1.tgz
 ```
+
+> 首次 Review 的 P1-1/P2-2 已被二次修复（事务性生成、npm 新包名规则）取代并归档到上文；P1-2、P2-1 经 Review 确认通过。
 
 ## 离仓初始化验收（Windows，全新空目录，源仓库外）
 
@@ -69,17 +69,17 @@ c4e21549cd9c6ba53bcd6ad9edef4b3a622e0e30ef4a70d02a8fa5255d8afbeb  future-ui-cont
 
 CLI 错误场景（退出码 1）：非空目录拒绝、`--local-rc-dir` 缺归档列出缺失、非法 projectName 拒绝。
 
-## Windows Node 24 最小 npm 离仓验证（本轮 Review 补充，全新目录 `E:\projects\cfu-accept\node24-accept\`）
+## Windows Node 24 最小 npm 离仓验证（二次 Review 后重跑，全新目录 `E:\projects\cfu-accept\node24-r2\`）
 
-绝对路径固定执行（不依赖 PATH 里的 sandbox Node22）：`$node24 = 'C:\Program Files\nodejs\node.exe'`（**v24.21.0**）、`$npmCli = 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'`（npm 11.19.0）。
+绝对路径固定执行（不依赖 PATH 里的 sandbox Node22）：`$node24 = 'C:\Program Files\nodejs\node.exe'`（**v24.21.0**）、`$npmCli = 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'`（npm 11.19.0）。本次使用二次修复后的新归档。
 
 | 步骤 | 命令 | 退出码 |
 |---|---|---|
 | 安装 CLI 归档 | `& $node24 $npmCli install <cli.tgz> --prefix installer` | 0 |
-| 生成 pilot 工程 | `& $node24 installer\...\dist\cli.js my-node24 --local-rc-dir <rc-dist>` | 0 |
-| 安装生成工程 | `& $node24 $npmCli install`（my-node24 内；npm11 拦截 esbuild postinstall → `install-scripts approve esbuild` 后放行） | 0 |
-| 构建 | `& $node24 node_modules\vite\bin\vite.js build` | 0（CSS 20.46 kB） |
+| 生成 pilot 工程（事务性生成路径） | `& $node24 installer\...\dist\cli.js my-r2 --local-rc-dir <rc-dist>` | 0 |
+| 安装生成工程 | `& $node24 $npmCli install`（my-r2 内；npm11 拦截 esbuild postinstall → `install-scripts approve esbuild` 后放行） | 0 |
 | typecheck | `& $node24 node_modules\typescript\bin\tsc --noEmit` | 0 |
+| 构建 | `& $node24 node_modules\vite\bin\vite.js build` | 0（CSS 20.46 kB） |
 | fixture 测试 | `& $node24 node_modules\vitest\vitest.mjs run` | 0（5/5） |
 
 ## 真实 Chrome 验证（loopback 127.0.0.1:5173）
@@ -100,6 +100,8 @@ CLI 错误场景（退出码 1）：非空目录拒绝、`--local-rc-dir` 缺归
 6. 本地增量 install 布局差异导致 webmcp-adapter 解析失败 → frozen-lockfile 重装后消失（pre-existing，非本轮改动）
 7. Review P1-2 首次 typecheck：`readSync` 4 参 overload 在 @types/node 24 不存在 → 改 5 参数（offset/length/position）
 8. Review P1-1 重试测试：合法候选 tgz 由测试内 `tar -czf` 构造（package/package.json 含 name/version），不依赖真实 rc-dist
+9. 二次 Review 设备名顺序缺陷：设备名检查置于大写检查后，`PRN` 先命中“不能含大写”→ 前置设备名检查（大小写不敏感）
+10. 二次 Review 事务回归注入：`vi.mock` 包装 `vendorRcTarballs`（vi.hoisted 故障开关），模拟“模板已写入后复制故障”
 
 ## 未测范围
 

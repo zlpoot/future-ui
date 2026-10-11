@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   checkTargetUsable,
   CreateError,
@@ -22,6 +22,26 @@ import {
 } from '../src/template.js';
 import { parseArgs, run, validateProjectName } from '../src/cli.js';
 import { RC_CANDIDATES, VENDOR_REL_DIR } from '../src/constants.js';
+import type { VendoredTarball } from '../src/rc-vendor.js';
+
+/**
+ * 事务性生成回归（P1-1）：包装 rc-vendor.vendorRcTarballs，可注入"模板已写入后
+ * 复制故障"，验证最终目标无残留、同名重试成功。默认透传原实现。
+ */
+const rvState = vi.hoisted(() => ({ failCopy: false }));
+
+vi.mock('../src/rc-vendor.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/rc-vendor.js')>();
+  return {
+    ...actual,
+    vendorRcTarballs: (projectDir: string, planned: VendoredTarball[]) => {
+      if (rvState.failCopy) {
+        throw new Error('simulated copy failure after partial template write');
+      }
+      return actual.vendorRcTarballs(projectDir, planned);
+    },
+  };
+});
 
 const TEMPLATE_ROOT = join(__dirname, '..', 'templates', 'react-vite-ts');
 
@@ -76,12 +96,13 @@ describe('parseArgs', () => {
   });
 });
 
-describe('validateProjectName (P2-2)', () => {
-  it('合法 npm 名通过', () => {
+describe('validateProjectName (P2-2 · npm new-package 规则)', () => {
+  it('合法 npm 新包名通过', () => {
     expect(validateProjectName('my-admin')).toBeNull();
     expect(validateProjectName('app2')).toBeNull();
     expect(validateProjectName('a')).toBeNull();
-    expect(validateProjectName('my_app~x')).toBeNull();
+    expect(validateProjectName('my_app')).toBeNull(); // 中间下划线合法
+    expect(validateProjectName('name-')).toBeNull(); // npm 允许末尾连字符
   });
 
   it('拒绝 "." 与 ".."', () => {
@@ -97,16 +118,29 @@ describe('validateProjectName (P2-2)', () => {
     expect(validateProjectName('console')).toBeNull();
   });
 
-  it('拒绝以 "." 或 "_" 开头、以 "."/"_"/"-" 结尾', () => {
+  it('拒绝以 "." 或 "_" 开头、以 "." 结尾（Windows 目录约束）', () => {
     expect(validateProjectName('.hidden')).toMatch(/开头/);
     expect(validateProjectName('_private')).toMatch(/开头/);
     expect(validateProjectName('name.')).toMatch(/结尾/);
-    expect(validateProjectName('name_')).toMatch(/结尾/);
-    expect(validateProjectName('name-')).toMatch(/结尾/);
   });
 
-  it('拒绝空格与非 URL 安全字符、超长', () => {
-    expect(validateProjectName('bad name')).toMatch(/只能包含/);
+  it('拒绝 npm 新包名不认可的大写与特殊字符', () => {
+    expect(validateProjectName('MyApp')).toMatch(/大写/);
+    expect(validateProjectName('my~app')).toMatch(/只能包含/);
+    expect(validateProjectName('my_app~x')).toMatch(/只能包含/);
+    expect(validateProjectName("a'b")).toMatch(/只能包含/);
+    expect(validateProjectName('a!b')).toMatch(/只能包含/);
+  });
+
+  it('拒绝 npm 保留名 node_modules / favicon.ico', () => {
+    expect(validateProjectName('node_modules')).toMatch(/保留名/);
+    expect(validateProjectName('favicon.ico')).toMatch(/保留名/);
+  });
+
+  it('拒绝空格、非 URL 安全字符、超长', () => {
+    expect(validateProjectName('bad name')).toMatch(/空格|只能包含/);
+    expect(validateProjectName(' name')).toMatch(/空格/);
+    expect(validateProjectName('name ')).toMatch(/空格/);
     expect(validateProjectName('a/b')).toMatch(/只能包含/);
     expect(validateProjectName('a'.repeat(215))).toMatch(/上限/);
   });
@@ -181,6 +215,45 @@ describe('run() 先预检后写入 + 失败后同名重试 (P1-1)', () => {
       const code = run(['occupied-app', '--local-rc-dir', makeRcDir()]);
       expect(code).toBe(1);
       expect(readFileSync(join(tmp, 'occupied-app', 'keep.txt'), 'utf8')).toBe('user data');
+    } finally {
+      process.chdir(cwd);
+    }
+  });
+
+  it('已写部分模板后复制故障 → 原目标无残留 → 同名重试成功（事务性生成）', () => {
+    const cwd = process.cwd();
+    process.chdir(tmp);
+    try {
+      // 写入中途（模板已写入、vendor 拷贝时）故障
+      rvState.failCopy = true;
+      const first = run(['my-txn', '--local-rc-dir', makeRcDir()]);
+      expect(first).toBe(1);
+      // 最终目标不存在（无半成品残留），父目录无暂存残骸
+      expect(existsSync(join(tmp, 'my-txn'))).toBe(false);
+      const leftovers = readdirSync(tmp).filter((n) => n.includes('.cfu-staging-'));
+      expect(leftovers).toEqual([]);
+
+      // 修复后同名重试成功（不被半成品阻塞）
+      rvState.failCopy = false;
+      const second = run(['my-txn', '--local-rc-dir', makeRcDir()]);
+      expect(second).toBe(0);
+      expect(existsSync(join(tmp, 'my-txn', 'package.json'))).toBe(true);
+      expect(existsSync(join(tmp, 'my-txn', 'src', 'App.tsx'))).toBe(true);
+      expect(readdirSync(join(tmp, 'my-txn', VENDOR_REL_DIR))).toHaveLength(4);
+    } finally {
+      rvState.failCopy = false;
+      process.chdir(cwd);
+    }
+  });
+
+  it('目标存在且为空目录：可生成成功（仅移除空目录，不触碰文件）', () => {
+    const cwd = process.cwd();
+    process.chdir(tmp);
+    try {
+      mkdirSync(join(tmp, 'empty-app'));
+      const code = run(['empty-app', '--local-rc-dir', makeRcDir()]);
+      expect(code).toBe(0);
+      expect(existsSync(join(tmp, 'empty-app', 'package.json'))).toBe(true);
     } finally {
       process.chdir(cwd);
     }

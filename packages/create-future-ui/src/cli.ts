@@ -12,10 +12,9 @@
  *   生成项目 `vendor/future-ui/` 相对目录，依赖改写为 `file:vendor/future-ui/<tgz>`，
  *   脱离 monorepo 后可 install/dev/build。
  */
-import { join, resolve, basename } from 'node:path';
+import { join, resolve, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   checkTargetUsable,
   CreateError,
@@ -107,10 +106,19 @@ export function parseArgs(argv: string[]): CliOptions | null {
 /** Windows 保留设备名（含带扩展名形态，如 CON.txt 在 Windows 上同样被保留）。 */
 const WINDOWS_DEVICE_NAME_RE = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$/i;
 
+/** npm 保留名（不可用作 package name / 目录名）。 */
+const NPM_FORBIDDEN_NAMES = new Set(['node_modules', 'favicon.ico']);
+
 /**
- * 校验项目名（目录名 = npm package name）：
- * 拒绝 "."、".."、Windows 设备名、以 "."/"_" 开头、以 "."/"_"/"-" 结尾、
- * 超长或含非 URL 安全字符（validate-npm-package-name 的 new-package 规则子集）。
+ * 校验项目名（目录名 = npm package name）。
+ * 按 npm `validate-npm-package-name` 的 new-packages 规则（validForNewPackages）实现：
+ *  - 拒绝空、"."".."、长度 > 214
+ *  - 拒绝以 "." / "_" 开头
+ *  - 拒绝大写字母（validForNewPackages 的 warning → 不通过）
+ *  - 拒绝 "~ ' ! ( ) *" 等非 URL 安全字符（errors）
+ *  - 拒绝首尾空格
+ * 另加 Windows 路径约束：拒绝以 "." 结尾（Windows 目录名规则）；拒绝 Windows 保留设备名。
+ * 另加 npm 保留名：node_modules / favicon.ico。
  * 返回错误描述；合法返回 null。
  */
 export function validateProjectName(name: string): string | null {
@@ -123,17 +131,27 @@ export function validateProjectName(name: string): string | null {
   if (name.length > 214) {
     return '长度超过 214 字符上限';
   }
-  if (/^[._]/.test(name)) {
-    return '不能以 "." 或 "_" 开头（npm 包名规则）';
+  if (name.trim() !== name) {
+    return '不能含首尾空格（npm 包名规则）';
   }
-  if (/[._-]$/.test(name)) {
-    return '不能以 "."、"_" 或 "-" 结尾（npm 包名规则）';
-  }
-  if (!/^[A-Za-z0-9._~-]+$/.test(name)) {
-    return '只能包含字母、数字、点、下划线、波浪线（~）与连字符（npm 包名规则）';
-  }
+  // Windows 保留设备名大小写不敏感，须先于大写/字符集检查命中（如 PRN、CON.txt）。
   if (WINDOWS_DEVICE_NAME_RE.test(name)) {
     return 'Windows 保留设备名，不能用作目录名';
+  }
+  if (/^[._]/.test(name)) {
+    return '不能以 "." 或 "_" 开头（npm 新包名规则）';
+  }
+  if (/[A-Z]/.test(name)) {
+    return '不能含大写字母（npm 新包名规则 validForNewPackages）';
+  }
+  if (!/^[a-z0-9._-]+$/.test(name)) {
+    return '只能包含小写字母、数字、点、下划线与连字符（npm 禁止 ~ \' ! ( ) * 等特殊字符）';
+  }
+  if (/\.$/.test(name)) {
+    return '不能以 "." 结尾（Windows 目录名约束）';
+  }
+  if (NPM_FORBIDDEN_NAMES.has(name.toLowerCase())) {
+    return 'npm 保留名（node_modules / favicon.ico），不能用作目录名/包名';
   }
   return null;
 }
@@ -185,26 +203,44 @@ export function run(argv: string[]): number {
       planned = planRcVendoring(resolve(options.localRcDir));
     }
 
-    // 阶段 2 · 全部预检通过后才开始写入。
-    ensureTargetDir(projectDir);
-    writeTemplate(projectDir, templateDir, options.projectName);
-    const manifest = renderPackageJson(options.projectName);
+    // 阶段 2 · 事务性生成：全部写入先在父目录下的暂存目录完成，
+    // 中途任何失败都清理暂存并保持最终目标原状（半成品不会阻塞同名重试）；
+    // 全部成功后再一次性 rename 提交（同卷原子）。不触碰/删除最终目标内的未知文件。
+    const stagingDir = join(
+      dirname(projectDir),
+      `.${options.projectName}.cfu-staging-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    );
+    ensureTargetDir(stagingDir);
+    try {
+      writeTemplate(stagingDir, templateDir, options.projectName);
+      const manifest = renderPackageJson(options.projectName);
 
-    if (planned !== undefined && options.localRcDir) {
-      vendorRcTarballs(projectDir, planned);
-      const fileRefByName = new Map(RC_CANDIDATES.map((c, i) => [c.packageName, planned[i]!.fileRef]));
-      rewriteDepsToVendor(manifest, (pkg) => fileRefByName.get(pkg) ?? pkg);
-      console.log(
-        `\n[pilot] 已 vendoring 四个 RC 归档 → ${VENDOR_REL_DIR}/（依赖改写为 file: 相对引用）`,
-      );
-    } else {
-      console.log(
-        `\n[registry 形态] 生成工程依赖保留 @future-ui/* 版本引用（当前 npm 未发布，仅占位；请使用 --local-rc-dir 完成本地验收）`,
-      );
+      if (planned !== undefined && options.localRcDir) {
+        vendorRcTarballs(stagingDir, planned);
+        const fileRefByName = new Map(RC_CANDIDATES.map((c, i) => [c.packageName, planned[i]!.fileRef]));
+        rewriteDepsToVendor(manifest, (pkg) => fileRefByName.get(pkg) ?? pkg);
+        console.log(
+          `\n[pilot] 已 vendoring 四个 RC 归档 → ${VENDOR_REL_DIR}/（依赖改写为 file: 相对引用）`,
+        );
+      } else {
+        console.log(
+          `\n[registry 形态] 生成工程依赖保留 @future-ui/* 版本引用（当前 npm 未发布，仅占位；请使用 --local-rc-dir 完成本地验收）`,
+        );
+      }
+
+      writeFileSync(join(stagingDir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+      writeFileSync(join(stagingDir, '.gitignore'), GITIGNORE_CONTENT, 'utf8');
+    } catch (e) {
+      rmSync(stagingDir, { recursive: true, force: true });
+      throw e;
     }
 
-    writeFileSync(join(projectDir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-    writeFileSync(join(projectDir, '.gitignore'), GITIGNORE_CONTENT, 'utf8');
+    // 阶段 3 · 提交：目标不存在 → rename（同卷原子）；目标存在且为空（预检已保证）
+    // → 仅移除该空目录（不含任何文件，不触碰未知文件）后 rename。
+    if (existsSync(projectDir)) {
+      rmdirSync(projectDir);
+    }
+    renameSync(stagingDir, projectDir);
     printNextSteps(projectDir, options.localRcDir);
     return 0;
   } catch (e) {
