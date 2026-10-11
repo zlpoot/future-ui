@@ -19,7 +19,7 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, copyFileSync, writeFileSync, rmSync, readFileSync, statSync } from 'node:fs';
-import { dirname, resolve, basename, join } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
@@ -114,7 +114,7 @@ function main() {
       publishStatus: 'UNPUBLISHED',
       macStatus: 'MAC_NOT_TESTED',
     },
-    packages: Object.entries(five).map(([f, p]) => {
+    packages: Object.keys(five).map((f) => {
       const name = f.replace(/\.tgz$/, '');
       return { name, file: f, sha256: allSha[f].toUpperCase() };
     }),
