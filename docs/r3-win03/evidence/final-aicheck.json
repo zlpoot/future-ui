@@ -1,0 +1,62 @@
+﻿{
+  "schema": "future-ui.ai-check@1",
+  "project": "my-admin",
+  "status": "ok",
+  "checks": [
+    {
+      "id": "import-EditDialog",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: EditDialog ← @future-ui/shadcn-adapter/browser（future-ui.dialog）"
+    },
+    {
+      "id": "import-ShadcnButton",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: ShadcnButton ← @future-ui/shadcn-adapter/browser（future-ui.button）"
+    },
+    {
+      "id": "import-ShadcnTextInput",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: ShadcnTextInput ← @future-ui/shadcn-adapter/browser（future-ui.text-input）"
+    },
+    {
+      "id": "import-editDialogProfile",
+      "verdict": "not-covered",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: 未知导出 editDialogProfile ← @future-ui/shadcn-adapter/browser",
+      "note": "不在当前组件目录，不得假定为受支持组件"
+    },
+    {
+      "id": "import-EditDialogOpenChangeDetail",
+      "verdict": "not-covered",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: 未知导出 EditDialogOpenChangeDetail ← @future-ui/shadcn-adapter/browser",
+      "note": "不在当前组件目录，不得假定为受支持组件"
+    },
+    {
+      "id": "import-ShadcnButton",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\theme.tsx: ShadcnButton ← @future-ui/shadcn-adapter/browser（future-ui.button）"
+    },
+    {
+      "id": "dialog-onOpenChange",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: EditDialog #1 声明 onOpenChange（关闭约定）"
+    },
+    {
+      "id": "dialog-onSave",
+      "verdict": "pass",
+      "detail": "E:\\projects\\cfu-accept109\\my-admin\\src\\App.tsx: EditDialog #1 声明 onSave（保存处理）"
+    },
+    {
+      "id": "dialog-pending-duplicate",
+      "verdict": "not-covered",
+      "detail": "保存 pending 与重复提交阻止：静态检查无法证明运行时行为",
+      "note": "真实交互证据见 src/fixture.test.tsx（jsdom：pending 按钮禁用、完成关闭）与人工 Chrome 验收；本命令不伪造 PASS"
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "pass": 6,
+    "diagnose": 0,
+    "notCovered": 3
+  },
+  "limits": "静态只读检查：import/声明级别；运行时行为以 fixture 测试与真实浏览器验收为准。"
+}

@@ -1,0 +1,416 @@
+﻿diff --git a/src/App.tsx b/src/App.tsx
+index 7823272..b527af0 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,8 +1,17 @@
+ /**
+- * create-future-ui 模板 · 最小启动入口（不预置管理页面）。
+- * 本地演示数据仅驻留内存，不落盘；不导入任何 Node-only 模块。
++ * 成员管理后台（首次 AI 实现 · #109）。
++ *
++ * 依据 AI-AGENTS.md 与 ai:view 的 Admin List 页面 recipe 组合：
++ *  - 左侧 Sidebar 导航 + 右侧内容区（页面级组合约定，非通用 Sidebar 组件 Contract）
++ *  - h1 页头 + 统计卡片（grid-cols-4）
++ *  - 搜索用 ShadcnTextInput（id + aria-label）
++ *  - 语义表格 table > thead(th[scope=col]) + tbody（非通用 Table Contract）
++ *  - 新增/编辑统一走 EditDialog（预填；取消不保存；onSave async，pending 防重复由
++ *    EditDialog 呈现并阻止重复提交，完成后自动关闭并刷新列表）
++ *  - Light/Dark：@future-ui/theme/theme.css token 单一数据源 + <html data-theme> 切换
++ * 所有组件从 @future-ui/shadcn-adapter/browser 导入（唯一合法入口）。
+  */
+-import { useState } from 'react';
++import { useMemo, useState } from 'react';
+ import type { ReactElement } from 'react';
+ import {
+   EditDialog,
+@@ -12,129 +21,229 @@ import {
+ } from '@future-ui/shadcn-adapter/browser';
+ import type { EditDialogOpenChangeDetail } from '@future-ui/shadcn-adapter/browser';
+ import { ThemeFloatToggle, useHostTheme } from './theme.js';
+-
+-interface Item {
+-  id: string;
+-  title: string;
+-  description: string;
+-}
+-
+-const INITIAL_ITEMS: Item[] = [
+-  { id: 'demo-1', title: '示例任务', description: '本地演示数据，等待编辑' },
+-];
++import { INITIAL_MEMBERS, computeStats, memberFields } from './members.js';
++import type { Member, MemberInput } from './members.js';
+ 
+ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+ 
++/** 打开编辑框的目标：null 关闭；{ mode:'create' } 新增；{ mode:'edit', member } 编辑预填。 */
++interface EditingTarget {
++  mode: 'create' | 'edit';
++  member: Member | null;
++}
++
+ export function App(): ReactElement {
+   const { themeName, toggleTheme } = useHostTheme();
+-  const [items, setItems] = useState<Item[]>(INITIAL_ITEMS);
+-  const [editing, setEditing] = useState<Item | null>(null);
+-  const [standalone, setStandalone] = useState('');
+-  const [clicked, setClicked] = useState(false);
++  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
++  const [editing, setEditing] = useState<EditingTarget | null>(null);
++  const [search, setSearch] = useState('');
++  const [saved, setSaved] = useState<string | null>(null);
+ 
+-  const fields = editing
+-    ? [
+-        { name: 'title', label: '标题', value: editing.title },
+-        { name: 'description', label: '描述', value: editing.description },
+-      ]
+-    : [];
++  const stats = useMemo(() => computeStats(members), [members]);
++  const filtered = useMemo(() => {
++    const q = search.trim().toLowerCase();
++    if (!q) return members;
++    return members.filter(
++      (m) =>
++        m.name.toLowerCase().includes(q) ||
++        m.email.toLowerCase().includes(q) ||
++        m.role.toLowerCase().includes(q) ||
++        m.status.toLowerCase().includes(q),
++    );
++  }, [members, search]);
+ 
++  /** 业务保存 handler：新增 append、编辑原地更新；成功后由 EditDialog 自动关闭。 */
+   const handleSave = async (values: Record<string, string>): Promise<void> => {
+     const target = editing;
+     if (!target) return;
+-    // pending 中间态由 EditDialog 呈现（保存中… + 阻止重复提交），完成后自动关闭。
+-    await delay(500);
+-    setItems((prev) =>
+-      prev.map((item) =>
+-        item.id === target.id
+-          ? {
+-              ...item,
+-              title: values.title ?? item.title,
+-              description: values.description ?? item.description,
+-            }
+-          : item,
+-      ),
+-    );
++    // 本地模拟保存耗时：pending 期间 EditDialog 呈现“保存中…”，阻止重复提交。
++    await delay(600);
++    const input: MemberInput = {
++      name: (values.name ?? '').trim(),
++      email: (values.email ?? '').trim(),
++      role: (values.role ?? 'viewer').trim() as Member['role'],
++      status: (values.status ?? 'active').trim() as Member['status'],
++    };
++    if (target.mode === 'create') {
++      const member: Member = {
++        id: `m-${Date.now().toString(36)}`,
++        ...input,
++        joinedAt: new Date().toISOString().slice(0, 10),
++      };
++      setMembers((prev) => [...prev, member]);
++      setSaved(`已新增成员：${member.name}`);
++    } else {
++      const current = target.member;
++      if (!current) return;
++      setMembers((prev) =>
++        prev.map((m) => (m.id === current.id ? { ...m, ...input } : m)),
++      );
++      setSaved(`已保存成员：${current.name}`);
++    }
++    setEditing(null);
+   };
+ 
+   const handleOpenChange = (detail: EditDialogOpenChangeDetail): void => {
++    // 取消/关闭：不保存、不写入 store。
+     if (!detail.open) setEditing(null);
+   };
+ 
++  const fields = editing ? memberFields(editing.member) : [];
++  const dialogLabel = editing?.mode === 'create' ? '新增成员' : '编辑成员';
++
+   return (
+     <div className="min-h-screen bg-background text-foreground">
+       <ThemeFloatToggle themeName={themeName} onToggle={toggleTheme} />
+-      <main className="mx-auto max-w-2xl px-4 py-10">
+-        <h1 className="text-2xl font-semibold">Future UI 全新工程</h1>
+-        <p className="mt-1 text-sm text-muted-foreground">
+-          create-future-ui 模板 · React 19 + Vite + TypeScript + Tailwind CSS v4 + shadcn/Radix
+-        </p>
+ 
+-        <section className="mt-8 rounded-lg border border-border bg-surface p-4" data-testid="button-section">
+-          <h2 className="text-sm font-medium">ShadcnButton</h2>
+-          <div className="mt-3 flex gap-2">
+-            <ShadcnButton type="button" data-testid="button-default" onClick={() => setClicked(true)}>
+-              默认按钮
+-            </ShadcnButton>
+-            <ShadcnButton type="button" variant="outline" data-testid="button-outline">
+-              描边按钮
+-            </ShadcnButton>
+-          </div>
+-          <p className="mt-2 text-xs text-muted-foreground" data-testid="button-echo">
+-            {clicked ? '默认按钮已点击' : '默认按钮未点击'}
+-          </p>
+-        </section>
++      <div className="flex min-h-screen">
++        {/* 左侧导航（页面组合约定：语义 nav + ul，非通用 Sidebar 组件 Contract） */}
++        <aside className="w-56 shrink-0 border-r border-border bg-surface">
++          <nav aria-label="主导航" className="px-3 py-6">
++            <p className="px-2 text-xs font-medium text-muted-foreground">Future UI 后台</p>
++            <ul className="mt-3 space-y-1">
++              <li>
++                <a
++                  href="#overview"
++                  aria-current="page"
++                  className="block rounded-md bg-primary/10 px-2 py-1.5 text-sm font-medium text-primary"
++                >
++                  成员管理
++                </a>
++              </li>
++              <li>
++                <a href="#overview" className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-strong">
++                  数据看板
++                </a>
++              </li>
++              <li>
++                <a href="#overview" className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-surface-strong">
++                  系统设置
++                </a>
++              </li>
++            </ul>
++          </nav>
++        </aside>
+ 
+-        <section className="mt-4 rounded-lg border border-border bg-surface p-4">
+-          <h2 className="text-sm font-medium">ShadcnTextInput（独立输入状态验证）</h2>
+-          <div className="mt-3">
+-            <ShadcnTextInput
+-              id="standalone-input"
+-              placeholder="输入内容…"
+-              value={standalone}
+-              onValueChange={(event) => setStandalone(event.value)}
+-              className="w-full"
+-            />
+-          </div>
+-          <p className="mt-2 text-xs text-muted-foreground" data-testid="standalone-echo">
+-            已输入：{standalone || '（空）'}
+-          </p>
+-        </section>
++        {/* 右侧内容区 */}
++        <main id="overview" className="min-w-0 flex-1 px-4 py-6">
++          <div className="mx-auto max-w-7xl">
++            {/* 页头 + 操作 */}
++            <header className="flex items-start justify-between gap-4">
++              <div>
++                <h1 className="text-2xl font-semibold text-foreground">成员管理</h1>
++                <p className="mt-1 text-sm text-muted-foreground">
++                  本地模拟成员数据 · 不接后端/外部账户
++                </p>
++              </div>
++              <ShadcnButton
++                type="button"
++                data-testid="open-create"
++                onClick={() => setEditing({ mode: 'create', member: null })}
++              >
++                新增成员
++              </ShadcnButton>
++            </header>
++
++            {saved ? (
++              <p className="mt-4 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground" data-testid="save-toast">
++                {saved}
++              </p>
++            ) : null}
+ 
+-        <section className="mt-4 rounded-lg border border-border bg-surface p-4" data-testid="item-list">
+-          <h2 className="text-sm font-medium">本地列表（无预置管理页）</h2>
+-          <ul className="mt-3 divide-y divide-border">
+-            {items.map((item) => (
+-              <li key={item.id} className="flex items-center justify-between py-2">
+-                <div>
+-                  <p className="text-sm font-medium">{item.title}</p>
+-                  <p className="text-xs text-muted-foreground">{item.description}</p>
++            {/* 统计卡片 */}
++            <section aria-label="成员统计" className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
++              <div className="rounded-lg border border-border bg-surface p-4">
++                <p className="text-sm text-muted-foreground">成员总数</p>
++                <p className="mt-1 text-2xl font-semibold" data-testid="stat-total">{stats.total}</p>
++              </div>
++              <div className="rounded-lg border border-border bg-surface p-4">
++                <p className="text-sm text-muted-foreground">管理员</p>
++                <p className="mt-1 text-2xl font-semibold" data-testid="stat-admins">{stats.admins}</p>
++              </div>
++              <div className="rounded-lg border border-border bg-surface p-4">
++                <p className="text-sm text-muted-foreground">活跃成员</p>
++                <p className="mt-1 text-2xl font-semibold" data-testid="stat-active">{stats.active}</p>
++              </div>
++              <div className="rounded-lg border border-border bg-surface p-4">
++                <p className="text-sm text-muted-foreground">待邀请</p>
++                <p className="mt-1 text-2xl font-semibold" data-testid="stat-invited">{stats.invited}</p>
++              </div>
++            </section>
++
++            {/* 搜索 + 成员表格 */}
++            <section aria-label="成员列表" className="mt-6">
++              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
++                <h2 className="text-sm font-medium">成员列表</h2>
++                <div className="w-full max-w-xs">
++                  <ShadcnTextInput
++                    id="member-search"
++                    name="member-search"
++                    aria-label="搜索成员"
++                    placeholder="搜索姓名、邮箱或角色…"
++                    value={search}
++                    onValueChange={(event) => setSearch(event.value)}
++                  />
+                 </div>
+-                <ShadcnButton
+-                  type="button"
+-                  variant="outline"
+-                  size="sm"
+-                  data-testid={`edit-${item.id}`}
+-                  onClick={() => setEditing(item)}
+-                >
+-                  编辑
+-                </ShadcnButton>
+-              </li>
+-            ))}
+-          </ul>
+-          <p className="mt-2 text-xs text-muted-foreground">仅本地内存演示数据，不落盘。</p>
+-        </section>
++              </div>
++
++              <div className="mt-3 overflow-x-auto rounded-lg border border-border bg-surface">
++                <table className="w-full border-collapse text-sm">
++                  <thead>
++                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
++                      <th scope="col" className="px-3 py-2 font-medium">姓名</th>
++                      <th scope="col" className="px-3 py-2 font-medium">邮箱</th>
++                      <th scope="col" className="px-3 py-2 font-medium">角色</th>
++                      <th scope="col" className="px-3 py-2 font-medium">状态</th>
++                      <th scope="col" className="px-3 py-2 font-medium">加入日期</th>
++                      <th scope="col" className="px-3 py-2 font-medium">操作</th>
++                    </tr>
++                  </thead>
++                  <tbody>
++                    {filtered.map((member) => (
++                      <tr key={member.id} className="border-b border-border last:border-b-0" data-testid={`row-${member.id}`}>
++                        <td className="px-3 py-2 font-medium text-foreground">{member.name}</td>
++                        <td className="px-3 py-2 text-muted-foreground">{member.email}</td>
++                        <td className="px-3 py-2">{member.role}</td>
++                        <td className="px-3 py-2">{member.status}</td>
++                        <td className="px-3 py-2 text-muted-foreground">{member.joinedAt}</td>
++                        <td className="px-3 py-2">
++                          <ShadcnButton
++                            type="button"
++                            variant="outline"
++                            size="sm"
++                            data-testid={`edit-${member.id}`}
++                            onClick={() => setEditing({ mode: 'edit', member })}
++                          >
++                            编辑
++                          </ShadcnButton>
++                        </td>
++                      </tr>
++                    ))}
++                    {filtered.length === 0 ? (
++                      <tr>
++                        <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted-foreground" data-testid="empty-row">
++                          未找到匹配的成员
++                        </td>
++                      </tr>
++                    ) : null}
++                  </tbody>
++                </table>
++              </div>
++            </section>
++          </div>
++        </main>
++      </div>
+ 
+-        <EditDialog
+-          open={editing !== null}
+-          profile={editDialogProfile}
+-          label="编辑条目"
+-          description="预填、取消不保存；保存进入 pending 后自动关闭并更新列表"
+-          fields={fields}
+-          onSave={handleSave}
+-          onOpenChange={handleOpenChange}
+-        />
+-      </main>
++      {/* 新增/编辑对话框：取消不保存；保存 pending 防重复由 EditDialog 呈现；成功后自动关闭 */}
++      <EditDialog
++        open={editing !== null}
++        profile={editDialogProfile}
++        label={dialogLabel}
++        description={editing?.mode === 'create' ? '填写成员信息并保存' : '修改后保存；取消则放弃本次修改'}
++        fields={fields}
++        onSave={handleSave}
++        onOpenChange={handleOpenChange}
++      />
+     </div>
+   );
+ }
+diff --git a/src/members.ts b/src/members.ts
+new file mode 100644
+index 0000000..6fc981e
+--- /dev/null
++++ b/src/members.ts
+@@ -0,0 +1,56 @@
++/**
++ * 本地模拟成员数据与业务 store（成员管理后台 · #109 首次 AI 实现）。
++ *
++ * 规范来源：AI-AGENTS.md + ai:view（r1-edit-dialog-reference@1.0.0；组件一律走
++ * @future-ui/shadcn-adapter/browser）。本文件只持有本地内存数据与保存 handler，
++ * 不接后端/外部账户；业务保存由应用层 handler 持有（AGENTS.md）。
++ */
++export type MemberRole = 'admin' | 'editor' | 'viewer';
++export type MemberStatus = 'active' | 'invited' | 'disabled';
++
++export interface Member {
++  id: string;
++  name: string;
++  email: string;
++  role: MemberRole;
++  status: MemberStatus;
++  joinedAt: string; // ISO date string，仅本地模拟
++}
++
++export const INITIAL_MEMBERS: Member[] = [
++  { id: 'm-01', name: '陈晨', email: 'chenchen@example.local', role: 'admin', status: 'active', joinedAt: '2026-01-12' },
++  { id: 'm-02', name: '李一诺', email: 'liyinuo@example.local', role: 'editor', status: 'active', joinedAt: '2026-02-03' },
++  { id: 'm-03', name: '王梓涵', email: 'wangzihan@example.local', role: 'viewer', status: 'invited', joinedAt: '2026-03-15' },
++  { id: 'm-04', name: '张欣然', email: 'zhangxinran@example.local', role: 'editor', status: 'active', joinedAt: '2026-04-22' },
++  { id: 'm-05', name: '刘思远', email: 'liusiyuan@example.local', role: 'viewer', status: 'disabled', joinedAt: '2026-05-08' },
++  { id: 'm-06', name: '赵梦琪', email: 'zhaomengqi@example.local', role: 'admin', status: 'invited', joinedAt: '2026-06-30' },
++];
++
++export type MemberInput = Pick<Member, 'name' | 'email' | 'role' | 'status'>;
++
++/** 由保存 handler 根据编辑目标派生的表单字段（新增为空、编辑预填行数据）。 */
++export function memberFields(member: Member | null): { name: string; label: string; value: string; placeholder: string }[] {
++  return [
++    { name: 'name', label: '姓名', value: member?.name ?? '', placeholder: '输入成员姓名' },
++    { name: 'email', label: '邮箱', value: member?.email ?? '', placeholder: 'name@example.local' },
++    { name: 'role', label: '角色', value: member?.role ?? 'viewer', placeholder: 'admin / editor / viewer' },
++    { name: 'status', label: '状态', value: member?.status ?? 'active', placeholder: 'active / invited / disabled' },
++  ];
++}
++
++/** 统计口径（本地模拟）：总数、管理员数、活跃数、待邀请数。 */
++export interface MemberStats {
++  total: number;
++  admins: number;
++  active: number;
++  invited: number;
++}
++
++export function computeStats(members: Member[]): MemberStats {
++  return {
++    total: members.length,
++    admins: members.filter((m) => m.role === 'admin').length,
++    active: members.filter((m) => m.status === 'active').length,
++    invited: members.filter((m) => m.status === 'invited').length,
++  };
++}

@@ -44,7 +44,7 @@
    - `src/App.tsx`：左侧 nav（语义 HTML+Tailwind）、h1 页头+新增按钮、统计卡 grid-cols-4、
      搜索 ShadcnTextInput、语义 table/thead/th[scope=col]/tbody、EditDialog 新增/编辑统一入口；
      保存 handler 应用层持有，`await delay(600)` 模拟保存，取消不写 store
-6. **首次检查**（原件 `evidence/run1-*`）：
+6. **首次检查**（原件已随 PR 提交：`evidence/run1-*`）：
    - `tsc --noEmit`：**0 通过**
    - `npm run build`：首次因命令引用错误失败（`$env:NPM_CLI` 未定义，非代码问题）；修正后 **0 通过**（`run1b-build`）
    - `vitest run`：**4 failed**（模板 fixture 针对模板 demo 页 testid，与成员管理页不匹配——真实失败，原件 `run1-vitest.txt`）
@@ -62,7 +62,7 @@
 
 最终修复 commit：`c6beeae264126c1904a5c91af8775ec2aaf526ec`
 
-## 4. 真实 Windows Chrome 验收（loopback 5178）
+## 4. 真实 Windows Chrome 验收（loopback；首轮 5178，Review 后复测 5173）
 
 | 场景 | 操作与断言 | 结果 |
 |---|---|---|
@@ -74,11 +74,12 @@
 | 取消不保存 | 改姓名后点取消 → Dialog 关闭、列表仍“陈晨” | PASS |
 | 保存 pending + 防重复 | 保存点击后 0.28s 抓取：`{"t":"保存中…","dis":true}`；完成后自动关闭；列表更新“陈晨（已更新）”、toast“已保存成员：陈晨” | PASS |
 | Light/Dark | `data-theme` light↔dark 切换；Dialog 打开期间切换主题：light 白底 `#ffffff`+字 `#1a1a1a`，dark 深底 `#0b1220`+字 `#e6edf7`（Portal 随 html token） | PASS（含修复 3） |
-| 键盘/焦点 | Dialog 打开初始焦点第一个字段（INPUT inDialog）；Tab 在字段间循环；Esc 关闭 Dialog | PASS |
+| 键盘/焦点 | Dialog 打开初始焦点第一个字段（INPUT inDialog）；Tab 在字段间循环；**Esc 不关闭 Dialog**（EditDialog R1-DLG-02 契约 `onEscapeKeyDown preventDefault`；受控实测 keydown `defaultPrevented=true`、1.6s 内 `data-state=open`，见 evidence/esc-keydown-evidence.md）；X 按钮/取消/保存成功关闭正常 | PASS（订正后） |
 | 按钮交互 | 新增/编辑/保存/取消/主题切换全部通过 DOM 点击触发（真实 Chrome，非 jsdom） | PASS |
 
-截图：`docs/r3-win03/evidence/win03-light-dialog.png`（light 白 Dialog）、`win03-dark-dialog.png`（dark 深 Dialog）。
-说明：viewport 219x649 为浏览器窗口窄宽，DOM 断言不受影响；完整页面视觉以截图 OCR 佐证。
+截图：`docs/r3-win03/evidence/win03-light-dialog.png`（light 白 Dialog）、`win03-dark-dialog.png`（dark 深 Dialog）、
+`win03-fullpage.png`（整页：侧栏导航可见；窄窗下内容区被挤压，桌面宽幅视觉未覆盖，结论按证据收敛）。
+说明：viewport 219x649 为浏览器窗口窄宽，DOM 断言不受影响；Dialog 特写截图可读性经独立 Review 确认。
 
 ## 5. 四维统计（对照 #109 验收口径）
 
@@ -92,15 +93,38 @@
 ## 6. 边界与未验证范围
 
 - **not-covered**（不冒称 PASS）：通用 Table/Sidebar/Forms 组件 Contract（不存在）、WebMCP Runtime/业务能力、npm 公网安装（未 publish）。
-- **NOT-TESTED**：macOS（MAC_NOT_TESTED）；键盘完整矩阵（仅验证 Tab 循环/Esc/初始焦点）；多行文本/Select 等未来组件。
+- **NOT-TESTED**：macOS（MAC_NOT_TESTED）；键盘完整矩阵（已测：初始焦点/Tab 循环/Esc 保持打开/X/取消/保存关闭）；多行文本/Select 等未来组件；桌面宽幅视觉（浏览器窗口 219px 窄窗，侧栏/统计卡/表格的桌面宽幅展示未覆盖）。
 - 浏览器验收使用本地模拟数据（内存态），刷新即复位；未接后端/外部账户。
 - 未修改公共 Contract/Schema/Profile 语义；未触碰 vendored upstream 冻结源码与 provenance。
 - 无付费模型 API 调用；未发布 npm/Tag/Release；未进行真实业务写入。
 
+## 6a. 证据清单与 CI 覆盖说明（Review 补件）
+
+**首次生成与修复原始证据**（本轮已随 PR 提交，见 `docs/r3-win03/evidence/`）：
+
+| 证据 | 文件 |
+|---|---|
+| 首次业务提示原文（无实现提示） | `first-ai-prompt.md` |
+| AI 工具调用顺序（先读规范后写代码，#1–#5 在 #6 之前） | `ai-tool-trail.md` |
+| ai:view / ai:doctor 首次输出 | `ai-view-run1.json`（+`ai-view-run1.txt`）、`ai-doctor-run1.json` |
+| 首次实现 commit stat 与全量 diff（空工程基线 `eedd5729` → 首次实现 `18b8ad20`，src 267+/102-） | `first-impl-stat.txt`、`first-impl.diff` |
+| 修复 3（dark Dialog）diff | `fix3-dark-dialog.diff` |
+| 首次失败原件（退出码/stdout） | `run1-tsc.txt`（0）、`run1-build.txt`（首次 build 命令引用错误，非代码）、`run1-vitest.txt`（4 failed）、`run1b-build.txt`（修正后 build 0） |
+| 最终回归输出 | `final-vitest.txt`（7 passed）、`final-tsc.txt`（0）、`final-build.txt`（0）、`final-aicheck.json`（0）、`final-aidoctor.json`（0） |
+| 中间轮回归 | `run2-vitest.txt`（修复 1 后）、`run3-vitest.txt`（修复 2 后） |
+| Esc 订正实测 | `esc-keydown-evidence.md` |
+| 截图 | `win03-light-dialog.png`、`win03-dark-dialog.png`、`win03-fullpage.png` |
+
+**CI 覆盖诚实说明**：本 PR 触发的 GitHub Actions run（install/lint/typecheck/test + 构建检查）覆盖仓库
+既有框架检查；**新增验证样本 `examples/r3-win03-member-admin/` 未被仓库 CI 直接执行**
+（根 vitest include 为 `examples/*/tests/**`、typecheck 链不含该示例）。该样本的 7 用例与 tsc/build/
+ai:check/ai:doctor 均在**源仓库外独立工程**中真实运行并通过，原始输出见上表 `final-*` 与 `run*-*`；
+未将其冒充为 CI 结果。如需 CI 直连，可后续追加最小重建入口，本轮按 Review 意见未扩大 CI 矩阵。
+
 ## 7. SHA 与代码版本
 
 - Base main：`25dda99a2fa043b856cd323ac690ce04434f891e`
-- PR HEAD（待 push 后回读远端确认）：worktree `feat/r3-win-03-member-admin`
+- PR HEAD（push 后回读远端为准）：worktree `feat/r3-win-03-member-admin`
 - 空工程基线：`eedd5729`；首次实现：`18b8ad20`；修复：`c352cec`、`c6beeae`
 - CLI 归档 SHA256：`A229D32897E2BC1BF8801811A4F5952BB32E6E753E894186318A7E7A3C2BFD89`
 - RC 四包 SHA256：contracts `C4E21549CD9C6BA53BCD6AD9EDEF4B3A622E0E30EF4A70D02A8FA5255D8AFBEB`、react-provider `32A020793604D6B818EF2F33424E14F30E4ED17891F6976003730006E8E17671`、shadcn-adapter `A474A793F224452EFF071BAC80DD68B4DC52E06E998CE59D4BB6E087410413CF`、theme `D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C`
@@ -123,6 +147,8 @@ npm install && npm install-scripts approve esbuild
 
 ## 9. 结论
 
-- **PASS-IN-SCOPE**：AI 规范读取已证实；业务功能与交互在真实 Windows Chrome 全链路可操作；
-  Light/Dark 与 Dialog Portal 一致性经 1 次应用层修复后 PASS；修复全程 0 人工干预。
-- 提交一个中文 Draft PR（Refs #109），停在 **AWAITING_INDEPENDENT_REVIEW**，交 ChatGPT 独立 Review。
+- **PASS-IN-SCOPE（代码） / BUSINESS VERIFY PASS（证据补齐后）**：AI 规范读取经
+  首次提示原文 + 工具轨迹 + 首次 diff + 首次失败原件可独立回放；业务功能与交互在真实
+  Windows Chrome 全链路可操作；Light/Dark 与 Dialog Portal 一致性经 1 次应用层修复后 PASS；
+  修复全程 0 人工干预。Esc 结论已按受控实测订正（不关闭，符合冻结组件契约）。
+- 提交中文 Draft PR（Refs #109）修复提交，停在 **AWAITING_INDEPENDENT_REVIEW**，交 ChatGPT 独立 Review。
