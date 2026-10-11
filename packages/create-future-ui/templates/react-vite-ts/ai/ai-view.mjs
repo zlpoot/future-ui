@@ -6,11 +6,12 @@
  * Light/Dark 主题约定与 Admin List Page 组合 recipe。
  *
  * 用法：`node ai/ai-view.mjs`（或 `npm run ai:view` / `pnpm ai:view`）。
- * 输出：JSON 到 stdout；同时落盘 ai/artifacts/ai-view.json 供机器消费。
- * 退出码：0 = 成功（视图已派生）。未安装依赖 / browser 入口不可用 → 非零并附诊断。
+ * 输出：默认仅写 stdout（只读查询不留 untracked 产物）；显式 `--out <path>`（相对工程根）
+ * 才落盘文件供机器消费。退出码：0 = 成功（视图已派生，含 warnings 时仍在 stdout 标注）；
+ * 未安装依赖 / browser 入口不可用 → 非零并附诊断。
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import {
   PROJECT_ROOT,
   BROWSER_MODULE,
@@ -70,10 +71,18 @@ const MAPPING_EXPORT = {
   'future-ui.text-input': 'textInputMapping',
 };
 
-function buildView(projectName, packages, browser) {
+function buildView(projectName, packages, browser, warnings) {
   const components = KNOWN_COMPONENTS.map((c) => {
     const mapping = browser[MAPPING_EXPORT[c.componentType]];
     const support = mapping ? deriveComponentSupport(mapping) : null;
+    // P2-04：真实导出校验——declared 导出必须确实存在于已安装 browser 入口；
+    // 缺失时不得宣称 supported（mappingStatus 降级 not-covered 并在顶层 warnings 标注）。
+    const missingExports = c.exports.filter((e) => browser[e] === undefined);
+    if (missingExports.length > 0) {
+      warnings.push(
+        `${c.componentType}：声明的导出 ${missingExports.join(', ')} 未出现在已安装 browser 入口（@future-ui/shadcn-adapter/browser）真实导出中；不得视为 supported（运行 ai:doctor 会 diagnose）`,
+      );
+    }
     const example =
       c.componentType === 'future-ui.dialog'
         ? '<EditDialog\n  open={open}\n  label="Edit member"\n  fields={[{ name: "displayName", label: "Name", type: "text" }]}\n  onSave={async (values) => { await save(values); }}\n  onOpenChange={({ open: next }) => setOpen(next)}\n/>'
@@ -83,15 +92,20 @@ function buildView(projectName, packages, browser) {
     return {
       componentType: c.componentType,
       importPath: BROWSER_MODULE,
-      exports: c.exports,
+      declaredExports: c.exports,
+      exportVerified: missingExports.length === 0,
+      missingExports,
       example,
-      mappingStatus: support?.status ?? 'not-covered',
+      mappingStatus: missingExports.length > 0 ? 'not-covered' : (support?.status ?? 'not-covered'),
       mapping: support
         ? {
             derivedFrom: 'D15 冻结映射（browser 导出）',
             domains: support.domains,
           }
         : null,
+      note: missingExports.length > 0
+        ? `已安装 browser 入口未导出 ${missingExports.join(', ')}；真实导出缺失，不得视为 supported`
+        : undefined,
     };
   });
 
@@ -104,6 +118,8 @@ function buildView(projectName, packages, browser) {
       contractMajor: browser.CONTRACT_VERSION?.split('.')[0] ?? '1',
     },
     generatedFrom: { tool: 'create-future-ui ai:view（R3-WIN-02 #108）', source: '已安装 RC 资产派生' },
+    viewStatus: warnings.length === 0 ? 'ok' : 'ok-with-warnings',
+    warnings,
     packages: packages.map((p) => ({
       name: p.name,
       version: p.installed ? p.version : null,
@@ -142,6 +158,10 @@ function buildView(projectName, packages, browser) {
 }
 
 async function main() {
+  // P3：默认仅 stdout（只读查询不留 untracked 产物）；显式 --out <path> 才落盘。
+  const args = process.argv.slice(2);
+  const outIndex = args.indexOf('--out');
+  const outRel = outIndex !== -1 ? args[outIndex + 1] : null;
   const pkg = projectPackageJson();
   const browser = await loadBrowserSurface();
   const packages = UI_PACKAGES.map((name) => {
@@ -159,11 +179,15 @@ async function main() {
         : null,
     };
   });
-  const view = buildView(pkg.name, packages, browser);
+  const warnings = [];
+  const view = buildView(pkg.name, packages, browser, warnings);
   const text = `${JSON.stringify(view, null, 2)}\n`;
   process.stdout.write(text);
-  mkdirSync(join(PROJECT_ROOT, 'ai', 'artifacts'), { recursive: true });
-  writeFileSync(join(PROJECT_ROOT, 'ai', 'artifacts', 'ai-view.json'), text, 'utf8');
+  if (outRel) {
+    const abs = resolve(PROJECT_ROOT, outRel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, text, 'utf8');
+  }
 }
 
 main().catch((err) => {

@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.local
 .DS_Store
+# ai:view --out 显式落盘的生成产物（默认仅 stdout，不留 untracked 文件）
+ai/artifacts/

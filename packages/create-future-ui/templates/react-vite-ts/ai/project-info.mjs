@@ -93,13 +93,23 @@ export function collectSourceFiles() {
   return out;
 }
 
-/** 从源码文件解析 `import ... from 'specifier'`（含 type import / as 别名），返回条目列表。 */
+/**
+ * 从源码文件解析 import 引用（P2-02：覆盖 ESM 全部常见静态形态）。
+ * 返回条目列表，每条约含 specifier / names / kind：
+ *  - named：`import { a, b as c } from 'x'`（含 `import type {...} from`、默认+具名混合）
+ *  - namespace：`import * as X from 'x'`
+ *  - side-effect：`import 'x'`
+ *  - dynamic：静态字面量 `import('x')`（非字面量的动态 import 无法静态解析 → 不匹配，调用方按 not-covered 处理）
+ */
 export function parseImports(filePath) {
   const text = readFileSync(filePath, 'utf8');
   const out = [];
-  const re = /import\s+(?:type\s+)?(?:(?:[\w$]+\s*,)?\s*\{([^}]*)\}|([\w$]+))\s+from\s+['"]([^'"]+)['"]/g;
+  const push = (specifier, names, kind) => out.push({ file: filePath, specifier, names, kind });
+
+  // 1) 具名 / 默认 import（含 type import 与 as 别名）
+  const namedRe = /import\s+(?:type\s+)?(?:(?:[\w$]+\s*,)?\s*\{([^}]*)\}|([\w$]+))\s+from\s+['"]([^'"]+)['"]/g;
   let m;
-  while ((m = re.exec(text)) !== null) {
+  while ((m = namedRe.exec(text)) !== null) {
     const named = m[1];
     const names = named
       ? named
@@ -110,7 +120,96 @@ export function parseImports(filePath) {
       : m[2]
         ? [m[2]]
         : [];
-    out.push({ file: filePath, specifier: m[3], names });
+    push(m[3], names, 'named');
+  }
+  // 2) namespace import：`import * as X from 'x'`
+  const nsRe = /import\s+(?:type\s+)?\*\s+as\s+[\w$]+\s+from\s+['"]([^'"]+)['"]/g;
+  while ((m = nsRe.exec(text)) !== null) push(m[1], [], 'namespace');
+  // 3) side-effect import：`import 'x'`
+  const sideRe = /import\s+['"]([^'"]+)['"]/g;
+  while ((m = sideRe.exec(text)) !== null) push(m[1], [], 'side-effect');
+  // 4) 静态字面量动态 import：`import('x')`
+  const dynRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((m = dynRe.exec(text)) !== null) push(m[1], [], 'dynamic');
+  return out;
+}
+
+/**
+ * 提取文本中 <tag ...> 的全部 JSX opening element（P2-03）。
+ * 花括号/字符串/模板/注释感知：属性表达式（如回调内嵌 JSX 或 `/>`）不会提前截断；
+ * 每个元素独立返回，供调用方按元素统计属性，避免"多元素只要一个含 prop 就 pass"。
+ * 返回元素文本数组（以 `>` 或 `/>` 结尾）；解析失败（未闭合）的片段跳过。
+ */
+export function findJsxOpeningElements(text, tag) {
+  const out = [];
+  const re = new RegExp(`<${tag}\\b`, 'g');
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    // 前一个字符是标识符/`.` 时是其它标识符的一部分（如 MyEditDialog、Comp.EditDialog）
+    if (m.index > 0 && /[A-Za-z0-9_$.]/.test(text[m.index - 1])) continue;
+    const seg = extractJsxOpeningElement(text, m.index);
+    if (seg) out.push(seg);
   }
   return out;
+}
+
+function extractJsxOpeningElement(text, start) {
+  let i = start;
+  const n = text.length;
+  let inString = null;
+  let depth = 0; // 花括号表达式深度（JSX 属性值 { ... }）
+  while (i < n) {
+    const ch = text[i];
+    if (inString !== null) {
+      if (ch === '\\') {
+        i += 2;
+        continue;
+      }
+      if (ch === inString) inString = null;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      inString = ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '{') {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+    if (ch === '}') {
+      depth -= 1;
+      i += 1;
+      continue;
+    }
+    if (depth === 0) {
+      if (ch === '/' && text[i + 1] === '/') {
+        const nl = text.indexOf('\n', i);
+        i = nl === -1 ? n : nl + 1;
+        continue;
+      }
+      if (ch === '/' && text[i + 1] === '*') {
+        const end = text.indexOf('*/', i + 2);
+        i = end === -1 ? n : end + 2;
+        continue;
+      }
+      if (ch === '>') return text.slice(start, i + 1);
+    }
+    i += 1;
+  }
+  return null;
+}
+
+/** 单元素文本上某个 prop 的出现次数（`prop=` 独立词边界）。 */
+export function countPropInElement(elementText, prop) {
+  const re = new RegExp(`(?:^|[^\\w$])${prop}\\s*=`, 'g');
+  const hits = elementText.match(re);
+  return hits ? hits.length : 0;
+}
+
+/** 元素是否含展开属性 `{...props}`（该元素回调无法静态判定 → not-covered）。 */
+export function elementHasSpreadProps(elementText) {
+  return /\{\.\.\./.test(elementText);
 }

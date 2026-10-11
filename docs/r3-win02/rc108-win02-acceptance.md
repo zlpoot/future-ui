@@ -73,6 +73,18 @@
    - `build-rc.mjs`：`./package.json` 元数据子路径原样保留；
    - `check-rc.mjs`：对 `package/package.json` 特殊子路径按"归档内该文件存在"判定。
    修复后本地 `pnpm build:rc` + `pnpm check:rc` 双 PASS。
+7. **PR #111 Review 四项 P2 + P3 修复（review 5481781640，业务结论 REQUEST_CHANGES）**：
+   - **P2-01**（版本漂移误判 pass）：ai-doctor 增加 `registryDeclarationCheck`——声明缺失 → diagnose（未声明漂移）；
+     可解析 registry 裸/`^`/`~` 版本 → 与安装版本 semver 对比（不匹配 → diagnose）；latest/*/git/复杂范围 → not-covered（不得 PASS）。零依赖最小 semver 实现。
+   - **P2-02**（import 扫描漏检）：project-info `parseImports` 覆盖 named / type / namespace（`import * as X`）/
+     side-effect（`import 'x'`）/ 静态字面量动态 `import('x')`；非字面量动态 import 不产生条目（调用方 not-covered）。
+   - **P2-03**（JSX 回调误报/漏报）：project-info 新增 `findJsxOpeningElements`（花括号/字符串/模板/注释感知，
+     属性表达式内嵌 `/>` 不提前截断，排除 `MyEditDialog`/`Comp.EditDialog` 前导标识符）+ `countPropInElement` +
+     `elementHasSpreadProps`；ai-check 改为逐元素独立校验，展开属性 → not-covered。
+   - **P2-04**（view 虚报 supported）：ai-view 按已安装 browser 入口**真实导出**校验 `declaredExports`；
+     缺失 → exportVerified=false、mappingStatus 降级 **not-covered**、顶层 warnings + note（不得 supported；doctor 会 diagnose）。
+   - **P3**（只读查询留 untracked 产物）：ai-view 默认仅 stdout，显式 `--out <path>` 才落盘；
+     模板 `.gitignore` 增 `ai/artifacts/`；README/AI-AGENTS 措辞同步。Windows 实测：默认调用无 artifacts 落盘，`--out` 落盘成功。
 
 ## 五之二、最终归档 SHA-256（本轮本地 build:rc 产物；CI 环境独立构建值以其日志打印为准）
 
@@ -86,8 +98,9 @@ D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C  future-ui-them
 （#108 不冻结归档；四包 SHA 随本轮 build:rc 修复后的 HEAD 变化是预期行为，与 #105 历史冻结值
 `bd4db68c…` 等不再相同，历史值属于旧 HEAD 证据，已明确不再混淆。）
 
-CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复与模板 AI 工具）：
-`71DDBBE68AD72E20D4034EE2742E802E67DF320B789C18C56CE71CA5B5BD8561`
+CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复、模板 AI 工具与 P2/P3 修复）：
+`5BFAE52F11A0F56E12502FB0AD1F96CF00FCEBD25BE3FD4ECFFA31C763BEFB8E`
+（历史 `71DDBBE6…` 为 Review 前版本，已标记不再使用）
 
 ## 六、Windows 真实离仓验收（最终归档重做，Node 24.21.0，源仓库外全新目录）
 
@@ -95,7 +108,7 @@ CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复与模板 AI 工�
 
 | 步骤 | 命令 | 退出码 |
 |---|---|---|
-| 安装 CLI 归档（`71DDBBE6…`） | `& node24 npm-cli.js install <cli.tgz> --prefix installer` | 0 |
+| 安装 CLI 归档（`5BFAE52F…`） | `& node24 npm-cli.js install <cli.tgz> --prefix installer` | 0 |
 | 生成新工程 | `node installer\...\dist\cli.js my-r3ai --local-rc-dir E:\projects\future-ui-r3rc\rc-dist` | 0 |
 | 安装工程依赖（file:vendor 四归档） | `npm install` + `install-scripts approve esbuild` | 0 |
 | **ai:view** | `node ai/ai-view.mjs` → `E:\projects\cfu-accept\win02-main\ai-view.json` | **0** |
@@ -108,13 +121,19 @@ CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复与模板 AI 工�
 AI 工具 Node-only 未进浏览器：真实 Chrome 打开 `http://127.0.0.1:5173/`，页面浅/深主题切换、
 ShadcnButton/TextInput/EditDialog 渲染正常（证据 `win02-ai-light.png` / `win02-ai-dark.png`）。
 
-### 最小负例（副本工程，只读工具不变）
+### 最小负例（副本工程，只读工具不变）——含 PR #111 Review 修复后新增项
 
 | 负例 | 注入 | 结果 |
 |---|---|---|
 | 错误 import | src/App.tsx 改用根入口 `@future-ui/shadcn-adapter` | `ai:check` 退出码 **1**，诊断 `import-root-@future-ui/shadcn-adapter`，附修复建议 |
 | 错误版本 | package.json 依赖 `file:...shadcn-adapter-0.0.0.tgz` | `ai:doctor` 退出码 **1**，诊断"声明 0.0.0，实际安装 0.1.0-rc.1" |
 | 未知组件 | `import { SomeTable } from '@future-ui/shadcn-adapter/browser'` | `ai:check` 退出码 0，但 `import-SomeTable` 标 **not-covered**（不虚报 supported）；已知组件仍 pass |
+| P2-01a | 声明改 registry 裸版本 `"0.0.0"`（非 file:） | `ai:doctor` 退出码 **1**，诊断"声明 0.0.0 不匹配实际安装 0.1.0-rc.1" |
+| P2-01b | 删除 shadcn-adapter 依赖声明（保留 node_modules） | `ai:doctor` 退出码 **1**，诊断"声明缺失…但实际安装了 0.1.0-rc.1"（未声明漂移） |
+| P2-01c | 四包声明改 registry 精确版本（1.0.0 / 0.1.0-rc.1） | `ai:doctor` 退出码 **0**，status ok（registry 精确版本匹配） |
+| P2-02 | `import * as Adapter from '@future-ui/shadcn-adapter'` + `import '@future-ui/shadcn-adapter'` | `ai:doctor` 退出码 **1**，browser-import diagnose（namespace/side-effect 根入口均被识别） |
+| P2-03 | 双 EditDialog：合法箭头回调（对象参数）第 1 个含 onSave；第 2 个缺 onSave | `ai:check`：`EditDialog #1` onOpenChange/onSave 均 pass；`EditDialog #2` onOpenChange pass、onSave **diagnose**（逐元素独立，属性顺序无关） |
+| P2-04 | node_modules 内 browser.js 删除 EditDialog 重导出（入口仍可加载） | `ai:view` viewStatus `ok-with-warnings`，dialog 项 exportVerified=false、mappingStatus **not-covered**；`ai:doctor` 退出码 **1** browser-entry diagnose |
 
 ## 七、未测试 / 未覆盖范围（如实记录）
 

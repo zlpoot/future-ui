@@ -18,10 +18,14 @@
 本工程提供机器可读的 AI 规范视图与只读检查命令（Node-only，不进浏览器）：
 
 ```bash
-pnpm ai:view    # 组件目录 / Profile / 版本 / 支持边界 / Admin List 页面 recipe → JSON
+pnpm ai:view    # 组件目录 / Profile / 版本 / 支持边界 / Admin List 页面 recipe → JSON（默认仅 stdout）
 pnpm ai:doctor  # 依赖版本与 browser 入口一致性检查 → JSON
 pnpm ai:check   # src 组件使用与行为约定的只读验证 → JSON
 ```
+
+`ai:view` 默认只写 stdout（只读查询不留 untracked 产物）；需要机器消费时显式落盘：
+`node ai/ai-view.mjs --out ai/artifacts/ai-view.json`（该路径已 gitignore）。
+其余 AI 命令同理可重定向 stdout（如 `pnpm ai:doctor > ai/artifacts/ai-doctor.json`）。
 
 详见 [AI-AGENTS.md](AI-AGENTS.md)：唯一合法 Browser 入口是
 `@future-ui/shadcn-adapter/browser`；Profile 为 `r1-edit-dialog-reference@1.0.0`；

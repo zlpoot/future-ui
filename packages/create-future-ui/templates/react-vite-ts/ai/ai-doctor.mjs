@@ -22,7 +22,7 @@ import {
   themeCssInstalled,
 } from './project-info.mjs';
 
-/** 从 file:vendor/<tgz> 引用中提取期望版本；非 file: 形态返回 null（按 not-covered 处理）。 */
+/** 从 file:vendor/<tgz> 引用中提取期望版本；非 file: 形态返回 null（走 registry 判定分支）。 */
 const VENDOR_PACKAGE_NAMES = [
   'future-ui-contracts',
   'future-ui-react-provider',
@@ -41,6 +41,106 @@ function expectedVersionFromDeclaration(declared) {
     if (fileName.startsWith(`${known}-`)) return fileName.slice(known.length + 1);
   }
   return null;
+}
+
+// ---- P2-01：registry semver 形态声明的一致性判定（最小 semver 实现，零依赖）----
+
+function parseSemver(v) {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(String(v).trim());
+  if (!m) return null;
+  return { major: +m[1], minor: +m[2], patch: +m[3], prerelease: m[4] ?? '' };
+}
+
+/** semver 比较：a < b → -1；a = b → 0；a > b → 1。 */
+function semverCompare(a, b) {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  if (a.patch !== b.patch) return a.patch - b.patch;
+  if (!a.prerelease && !b.prerelease) return 0;
+  if (!a.prerelease) return 1; // 发布版 > 预发布
+  if (!b.prerelease) return -1;
+  const ap = a.prerelease.split('.');
+  const bp = b.prerelease.split('.');
+  for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
+    if (i >= ap.length) return -1;
+    if (i >= bp.length) return 1;
+    const x = /^\d+$/.test(ap[i]) ? +ap[i] : ap[i];
+    const y = /^\d+$/.test(bp[i]) ? +bp[i] : bp[i];
+    if (x === y) continue;
+    if (typeof x === 'number' && typeof y === 'string') return -1; // 数字段 < 字母段
+    if (typeof x === 'string' && typeof y === 'number') return 1;
+    return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * 判定已安装版本是否落在声明范围（^ / ~ / 裸版本）。
+ * 返回 true（匹配）/ false（不匹配）/ null（该声明形态无法静态判定 → not-covered）。
+ */
+function versionInRange(installed, range) {
+  const r = String(range ?? '').trim();
+  if (r === '' || r === '*' || r === 'latest' || r === 'x' || /^[\s|]+$/.test(r)) return null;
+  const installedV = parseSemver(installed);
+  if (!installedV) return null;
+  if (r.startsWith('^')) {
+    const p = parseSemver(r.slice(1));
+    if (!p) return null;
+    // ^0.0.z → 精确；^0.y.z → >=0.y.z <0.(y+1).0；^x.y.z (x>0) → >=x.y.z <(x+1).0.0
+    const upper =
+      p.major > 0
+        ? { major: p.major + 1, minor: 0, patch: 0, prerelease: '' }
+        : p.minor > 0
+          ? { major: 0, minor: p.minor + 1, patch: 0, prerelease: '' }
+          : null;
+    if (upper === null) return semverCompare(installedV, p) === 0;
+    return semverCompare(installedV, p) >= 0 && semverCompare(installedV, upper) < 0;
+  }
+  if (r.startsWith('~')) {
+    const p = parseSemver(r.slice(1));
+    if (!p) return null;
+    const upper = { major: p.major, minor: p.minor + 1, patch: 0, prerelease: '' };
+    return semverCompare(installedV, p) >= 0 && semverCompare(installedV, upper) < 0;
+  }
+  if (r.startsWith('>') || r.startsWith('<') || r.startsWith('=') || r.includes(' || ')) return null; // 复杂范围 → not-covered
+  const p = parseSemver(r);
+  if (!p) return null;
+  return semverCompare(installedV, p) === 0;
+}
+
+/**
+ * P2-01：非 file: 声明的一致性判定。绝不无条件记 pass：
+ *  - 声明缺失（依赖未声明但包已安装）→ diagnose（未声明漂移）；
+ *  - 可解析的 registry 版本（裸 / ^ / ~）→ 与安装版本对比（不匹配 → diagnose）；
+ *  - 无法静态判定的声明（latest / * / git / 复杂范围）→ not-covered（不得 PASS）。
+ */
+function registryDeclarationCheck(declared, installed, name) {
+  if (declared == null || declared === '') {
+    return {
+      id: `dep-${name}`,
+      verdict: 'diagnose',
+      detail: `${name} 声明缺失（package.json 无依赖条目），但实际安装了 ${installed}`,
+      fix: `在 package.json 声明 ${name}（file:vendor 归档或 registry 版本），消除未声明漂移`,
+    };
+  }
+  const matched = versionInRange(installed, declared);
+  if (matched === null) {
+    return {
+      id: `dep-${name}`,
+      verdict: 'not-covered',
+      detail: `${name} 声明 ${declared}，实际安装 ${installed}`,
+      note: '该声明形态（latest/*/git/复杂范围等）无法静态判定一致性，保持 not-covered',
+    };
+  }
+  if (matched === true) {
+    return { id: `dep-${name}`, verdict: 'pass', detail: `${name} 声明 ${declared} 匹配实际安装 ${installed}` };
+  }
+  return {
+    id: `dep-${name}`,
+    verdict: 'diagnose',
+    detail: `${name} 声明 ${declared} 不匹配实际安装 ${installed}`,
+    fix: '统一声明与安装版本（如 file:vendor 归档 0.1.0-rc.1），避免版本漂移',
+  };
 }
 
 async function main() {
@@ -70,12 +170,7 @@ async function main() {
         );
       }
     } else {
-      checks.push({
-        id: `dep-${name}`,
-        verdict: 'pass',
-        detail: `${name} 声明 ${declared ?? '（未声明）'}，实际安装 ${meta.version}`,
-        note: 'registry semver 形态：仅报告实际安装版本；精确一致性以 file:vendor 归档形态为准',
-      });
+      checks.push(registryDeclarationCheck(declared, meta.version, name));
     }
   }
 
@@ -155,13 +250,19 @@ async function main() {
     fail('theme-css', 'diagnose', '@future-ui/theme 的 dist/theme.css 缺失', '检查 @future-ui/theme 归档是否包含 dist/theme.css');
   }
 
-  const failed = checks.filter((c) => c.verdict !== 'pass');
+  const failed = checks.filter((c) => c.verdict === 'diagnose');
+  const nc = checks.filter((c) => c.verdict === 'not-covered');
   const report = {
     schema: 'future-ui.ai-doctor@1',
     project: pkg.name,
-    status: failed.length === 0 ? 'ok' : 'diagnose',
+    status: failed.length === 0 ? (nc.length === 0 ? 'ok' : 'ok-with-not-covered') : 'diagnose',
     checks,
-    summary: { total: checks.length, pass: checks.length - failed.length, diagnose: failed.length },
+    summary: {
+      total: checks.length,
+      pass: checks.length - failed.length - nc.length,
+      diagnose: failed.length,
+      notCovered: nc.length,
+    },
   };
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   process.exit(failed.length === 0 ? 0 : 1);

@@ -62,8 +62,9 @@ A474A793F224452EFF071BAC80DD68B4DC52E06E998CE59D4BB6E087410413CF  future-ui-shad
 D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C  future-ui-theme-0.1.0-rc.1.tgz
 ```
 
-CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复与模板 AI 工具）：
-`71DDBBE68AD72E20D4034EE2742E802E67DF320B789C18C56CE71CA5B5BD8561`
+CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复、模板 AI 工具与 P2/P3 修复）：
+`5BFAE52F11A0F56E12502FB0AD1F96CF00FCEBD25BE3FD4ECFFA31C763BEFB8E`
+（历史 `71DDBBE6…` 为 Review 前版本，不再使用）
 
 ## Windows 离仓验收（Node 24.21.0 · npm 11.19.0 · 源仓库外全新目录，基于最终归档重做）
 
@@ -78,6 +79,7 @@ CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复与模板 AI 工具
 | tsc / vite build / vitest | — | 0 / 0 / 0 |
 
 真实输出文件：`E:\projects\cfu-accept\win02-main\{ai-view,ai-doctor,ai-check}.json`
+P3 验证：默认调用无 `ai/artifacts/` 落盘（只读不留 untracked），`--out ai/artifacts/ai-view.json` 显式落盘成功。
 Chrome 冒烟：`http://127.0.0.1:5173/` 浅/深主题、三组件渲染正常（Node-only 未进浏览器）。
 
 ### 负例（最小只读验证）
@@ -99,6 +101,17 @@ Chrome 冒烟：`http://127.0.0.1:5173/` 浅/深主题、三组件渲染正常�
    `"./package.json"` 误改写成 `{types:.d.ts, default:.js}` → build-rc 原样保留该元数据子路径；
    check-rc 对 `package/package.json` 特殊子路径按"归档内存在"判定。修复后本地
    `pnpm build:rc` + `pnpm check:rc` 双 PASS，四包 SHA 见上（CI 独立构建值以其日志为准）。
+7. **Review（5481781640）四项 P2 + P3**：
+   - P2-01 版本漂移误判 pass → doctor 增 registryDeclarationCheck：缺失声明 diagnose、
+     registry 裸/^/~ 版本 semver 对比、复杂声明 not-covered（零依赖最小 semver）
+   - P2-02 import 漏检 → parseImports 覆盖 named/type/namespace/side-effect/静态动态 import；
+     非字面量动态 import 由调用方 not-covered
+   - P2-03 JSX 误报/漏报 → 元素级 JSX opening 解析（花括号/字符串/注释感知、属性顺序无关、
+     排除前导标识符），逐元素校验、展开属性 not-covered
+   - P2-04 view 虚报 → 按已安装 browser 真实导出校验，缺失降级 not-covered + warnings
+   - P3 只读落盘 → ai:view 默认仅 stdout，`--out` 显式落盘；模板 .gitignore 忽略 ai/artifacts/；文档措辞同步
+   新负例（registry 漂移/删除声明/registry 精确/ns+副作用 import/双 Dialog/删导出）全部符合预期；
+   旧负例（badimport/badversion/unknown）回归不回归。
 
 ## 未测 / 未覆盖
 

@@ -18,23 +18,12 @@ import {
   projectPackageJson,
   collectSourceFiles,
   parseImports,
+  findJsxOpeningElements,
+  countPropInElement,
+  elementHasSpreadProps,
 } from './project-info.mjs';
 
 const KNOWN_EXPORT = new Map(KNOWN_COMPONENTS.flatMap((c) => c.exports.map((e) => [e, c.componentType])));
-
-/** 统计某个 JSX 标记上 prop 出现的次数（简单非嵌套静态文本检查，明确标注限制）。 */
-function countJsxProp(entry, tag, prop) {
-  const text = entry.text;
-  const re = new RegExp(`<${tag}[\\s\\S]*?\\/?>`, 'g');
-  let count = 0;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const self = m[0];
-    const selfRe = new RegExp(`\\b${prop}=`, 'g');
-    while (selfRe.exec(self) !== null) count += 1;
-  }
-  return count;
-}
 
 async function main() {
   const pkg = projectPackageJson();
@@ -74,19 +63,38 @@ async function main() {
     }
   }
 
-  // 2) EditDialog 行为约定（静态可确认部分）
-  const dialogUses = entries.filter((e) => e.text.includes('<EditDialog'));
-  if (dialogUses.length > 0) {
-    for (const entry of dialogUses) {
-      if (countJsxProp(entry, 'EditDialog', 'onOpenChange') > 0) {
-        pass('dialog-onOpenChange', `${entry.file}: EditDialog 声明 onOpenChange（关闭约定）`);
-      } else {
-        fail('dialog-onOpenChange', `${entry.file}: EditDialog 缺少 onOpenChange 回调`, '添加 onOpenChange={({ open: next }) => ...}，取消不保存按关闭约定处理');
-      }
-      if (countJsxProp(entry, 'EditDialog', 'onSave') > 0) {
-        pass('dialog-onSave', `${entry.file}: EditDialog 声明 onSave（保存处理）`);
-      } else {
-        fail('dialog-onSave', `${entry.file}: EditDialog 缺少 onSave`, '提供 async onSave（pending 由 EditDialog 呈现）');
+  // 2) EditDialog 行为约定（P2-03：以每个 JSX opening element 为单位解析；
+  //    展开属性 {…props} 无法静态判定 → not-covered；多元素各自独立校验）
+  const dialogFiles = entries
+    .map((e) => ({ file: e.file, elements: findJsxOpeningElements(e.text, 'EditDialog') }))
+    .filter((e) => e.elements.length > 0);
+  if (dialogFiles.length > 0) {
+    for (const { file, elements } of dialogFiles) {
+      for (const [idx, el] of elements.entries()) {
+        const label = `EditDialog #${idx + 1}`;
+        if (elementHasSpreadProps(el)) {
+          notCovered(
+            `dialog-onOpenChange`,
+            `${file}: ${label} 含展开属性 {...props}，onOpenChange 无法静态判定`,
+            '展开属性中的回调不在静态验证范围；需在展开处显式声明或由 fixture/浏览器验收证明',
+          );
+          notCovered(
+            `dialog-onSave`,
+            `${file}: ${label} 含展开属性 {...props}，onSave 无法静态判定`,
+            '展开属性中的回调不在静态验证范围；需在展开处显式声明或由 fixture/浏览器验收证明',
+          );
+          continue;
+        }
+        if (countPropInElement(el, 'onOpenChange') > 0) {
+          pass(`dialog-onOpenChange`, `${file}: ${label} 声明 onOpenChange（关闭约定）`);
+        } else {
+          fail(`dialog-onOpenChange`, `${file}: ${label} 缺少 onOpenChange 回调`, '添加 onOpenChange={({ open: next }) => ...}，取消不保存按关闭约定处理');
+        }
+        if (countPropInElement(el, 'onSave') > 0) {
+          pass(`dialog-onSave`, `${file}: ${label} 声明 onSave（保存处理）`);
+        } else {
+          fail(`dialog-onSave`, `${file}: ${label} 缺少 onSave`, '提供 async onSave（pending 由 EditDialog 呈现）');
+        }
       }
     }
     notCovered(

@@ -7,12 +7,13 @@
 
 | 命令 | 作用 | 输出 |
 |---|---|---|
-| `pnpm ai:view` / `npm run ai:view` | 当前工程的 AI 规范视图：组件目录、import 路径、导出名、包/Profile/版本、支持边界、Admin List 页面 recipe | JSON（stdout + `ai/artifacts/ai-view.json`） |
+| `pnpm ai:view` / `npm run ai:view` | 当前工程的 AI 规范视图：组件目录、import 路径、导出名、包/Profile/版本、支持边界、Admin List 页面 recipe | JSON（默认仅 stdout；`--out ai/artifacts/ai-view.json` 显式落盘） |
 | `pnpm ai:doctor` / `npm run ai:doctor` | 检查依赖声明 vs 实际安装版本、vendor 归档、browser 入口、Profile、浏览器导入路径 | JSON；有诊断退出码非零 |
 | `pnpm ai:check` / `npm run ai:check` | 对 src 声明的组件使用做只读验证（import/行为约定静态可确认部分） | JSON；有诊断退出码非零 |
 
-所有命令都是只读、确定性的：不执行业务操作、不调用模型、不修改文件（view 仅落盘
-`ai/artifacts/ai-view.json` 供机器消费）。
+所有命令都是只读、确定性的：不执行业务操作、不调用模型、不修改文件。
+`ai:view` 默认仅 stdout，显式 `--out <path>` 才落盘（该路径已 gitignore，属生成产物）；
+doctor/check 用 shell 重定向 stdout 即可留档。
 
 ## 权威事实
 
