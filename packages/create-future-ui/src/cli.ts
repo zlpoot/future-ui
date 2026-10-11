@@ -14,6 +14,7 @@
  */
 import { join, resolve, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { builtinModules } from 'node:module';
 import { existsSync, renameSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   checkTargetUsable,
@@ -109,14 +110,20 @@ const WINDOWS_DEVICE_NAME_RE = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$/i;
 /** npm 保留名（不可用作 package name / 目录名）。 */
 const NPM_FORBIDDEN_NAMES = new Set(['node_modules', 'favicon.ico']);
 
+/** Node.js 内置模块名（builtins；与 validate-npm-package-name 的 builtin 排除一致）。 */
+const NODE_BUILTIN_NAMES = new Set(
+  builtinModules.map((m) => (m.startsWith('node:') ? m.slice(5) : m).split('/')[0]),
+);
+
 /**
  * 校验项目名（目录名 = npm package name）。
  * 按 npm `validate-npm-package-name` 的 new-packages 规则（validForNewPackages）实现：
  *  - 拒绝空、"."".."、长度 > 214
- *  - 拒绝以 "." / "_" 开头
+ *  - 拒绝以 "." / "_" / "-" 开头
  *  - 拒绝大写字母（validForNewPackages 的 warning → 不通过）
  *  - 拒绝 "~ ' ! ( ) *" 等非 URL 安全字符（errors）
  *  - 拒绝首尾空格
+ *  - 拒绝 Node.js 内置模块名（http / stream 等，validForNewPackages 的 warning → 不通过）
  * 另加 Windows 路径约束：拒绝以 "." 结尾（Windows 目录名规则）；拒绝 Windows 保留设备名。
  * 另加 npm 保留名：node_modules / favicon.ico。
  * 返回错误描述；合法返回 null。
@@ -141,6 +148,9 @@ export function validateProjectName(name: string): string | null {
   if (/^[._]/.test(name)) {
     return '不能以 "." 或 "_" 开头（npm 新包名规则）';
   }
+  if (name.startsWith('-')) {
+    return '不能以 "-" 开头（npm 新包名规则）';
+  }
   if (/[A-Z]/.test(name)) {
     return '不能含大写字母（npm 新包名规则 validForNewPackages）';
   }
@@ -152,6 +162,9 @@ export function validateProjectName(name: string): string | null {
   }
   if (NPM_FORBIDDEN_NAMES.has(name.toLowerCase())) {
     return 'npm 保留名（node_modules / favicon.ico），不能用作目录名/包名';
+  }
+  if (NODE_BUILTIN_NAMES.has(name.toLowerCase())) {
+    return 'Node 内置模块名（如 http/stream），不能用作目录名/包名（npm 新包名规则）';
   }
   return null;
 }
@@ -235,12 +248,26 @@ export function run(argv: string[]): number {
       throw e;
     }
 
-    // 阶段 3 · 提交：目标不存在 → rename（同卷原子）；目标存在且为空（预检已保证）
-    // → 仅移除该空目录（不含任何文件，不触碰未知文件）后 rename。
-    if (existsSync(projectDir)) {
-      rmdirSync(projectDir);
+    // 阶段 3 · 提交（纳入 fail-safe）：目标不存在 → rename（同卷原子）；
+    // 目标存在且为空（预检已保证）→ 仅移除该空目录（不含任何文件，不触碰未知文件）后 rename。
+    // rename 失败（Windows 占用/权限等）时 finally 清理暂存并恢复目标原状：
+    // 原本为空目录则重建空目录；原本不存在则保持不存在。不留暂存残骸。
+    const targetExisted = existsSync(projectDir);
+    let committed = false;
+    try {
+      if (targetExisted) {
+        rmdirSync(projectDir);
+      }
+      renameSync(stagingDir, projectDir);
+      committed = true;
+    } finally {
+      if (!committed) {
+        rmSync(stagingDir, { recursive: true, force: true });
+        if (targetExisted) {
+          ensureTargetDir(projectDir); // 恢复原空目录状态
+        }
+      }
     }
-    renameSync(stagingDir, projectDir);
     printNextSteps(projectDir, options.localRcDir);
     return 0;
   } catch (e) {

@@ -16,9 +16,16 @@
 
 `create-future-ui-0.1.0-rc.1.tgz`
 
-SHA-256：`8A4A9E1716BF14A379D1C7370BFBEB58F14F8FA18FCE99B81DE5E45EB2F9E5FD`（二次 Review 修复后新 HEAD 重新打包；历史值 `FC7650AE…`、`1F86A5AE…` 均已标记废弃，不与最终候选混淆）
+SHA-256：`CB9D8C7E6A4777890278F12915B09A8ECD803C8613FF3B183455508F8BB9D306`（三轮 Review 修复后新 HEAD 重新打包；历史值 `8A4A9E17…`、`FC7650AE…`、`1F86A5AE…` 均已标记废弃，不与最终候选混淆）
 
 归档内容：`dist/*.js|.d.ts|.map` + `templates/react-vite-ts/**`（含 index.html.tmpl、README.md.tmpl、src/{main,App,theme.tsx,fixture.test.tsx,styles.css}、vite.config.ts、tsconfig.json）。
+
+## 三轮 Review 修复（Review #5481358683，两项 OPEN）
+
+| 项 | 问题 | 修复 | 验证 |
+|---|---|---|---|
+| P2-1 命名规则漏项 | `[a-z0-9._-]` 放过前导连字符（`-demo`）；排除名仅两个，放过 Node core module 名（`http`/`stream`），与 `validForNewPackages` 不一致 | 新增：拒绝 `startsWith('-')`；`builtinModules` 枚举 Node 内置名（去 `node:` 前缀、取段首）并拒绝（`http`/`stream`/`fs`/`path`/`events`/`buffer` 等）。`name-`、`my_app`、`httpd`/`streams` 仍合法 | 单测新增 3 组用例全过 |
+| P2-2 提交失败清理缺口 | `rmdirSync`/`renameSync` 在 catch 外；rename 抛错（Windows 占用/权限）会残留完整暂存目录，已存在空目录先被移除 | 提交纳入 fail-safe try/finally：rename 失败 → `rmSync` 清理暂存 + 目标原本为空目录则 `ensureTargetDir` 恢复原状；原本不存在则保持不存在 | 单测注入可控 `renameSync` EPERM：非零退出、无暂存残骸、原空目录保留、修复后同名重试成功 ✓ |
 
 ## 二次 Review 修复（Review #5481310333，两项 OPEN）
 
@@ -103,6 +110,8 @@ SHA-256：`8A4A9E1716BF14A379D1C7370BFBEB58F14F8FA18FCE99B81DE5E45EB2F9E5FD`（�
 9. **Review P1-1 重试测试构造**：合法候选 tgz 由测试内 `tar -czf` 构造（package/package.json 含 name/version），验证 planRcVendoring 全链路，不依赖真实 rc-dist。
 10. **二次 Review P1-1 顺序缺陷**：设备名检查置于大写检查之后，`PRN` 等先命中“不能含大写”→ 将 Windows 设备名检查前置（本身大小写不敏感）后 21/21 全过。
 11. **二次 Review P2-2 事务回归测试注入**：`vi.mock` 包装 `vendorRcTarballs`（vi.hoisted 故障开关），模拟“模板已写入后复制故障”，验证暂存清理与同名重试。
+12. **三轮 Review P2-1 合法用例冲突**：原“非设备名前缀合法”用例用 `console`，而 `console` 恰为 Node builtin（新规则正确命中）→ 换用 `concurrent` 后 24/24 全过。
+13. **三轮 Review P2-2 提交失败回归注入**：`vi.mock` 包装 `node:fs.renameSync`（vi.hoisted EPERM 开关），验证 rename 失败清理与空目录恢复。
 
 ## 未测范围（如实记录）
 
@@ -114,4 +123,4 @@ SHA-256：`8A4A9E1716BF14A379D1C7370BFBEB58F14F8FA18FCE99B81DE5E45EB2F9E5FD`（�
 
 ## 结论
 
-`create-future-ui` 可独立 pack（prepack 构建门）、可离仓安装（Node 22 pnpm 与 Node 24 npm 双通道）、可生成完整可安装/运行/构建/测试的 React 工程；首次 Review 四项（P1×2、P2×2）与二次 Review 两项（P1-1 事务性生成、P2-2 npm 新包名规则）均已修复并补充 Node 24 权威证据。Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，等待增量 Review。
+`create-future-ui` 可独立 pack（prepack 构建门）、可离仓安装（Node 22 pnpm 与 Node 24 npm 双通道）、可生成完整可安装/运行/构建/测试的 React 工程；三轮 Review 全部指出的问题（事务性生成、npm 新包名规则含前导 `-` 与 builtin、提交 fail-safe）均已修复并补充 Node 24 权威证据。Windows 真实验收通过。停止于 `AWAITING_INDEPENDENT_REVIEW`，等待增量 Review。

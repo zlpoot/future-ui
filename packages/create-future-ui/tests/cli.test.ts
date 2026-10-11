@@ -43,6 +43,28 @@ vi.mock('../src/rc-vendor.js', async (importOriginal) => {
   };
 });
 
+/**
+ * 提交阶段 fail-safe 回归（P2-2）：包装 node:fs.renameSync，可注入可控的
+ * rename 失败（EPERM），验证非零退出、无暂存残骸、原空目录状态保留、
+ * 不覆盖未知文件、修复后同名重试成功。默认透传原实现。
+ */
+const fsState = vi.hoisted(() => ({ failRename: false }));
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    renameSync: (from: string, to: string) => {
+      if (fsState.failRename) {
+        const err = new Error('simulated rename failure (EPERM)') as NodeJS.ErrnoException;
+        err.code = 'EPERM';
+        throw err;
+      }
+      return actual.renameSync(from, to);
+    },
+  };
+});
+
 const TEMPLATE_ROOT = join(__dirname, '..', 'templates', 'react-vite-ts');
 
 let tmp: string;
@@ -114,8 +136,8 @@ describe('validateProjectName (P2-2 · npm new-package 规则)', () => {
     for (const bad of ['CON', 'con', 'Prn', 'AUX', 'NUL', 'COM1', 'COM9', 'LPT1', 'LPT9', 'CON.txt']) {
       expect(validateProjectName(bad)).toMatch(/设备名/);
     }
-    // 合法前缀不受影响
-    expect(validateProjectName('console')).toBeNull();
+    // 合法前缀不受影响（非设备名、非 Node builtin）
+    expect(validateProjectName('concurrent')).toBeNull();
   });
 
   it('拒绝以 "." 或 "_" 开头、以 "." 结尾（Windows 目录约束）', () => {
@@ -130,6 +152,20 @@ describe('validateProjectName (P2-2 · npm new-package 规则)', () => {
     expect(validateProjectName('my_app~x')).toMatch(/只能包含/);
     expect(validateProjectName("a'b")).toMatch(/只能包含/);
     expect(validateProjectName('a!b')).toMatch(/只能包含/);
+  });
+
+  it('拒绝前导连字符（npm 新包名规则 startsWith(-)）', () => {
+    expect(validateProjectName('-demo')).toMatch(/开头/);
+    expect(validateProjectName('-')).toMatch(/开头/);
+  });
+
+  it('拒绝 Node 内置模块名（builtin modules 排除）', () => {
+    for (const bad of ['http', 'stream', 'fs', 'path', 'events', 'buffer']) {
+      expect(validateProjectName(bad)).toMatch(/内置模块/);
+    }
+    // 非内置名不受影响
+    expect(validateProjectName('httpd')).toBeNull();
+    expect(validateProjectName('streams')).toBeNull();
   });
 
   it('拒绝 npm 保留名 node_modules / favicon.ico', () => {
@@ -255,6 +291,42 @@ describe('run() 先预检后写入 + 失败后同名重试 (P1-1)', () => {
       expect(code).toBe(0);
       expect(existsSync(join(tmp, 'empty-app', 'package.json'))).toBe(true);
     } finally {
+      process.chdir(cwd);
+    }
+  });
+
+  it('rename 提交失败：非零退出、无暂存残骸、原空目录保留、修复后同名重试成功（P2-2）', () => {
+    const cwd = process.cwd();
+    process.chdir(tmp);
+    try {
+      // 场景 A：目标原本不存在，rename 失败 → 保持不存在、无暂存残骸
+      fsState.failRename = true;
+      const first = run(['my-rename', '--local-rc-dir', makeRcDir()]);
+      expect(first).toBe(1);
+      expect(existsSync(join(tmp, 'my-rename'))).toBe(false);
+      expect(readdirSync(tmp).filter((n) => n.includes('.cfu-staging-'))).toEqual([]);
+
+      // 场景 B：目标原本是空目录，rename 失败 → 空目录状态保留、内容为空、无暂存残骸
+      mkdirSync(join(tmp, 'empty-rename'));
+      const second = run(['empty-rename', '--local-rc-dir', makeRcDir()]);
+      expect(second).toBe(1);
+      expect(existsSync(join(tmp, 'empty-rename'))).toBe(true);
+      expect(readdirSync(join(tmp, 'empty-rename'))).toEqual([]);
+      expect(readdirSync(tmp).filter((n) => n.includes('.cfu-staging-'))).toEqual([]);
+
+      // 不覆盖未知文件：非空目标在预检阶段即被拒绝（已有独立用例），
+      // rename 失败路径只触碰我们创建的暂存目录与空目标。
+
+      // 修复后同名重试成功（两场景都不被残骸阻塞）
+      fsState.failRename = false;
+      const third = run(['my-rename', '--local-rc-dir', makeRcDir()]);
+      expect(third).toBe(0);
+      expect(existsSync(join(tmp, 'my-rename', 'package.json'))).toBe(true);
+      const fourth = run(['empty-rename', '--local-rc-dir', makeRcDir()]);
+      expect(fourth).toBe(0);
+      expect(existsSync(join(tmp, 'empty-rename', 'package.json'))).toBe(true);
+    } finally {
+      fsState.failRename = false;
       process.chdir(cwd);
     }
   });
