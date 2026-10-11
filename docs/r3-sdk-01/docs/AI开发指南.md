@@ -28,13 +28,15 @@ npm run ai:view -- --out ai/artifacts/ai-view.json
 
 ## 2. ai:view 输出的核心事实（真实结构）
 
-- `components`：`EditDialog`（supported）、`ShadcnButton`（partial）、`ShadcnTextInput`（partial），
-  每项含 `importPath: "@future-ui/shadcn-adapter/browser"`、`exportName`、`exportVerified`、
+- `components`：`future-ui.dialog`（EditDialog，supported）、`future-ui.button`（ShadcnButton，partial）、
+  `future-ui.text-input`（ShadcnTextInput，partial），每项含 `importPath: "@future-ui/shadcn-adapter/browser"`、
+  `declaredExports`（真实导出名数组）、`exportVerified`、`missingExports`、
   `mapping.domains`（逐条 supported / partial / unsupported）。
-- `profile`：`r1-edit-dialog-reference@1.0.0`（`editDialogProfile`）。
-- `versions`：contracts `1.0.0`，其余包 `0.1.0-rc.1`——从**已安装 package.json** 派生，不硬编码。
+- `profile`：`profileId: r1-edit-dialog-reference` + `profileVersion: 1.0.0`（`editDialogProfile`）。
+- `packages`：数组，每项 `name/version/declared/installed/browserSafe`——contracts `1.0.0`，
+  其余包 `0.1.0-rc.1`，从**已安装 package.json** 派生，不硬编码。
 - `pages`：`future-ui.page.admin-list` 组合 recipe（侧栏/页头层级/统计卡/搜索/语义表格/EditDialog 交互约定）。
-- `theme`：Light/Dark token 单一数据源引用、`<html data-theme>` 切换、Portal 说明。
+- `theme`：`cssEntry: "@future-ui/theme/theme.css"`、`cssInstalled`、Light/Dark 说明、Portal 说明。
 
 ## 3. 状态边界（不得虚报）
 
