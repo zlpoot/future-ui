@@ -6,7 +6,8 @@
   "description": "R1-02 (#68) / R3-RC-001 (#104): first existing-library adapter — shadcn/ui new-york-v4 (Radix) Dialog/Button/TextInput + Project Profile + EditDialog reference. Browser-safe surface at ./browser.",
   "exports": {
     ".": "./src/index.ts",
-    "./browser": "./src/browser.ts"
+    "./browser": "./src/browser.ts",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

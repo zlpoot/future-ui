@@ -13,6 +13,20 @@
 - shadcn/Radix 适配组件：`ShadcnButton`、`ShadcnTextInput`、`EditDialog`
 - 主题资源：`@future-ui/theme/theme.css`（Light/Dark token 单一数据源，无第二份色值）
 
+## AI 规范入口（R3-WIN-02 / Issue #108）
+
+本工程提供机器可读的 AI 规范视图与只读检查命令（Node-only，不进浏览器）：
+
+```bash
+pnpm ai:view    # 组件目录 / Profile / 版本 / 支持边界 / Admin List 页面 recipe → JSON
+pnpm ai:doctor  # 依赖版本与 browser 入口一致性检查 → JSON
+pnpm ai:check   # src 组件使用与行为约定的只读验证 → JSON
+```
+
+详见 [AI-AGENTS.md](AI-AGENTS.md)：唯一合法 Browser 入口是
+`@future-ui/shadcn-adapter/browser`；Profile 为 `r1-edit-dialog-reference@1.0.0`；
+版本从已安装包元数据派生，不在文档硬编码。
+
 ## 开始
 
 ```bash

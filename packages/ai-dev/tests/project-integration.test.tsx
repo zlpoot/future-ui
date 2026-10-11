@@ -68,6 +68,23 @@ describe('R1-03 Phase D — real shadcn descriptor', () => {
     const textSrc = moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.text-input')!);
     expect(textSrc.example).toContain('onValueChange={(event) => setEmail(event.value)}');
   });
+
+  it('R3-WIN-02 (#108): browser-safe import surface + version derived from package metadata', () => {
+    const view = buildShadcnProjectView().view!;
+    for (const type of ['future-ui.dialog', 'future-ui.button', 'future-ui.text-input']) {
+      const src = moduleSource(view.definitions.find((d) => d.componentType === type)!);
+      // consumers must import the browser-safe entry, never the Node-only index
+      expect(src.module).toBe('@future-ui/shadcn-adapter/browser');
+    }
+    const dialog = view.definitions.find((d) => d.componentType === 'future-ui.dialog')!;
+    // version is the REAL installed package version, not the historical 0.0.0 hardcode
+    expect(dialog.identity.adapterVersion).not.toBe('0.0.0');
+    expect(dialog.identity.adapterVersion).toBeTruthy();
+    // browser entry exposes the three real named exports
+    expect(importableModule(dialog.source)?.exports).toEqual(['EditDialog']);
+    expect(importableModule(moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.button')!))?.exports).toEqual(['ShadcnButton']);
+    expect(importableModule(moduleSource(view.definitions.find((d) => d.componentType === 'future-ui.text-input')!))?.exports).toEqual(['ShadcnTextInput']);
+  });
 });
 
 describe('R1-03 Phase C anchors over the real EditDialog', () => {

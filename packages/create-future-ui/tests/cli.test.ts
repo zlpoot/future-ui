@@ -369,4 +369,24 @@ describe('writeTemplate', () => {
     expect(readme).toContain('my-admin');
     expect(readme).toContain('本地候选');
   });
+
+  it('R3-WIN-02 (#108): 模板包含 AI 规范工具与发现入口', () => {
+    const target = join(tmp, 'proj-ai');
+    mkdirSync(target);
+    writeTemplate(target, TEMPLATE_ROOT, 'proj-ai');
+    // Node-only AI 工具（不进浏览器 bundle）
+    for (const f of ['ai/project-info.mjs', 'ai/ai-view.mjs', 'ai/ai-doctor.mjs', 'ai/ai-check.mjs']) {
+      expect(existsSync(join(target, f))).toBe(true);
+    }
+    // Coding Agent 发现入口
+    expect(existsSync(join(target, 'AI-AGENTS.md'))).toBe(true);
+    const agents = readFileSync(join(target, 'AI-AGENTS.md'), 'utf8');
+    expect(agents).toContain('@future-ui/shadcn-adapter/browser');
+    expect(agents).toContain('r1-edit-dialog-reference@1.0.0');
+    // scripts 挂载 ai 命令
+    const m = renderPackageJson('proj-ai');
+    expect(m.scripts['ai:view']).toBe('node ai/ai-view.mjs');
+    expect(m.scripts['ai:doctor']).toBe('node ai/ai-doctor.mjs');
+    expect(m.scripts['ai:check']).toBe('node ai/ai-check.mjs');
+  });
 });
