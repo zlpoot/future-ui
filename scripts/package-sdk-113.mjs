@@ -80,6 +80,7 @@ function parseArgs(argv) {
     const k = argv[i];
     if (k in args) {
       if (k === '--force') args[k] = true;
+      else if (k === '--base-sha') args[k] = String(argv[i + 1] ?? '').trim() || FROZEN_BASE; // Git SHA：不做路径 resolve
       else args[k] = resolve(argv[i + 1] ?? '');
     }
   }
@@ -121,16 +122,22 @@ function main() {
   if (!existsSync(cliTgz)) throw new Error(`cli-tgz not found: ${cliTgz}`);
   mkdirSync(outDir, { recursive: true });
 
-  // P1 覆盖保护：目标已存在默认拒绝；--force 才允许覆盖（删除前打印）
+  // P1 覆盖保护：目标已存在默认拒绝；--force 才允许覆盖（删除前打印）。
+  // 保护对象：SDK 目录、同名 ZIP、交付记录 SDK-PACK-RECORD.txt（均可能是既有未知文件）。
   const sdkDir = join(outDir, SDK_DIR_NAME);
   const zipPath = join(outDir, ZIP_NAME);
-  for (const [label, p] of [['SDK dir', sdkDir], ['ZIP', zipPath]]) {
+  const recordPath = join(outDir, 'SDK-PACK-RECORD.txt');
+  for (const [label, p, kind] of [
+    ['SDK dir', sdkDir, 'dir'],
+    ['ZIP', zipPath, 'file'],
+    ['SDK-PACK-RECORD.txt', recordPath, 'file'],
+  ]) {
     if (existsSync(p)) {
       if (!force) {
         throw new Error(`refusing to overwrite existing ${label}: ${p}（请使用新的空 out 目录，或显式 --force）`);
       }
       console.warn(`[force] removing existing ${label}: ${p}`);
-      if (label === 'SDK dir') rmSync(p, { recursive: true, force: true });
+      if (kind === 'dir') rmSync(p, { recursive: true, force: true });
       else rmSync(p, { force: true });
     }
   }
