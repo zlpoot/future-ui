@@ -27,3 +27,7 @@ docs/benchmarks/d10-harness/runs/
 
 # R3-RC-001 (#104) local pack archives and staging (never committed)
 rc-dist/
+
+# R3-WIN-01: create-future-ui pack 产物（不入库，归档 SHA 见 docs）
+cli-pack/
+
