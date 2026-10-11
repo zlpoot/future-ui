@@ -442,6 +442,25 @@ describe('AI 工具纯函数 · parseImports 多形态（P2-02）', () => {
     writeFileSync(f, "const m = await import(someModule);\n", 'utf8');
     expect(info.parseImports(f)).toEqual([]);
   });
+
+  it('默认 + namespace 复合 import（import Def, * as Root from ...）也被识别（第二轮 P2-02 遗留）', async () => {
+    const info = await loadAiInfo();
+    const dir = join(tmp, 'imports3');
+    mkdirSync(dir, { recursive: true });
+    const f = join(dir, 'c.tsx');
+    writeFileSync(
+      f,
+      "import Def, * as Root from '@future-ui/shadcn-adapter';\nimport Def2, * as Root2 from '@future-ui/shadcn-adapter/browser';\n",
+      'utf8',
+    );
+    const imps: { specifier: string; kind: string }[] = info.parseImports(f);
+    const root = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter');
+    expect(root).toHaveLength(1);
+    expect(root[0].kind).toBe('mixed-namespace');
+    const browser = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter/browser');
+    expect(browser).toHaveLength(1);
+    expect(browser[0].kind).toBe('mixed-namespace');
+  });
 });
 
 describe('AI 工具纯函数 · EditDialog JSX 元素级解析（P2-03）', () => {
@@ -479,5 +498,24 @@ describe('AI 工具纯函数 · EditDialog JSX 元素级解析（P2-03）', () =
     const info = await loadAiInfo();
     expect(info.elementHasSpreadProps('<EditDialog {...props} />')).toBe(true);
     expect(info.elementHasSpreadProps('<EditDialog onSave={save} />')).toBe(false);
+  });
+
+  it('字符串 / 模板 / 注释中的伪属性不误判（第二轮 P2-03 遗留）', async () => {
+    const info = await loadAiInfo();
+    const src = [
+      '<EditDialog',
+      '  description="onSave=NOT_REAL"',
+      '  hint={`onSave=NOT_REAL_TEMPLATE`}',
+      '  // onSave=NOT_REAL_COMMENT',
+      '  onSave={save}',
+      '  data-onSave="attr-prefix-not-counted"',
+      '/>',
+    ].join('\n');
+    const els = info.findJsxOpeningElements(src, 'EditDialog');
+    expect(els).toHaveLength(1);
+    // 字符串/模板/注释/带前缀属性中的 onSave= 均不得计入；真实 onSave 属性恰好 1 次
+    expect(info.countPropInElement(els[0], 'onSave')).toBe(1);
+    // description / data-onSave 本身仍是属性（不同名，不参与 onSave 计数）
+    expect(info.countPropInElement(els[0], 'description')).toBe(1);
   });
 });

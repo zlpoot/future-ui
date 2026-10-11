@@ -62,9 +62,9 @@ A474A793F224452EFF071BAC80DD68B4DC52E06E998CE59D4BB6E087410413CF  future-ui-shad
 D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C  future-ui-theme-0.1.0-rc.1.tgz
 ```
 
-CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复、模板 AI 工具与 P2/P3 修复）：
-`5BFAE52F11A0F56E12502FB0AD1F96CF00FCEBD25BE3FD4ECFFA31C763BEFB8E`
-（历史 `71DDBBE6…` 为 Review 前版本，不再使用）
+CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复、模板 AI 工具、P2/P3 修复与第二轮复审修复）：
+`EC7276E7D063762B6660015AA8D224DFED37B577F8AB3A61C0D5F6A4833CDE5E`
+（历史 `71DDBBE6…` / `5BFAE52F…` 为 Review 前版本，不再使用）
 
 ## Windows 离仓验收（Node 24.21.0 · npm 11.19.0 · 源仓库外全新目录，基于最终归档重做）
 
@@ -112,6 +112,14 @@ Chrome 冒烟：`http://127.0.0.1:5173/` 浅/深主题、三组件渲染正常�
    - P3 只读落盘 → ai:view 默认仅 stdout，`--out` 显式落盘；模板 .gitignore 忽略 ai/artifacts/；文档措辞同步
    新负例（registry 漂移/删除声明/registry 精确/ns+副作用 import/双 Dialog/删导出）全部符合预期；
    旧负例（badimport/badversion/unknown）回归不回归。
+8. **第二轮复审（5482526845）遗留**：
+   - 复合导入 `import Def, * as Root from '@future-ui/shadcn-adapter'` 漏检 → parseImports 增
+     mixed-namespace 正则；负例 doctor 退出码 1 browser-import diagnose
+   - 字符串伪属性 `description="onSave="` 误判 → countPropInElement 重写为 token 级扫描
+     （跳过字符串/模板/注释/JSX 表达式、独立词边界、排除 -/. 前缀）；负例 check 退出码 0 不误报
+   - 生成器 .gitignore 覆盖 → cli.ts GITIGNORE_CONTENT 补 ai/artifacts/（与模板同步）；
+     实测生成工程含该规则
+   针对性回归：cli.test 新增 2 用例（32 tests 全过）；CLI 归档 SHA 更新 `EC7276E7…`。
 
 ## 未测 / 未覆盖
 

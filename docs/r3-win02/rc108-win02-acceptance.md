@@ -85,6 +85,16 @@
      缺失 → exportVerified=false、mappingStatus 降级 **not-covered**、顶层 warnings + note（不得 supported；doctor 会 diagnose）。
    - **P3**（只读查询留 untracked 产物）：ai-view 默认仅 stdout，显式 `--out <path>` 才落盘；
      模板 `.gitignore` 增 `ai/artifacts/`；README/AI-AGENTS 措辞同步。Windows 实测：默认调用无 artifacts 落盘，`--out` 落盘成功。
+8. **PR #111 第二轮复审（review 5482526845）两项 P2 遗留 + P3 遗留**：
+   - **P2-02 复合导入漏检**：`import Def, * as Root from '@future-ui/shadcn-adapter'`（默认+namespace 复合）
+     之前两个正则均不匹配。parseImports 新增 mixed-namespace 正则覆盖；负例：复合导入根入口 → doctor 退出码 **1** browser-import diagnose。
+   - **P2-03 字符串伪属性误判**：`description="onSave="` 会被旧正则误认为真实 onSave。
+     `countPropInElement` 重写为 token 级扫描（跳过字符串/模板/注释/JSX 表达式，属性名需独立词边界、
+     排除 `data-onSave`/`comp.onSave` 等 `-`/`.` 前导）；负例：模板 EditDialog 加 `description="onSave=NOT_REAL_TEXT"` →
+     ai:check 退出码 **0** 不误报（onOpenChange/onSave 均 pass）。
+   - **P3 .gitignore 生成覆盖**：cli.ts 硬编码 `GITIGNORE_CONTENT` 缺 `ai/artifacts/`（模板 .gitignore 是保护性冗余，
+     实际生成由 CLI 写入）。已与模板同步补入；实测生成工程 .gitignore 含 `ai/artifacts/`。
+   针对性回归：cli.test 新增复合导入 / 字符串伪属性用例（32 tests 全过）。CLI 归档 SHA 更新 `EC7276E7…`。
 
 ## 五之二、最终归档 SHA-256（本轮本地 build:rc 产物；CI 环境独立构建值以其日志打印为准）
 
@@ -98,9 +108,9 @@ D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C  future-ui-them
 （#108 不冻结归档；四包 SHA 随本轮 build:rc 修复后的 HEAD 变化是预期行为，与 #105 历史冻结值
 `bd4db68c…` 等不再相同，历史值属于旧 HEAD 证据，已明确不再混淆。）
 
-CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复、模板 AI 工具与 P2/P3 修复）：
-`5BFAE52F11A0F56E12502FB0AD1F96CF00FCEBD25BE3FD4ECFFA31C763BEFB8E`
-（历史 `71DDBBE6…` 为 Review 前版本，已标记不再使用）
+CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复、模板 AI 工具、P2/P3 修复与第二轮复审修复）：
+`EC7276E7D063762B6660015AA8D224DFED37B577F8AB3A61C0D5F6A4833CDE5E`
+（历史 `71DDBBE6…` / `5BFAE52F…` 为 Review 前版本，已标记不再使用）
 
 ## 六、Windows 真实离仓验收（最终归档重做，Node 24.21.0，源仓库外全新目录）
 
@@ -108,7 +118,7 @@ CLI 归档（`create-future-ui-0.1.0-rc.1.tgz`，含 BOM 修复、模板 AI 工�
 
 | 步骤 | 命令 | 退出码 |
 |---|---|---|
-| 安装 CLI 归档（`5BFAE52F…`） | `& node24 npm-cli.js install <cli.tgz> --prefix installer` | 0 |
+| 安装 CLI 归档（`EC7276E7…`） | `& node24 npm-cli.js install <cli.tgz> --prefix installer` | 0 |
 | 生成新工程 | `node installer\...\dist\cli.js my-r3ai --local-rc-dir E:\projects\future-ui-r3rc\rc-dist` | 0 |
 | 安装工程依赖（file:vendor 四归档） | `npm install` + `install-scripts approve esbuild` | 0 |
 | **ai:view** | `node ai/ai-view.mjs` → `E:\projects\cfu-accept\win02-main\ai-view.json` | **0** |

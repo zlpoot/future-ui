@@ -98,6 +98,7 @@ export function collectSourceFiles() {
  * 返回条目列表，每条约含 specifier / names / kind：
  *  - named：`import { a, b as c } from 'x'`（含 `import type {...} from`、默认+具名混合）
  *  - namespace：`import * as X from 'x'`
+ *  - mixed-namespace：`import X, * as Y from 'x'`（默认 + namespace 复合）
  *  - side-effect：`import 'x'`
  *  - dynamic：静态字面量 `import('x')`（非字面量的动态 import 无法静态解析 → 不匹配，调用方按 not-covered 处理）
  */
@@ -125,6 +126,9 @@ export function parseImports(filePath) {
   // 2) namespace import：`import * as X from 'x'`
   const nsRe = /import\s+(?:type\s+)?\*\s+as\s+[\w$]+\s+from\s+['"]([^'"]+)['"]/g;
   while ((m = nsRe.exec(text)) !== null) push(m[1], [], 'namespace');
+  // 2b) 默认 + namespace 复合：`import X, * as Y from 'x'`（Review 第二轮 P2-02 遗留）
+  const mixedNsRe = /import\s+(?:type\s+)?[\w$]+\s*,\s*\*\s+as\s+[\w$]+\s+from\s+['"]([^'"]+)['"]/g;
+  while ((m = mixedNsRe.exec(text)) !== null) push(m[1], [], 'mixed-namespace');
   // 3) side-effect import：`import 'x'`
   const sideRe = /import\s+['"]([^'"]+)['"]/g;
   while ((m = sideRe.exec(text)) !== null) push(m[1], [], 'side-effect');
@@ -202,11 +206,84 @@ function extractJsxOpeningElement(text, start) {
   return null;
 }
 
-/** 单元素文本上某个 prop 的出现次数（`prop=` 独立词边界）。 */
+/**
+ * 单元素文本上某个 JSX 属性（`prop=`）的出现次数（token 级扫描）。
+ * 跳过字符串 / 模板 / 注释 / JSX 表达式（{...}），避免 `description="onSave="` 之类的
+ * 字符串伪属性被误判（Review 第二轮 P2-03 遗留）。属性名需为独立词（前导非 [\w$.-]）。
+ */
 export function countPropInElement(elementText, prop) {
-  const re = new RegExp(`(?:^|[^\\w$])${prop}\\s*=`, 'g');
-  const hits = elementText.match(re);
-  return hits ? hits.length : 0;
+  const n = elementText.length;
+  let i = 0;
+  let inString = null;
+  let count = 0;
+  const skipString = () => {
+    const q = elementText[i];
+    i += 1;
+    while (i < n) {
+      const c = elementText[i];
+      if (c === '\\') {
+        i += 2;
+        continue;
+      }
+      if (c === q) {
+        i += 1;
+        return;
+      }
+      i += 1;
+    }
+  };
+  while (i < n) {
+    const ch = elementText[i];
+    if (inString !== null) {
+      if (ch === '\\') {
+        i += 2;
+        continue;
+      }
+      if (ch === inString) inString = null;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      inString = ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '{') {
+      // 跳过整个 JSX 表达式（属性值 { ... }）；属性名不可能出现在表达式内。
+      // 内部字符串用局部 skipString 跳过，不污染外层 inString 状态。
+      let depth = 1;
+      i += 1;
+      while (i < n && depth > 0) {
+        const c = elementText[i];
+        if (c === '"' || c === "'" || c === '`') {
+          skipString();
+          continue;
+        }
+        if (c === '{') depth += 1;
+        if (c === '}') depth -= 1;
+        i += 1;
+      }
+      continue;
+    }
+    if (ch === '/' && elementText[i + 1] === '/') {
+      const nl = elementText.indexOf('\n', i);
+      i = nl === -1 ? n : nl + 1;
+      continue;
+    }
+    if (ch === '/' && elementText[i + 1] === '*') {
+      const end = elementText.indexOf('*/', i + 2);
+      i = end === -1 ? n : end + 2;
+      continue;
+    }
+    if (elementText.startsWith(prop, i) && elementText[i + prop.length] === '=') {
+      const before = i === 0 ? '' : elementText[i - 1];
+      if (!/[\w$.-]/.test(before)) count += 1;
+      i += prop.length;
+      continue;
+    }
+    i += 1;
+  }
+  return count;
 }
 
 /** 元素是否含展开属性 `{...props}`（该元素回调无法静态判定 → not-covered）。 */

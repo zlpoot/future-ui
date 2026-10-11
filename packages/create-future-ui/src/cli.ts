@@ -28,11 +28,14 @@ import { planRcVendoring, vendorRcTarballs } from './rc-vendor.js';
 import type { VendoredTarball } from './rc-vendor.js';
 import { RC_CANDIDATES, TEMPLATE_NAME, VENDOR_REL_DIR, DEFAULT_DEV_PORT } from './constants.js';
 
-/** 生成工程自带的 .gitignore（模板归档不含 dotfiles）。 */
+/** 生成工程自带的 .gitignore（模板归档不含 dotfiles）。
+ *  注意与 templates/react-vite-ts/.gitignore 保持同步：ai:view --out 的生成产物必须被忽略。 */
 const GITIGNORE_CONTENT = `node_modules/
 dist/
 *.local
 .DS_Store
+# ai:view --out 显式落盘的生成产物（默认仅 stdout，不留 untracked 文件）
+ai/artifacts/
 `;
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
