@@ -38,6 +38,9 @@ export const BASE_PACKAGE_JSON: RenderedPackageJson = {
     preview: 'vite preview',
     typecheck: 'tsc --noEmit',
     test: 'vitest run',
+    'ai:view': 'node ai/ai-view.mjs',
+    'ai:doctor': 'node ai/ai-doctor.mjs',
+    'ai:check': 'node ai/ai-check.mjs',
   },
   dependencies: {
     '@future-ui/contracts': '1.0.0',

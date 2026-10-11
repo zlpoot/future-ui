@@ -29,9 +29,24 @@ import {
   upstreamCommit,
 } from '@future-ui/shadcn-adapter';
 import type { MappingDomain } from '@future-ui/shadcn-adapter';
+import adapterPackageJson from '@future-ui/shadcn-adapter/package.json' with { type: 'json' };
 
-/** Mirrors packages/shadcn-adapter/package.json "version" (private adapter). */
-const ADAPTER_PACKAGE_VERSION = '0.0.0';
+/**
+ * R3-WIN-02 (#108): derive the REAL adapter package version from the package
+ * metadata (`./package.json` subpath exposed by the adapter's exports) instead
+ * of a hand-maintained constant. The historical `0.0.0` hardcode drifted from
+ * the actual RC (`0.1.0-rc.1`). Reading the package.json keeps the descriptor
+ * in lockstep with the adapter version — no second constant to drift.
+ */
+const ADAPTER_PACKAGE_VERSION = adapterPackageJson.version;
+
+/**
+ * Browser-safe import surface (R3-WIN-02 #108): the package index re-exports
+ * Node-only mapping validators (transitive `node:fs`), so consumers must import
+ * `@future-ui/shadcn-adapter/browser`. The descriptor now records the REAL
+ * browser entry and its named exports, not the root entry.
+ */
+const BROWSER_MODULE = '@future-ui/shadcn-adapter/browser';
 
 const CONSUMER_EXPORTS: Record<string, string[]> = {
   'future-ui.dialog': ['EditDialog'],
@@ -115,7 +130,7 @@ export function buildShadcnComponentDefinitions(): ComponentDefinition[] {
       },
       source: {
         kind: 'module-import',
-        module: '@future-ui/shadcn-adapter',
+        module: BROWSER_MODULE,
         exports,
         example: exampleFor(report.componentType).code,
       },

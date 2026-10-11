@@ -11,6 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   checkTargetUsable,
@@ -368,5 +369,153 @@ describe('writeTemplate', () => {
     const readme = readFileSync(join(target, 'README.md'), 'utf8');
     expect(readme).toContain('my-admin');
     expect(readme).toContain('本地候选');
+  });
+
+  it('R3-WIN-02 (#108): 模板包含 AI 规范工具与发现入口', () => {
+    const target = join(tmp, 'proj-ai');
+    mkdirSync(target);
+    writeTemplate(target, TEMPLATE_ROOT, 'proj-ai');
+    // Node-only AI 工具（不进浏览器 bundle）
+    for (const f of ['ai/project-info.mjs', 'ai/ai-view.mjs', 'ai/ai-doctor.mjs', 'ai/ai-check.mjs']) {
+      expect(existsSync(join(target, f))).toBe(true);
+    }
+    // Coding Agent 发现入口
+    expect(existsSync(join(target, 'AI-AGENTS.md'))).toBe(true);
+    const agents = readFileSync(join(target, 'AI-AGENTS.md'), 'utf8');
+    expect(agents).toContain('@future-ui/shadcn-adapter/browser');
+    expect(agents).toContain('r1-edit-dialog-reference@1.0.0');
+    // scripts 挂载 ai 命令
+    const m = renderPackageJson('proj-ai');
+    expect(m.scripts['ai:view']).toBe('node ai/ai-view.mjs');
+    expect(m.scripts['ai:doctor']).toBe('node ai/ai-doctor.mjs');
+    expect(m.scripts['ai:check']).toBe('node ai/ai-check.mjs');
+    // P3：只读查询不留 untracked 产物——默认 stdout、--out 显式落盘且路径已 gitignore
+    expect(readFileSync(join(target, 'README.md'), 'utf8')).toContain('--out ai/artifacts/ai-view.json');
+    expect(readFileSync(join(target, '.gitignore'), 'utf8')).toContain('ai/artifacts/');
+  });
+});
+
+/**
+ * 动态加载模板 AI 共享库（纯函数单测；project-info.mjs 零第三方依赖）。
+ */
+async function loadAiInfo() {
+  const href = pathToFileURL(join(TEMPLATE_ROOT, 'ai', 'project-info.mjs')).href;
+  return import(href);
+}
+
+describe('AI 工具纯函数 · parseImports 多形态（P2-02）', () => {
+  it('识别 named / type / default+具名混合 / namespace / side-effect / 静态动态 import', async () => {
+    const info = await loadAiInfo();
+    const dir = join(tmp, 'imports');
+    mkdirSync(dir, { recursive: true });
+    const src = [
+      "import { EditDialog } from '@future-ui/shadcn-adapter/browser';",
+      "import type { EditDialogProps } from '@future-ui/shadcn-adapter/browser';",
+      "import Def, { ShadcnButton as Btn } from '@future-ui/shadcn-adapter/browser';",
+      "import * as Adapter from '@future-ui/shadcn-adapter';",
+      "import '@future-ui/shadcn-adapter';",
+      "const m = await import('@future-ui/shadcn-adapter');",
+    ].join('\n');
+    const f = join(dir, 'a.tsx');
+    writeFileSync(f, src, 'utf8');
+    type ImportEntry = { file: string; specifier: string; kind: string; names: string[] };
+    const imps: ImportEntry[] = info.parseImports(f);
+
+    // 根入口（浏览器不安全）三种形态都能被发现
+    const root = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter');
+    expect(root).toHaveLength(3);
+    expect(root.map((i) => i.kind).sort()).toEqual(['dynamic', 'namespace', 'side-effect']);
+
+    // browser 入口具名导出提取（含 type 与 as 别名——names 为别名前的原导出名）
+    const browserImps = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter/browser');
+    expect(browserImps.map((i) => i.kind)).toEqual(['named', 'named', 'named']);
+    expect(browserImps.find((i) => i.names.includes('EditDialog'))).toBeTruthy();
+    expect(browserImps.find((i) => i.names.includes('ShadcnButton'))).toBeTruthy();
+    expect(browserImps.find((i) => i.names.includes('EditDialogProps'))).toBeTruthy();
+  });
+
+  it('非字面量动态 import（import(variable)）不产生条目（无法静态解析 → 调用方 not-covered）', async () => {
+    const info = await loadAiInfo();
+    const dir = join(tmp, 'imports2');
+    mkdirSync(dir, { recursive: true });
+    const f = join(dir, 'b.tsx');
+    writeFileSync(f, "const m = await import(someModule);\n", 'utf8');
+    expect(info.parseImports(f)).toEqual([]);
+  });
+
+  it('默认 + namespace 复合 import（import Def, * as Root from ...）也被识别（第二轮 P2-02 遗留）', async () => {
+    const info = await loadAiInfo();
+    const dir = join(tmp, 'imports3');
+    mkdirSync(dir, { recursive: true });
+    const f = join(dir, 'c.tsx');
+    writeFileSync(
+      f,
+      "import Def, * as Root from '@future-ui/shadcn-adapter';\nimport Def2, * as Root2 from '@future-ui/shadcn-adapter/browser';\n",
+      'utf8',
+    );
+    const imps: { specifier: string; kind: string }[] = info.parseImports(f);
+    const root = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter');
+    expect(root).toHaveLength(1);
+    expect(root[0].kind).toBe('mixed-namespace');
+    const browser = imps.filter((i) => i.specifier === '@future-ui/shadcn-adapter/browser');
+    expect(browser).toHaveLength(1);
+    expect(browser[0].kind).toBe('mixed-namespace');
+  });
+});
+
+describe('AI 工具纯函数 · EditDialog JSX 元素级解析（P2-03）', () => {
+  it('回调内嵌 `/>` 不提前截断、属性顺序无关、双元素独立统计', async () => {
+    const info = await loadAiInfo();
+    const src = [
+      '<EditDialog',
+      '  onOpenChange={({ open }) => setOpen(open)}',
+      '  renderTitle={() => <Icon />}',
+      '  onSave={save}',
+      '/>',
+      '',
+      '<EditDialog open={true} onOpenChange={onClose} />',
+    ].join('\n');
+    const els = info.findJsxOpeningElements(src, 'EditDialog');
+    expect(els).toHaveLength(2);
+    // 元素一：renderTitle 里的 <Icon /> 不得截断元素，onOpenChange/onSave 均在
+    expect(info.countPropInElement(els[0], 'onOpenChange')).toBe(1);
+    expect(info.countPropInElement(els[0], 'onSave')).toBe(1);
+    // 元素二：独立统计，缺 onSave（不再被元素一掩盖）
+    expect(info.countPropInElement(els[1], 'onOpenChange')).toBe(1);
+    expect(info.countPropInElement(els[1], 'onSave')).toBe(0);
+  });
+
+  it('不匹配 MyEditDialog / Comp.EditDialog 等前导标识符', () => {
+    return loadAiInfo().then((info) => {
+      const src = '<MyEditDialog />\n<Comp.EditDialog />\n<EditDialog onSave={save} />';
+      const els = info.findJsxOpeningElements(src, 'EditDialog');
+      expect(els).toHaveLength(1);
+      expect(info.countPropInElement(els[0], 'onSave')).toBe(1);
+    });
+  });
+
+  it('展开属性 {...props} 被识别（该元素回调无法静态判定）', async () => {
+    const info = await loadAiInfo();
+    expect(info.elementHasSpreadProps('<EditDialog {...props} />')).toBe(true);
+    expect(info.elementHasSpreadProps('<EditDialog onSave={save} />')).toBe(false);
+  });
+
+  it('字符串 / 模板 / 注释中的伪属性不误判（第二轮 P2-03 遗留）', async () => {
+    const info = await loadAiInfo();
+    const src = [
+      '<EditDialog',
+      '  description="onSave=NOT_REAL"',
+      '  hint={`onSave=NOT_REAL_TEMPLATE`}',
+      '  // onSave=NOT_REAL_COMMENT',
+      '  onSave={save}',
+      '  data-onSave="attr-prefix-not-counted"',
+      '/>',
+    ].join('\n');
+    const els = info.findJsxOpeningElements(src, 'EditDialog');
+    expect(els).toHaveLength(1);
+    // 字符串/模板/注释/带前缀属性中的 onSave= 均不得计入；真实 onSave 属性恰好 1 次
+    expect(info.countPropInElement(els[0], 'onSave')).toBe(1);
+    // description / data-onSave 本身仍是属性（不同名，不参与 onSave 计数）
+    expect(info.countPropInElement(els[0], 'description')).toBe(1);
   });
 });
