@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "@future-ui/theme/theme.css";
+
+/*
+ * Tailwind CSS v4 显式源扫描：
+ * shadcn-adapter 的组件类名（bg-primary、text-foreground、border-border 等）
+ * 在 node_modules 的打包产物里，默认自动扫描不会覆盖，必须用 @source 显式声明，
+ * 否则编辑弹窗等组件样式在构建产物中缺失（不能只以 React 渲染通过即宣称 PASS）。
+ */
+@source "../node_modules/@future-ui/shadcn-adapter/dist";
+
+/*
+ * 页面级组合修复（#109 Chrome 验收发现）：vendored shadcn Dialog/Input 冻结类
+ * 未含 text-foreground（light 下依赖默认黑色继承）；dark 下 dialog 背景由
+ * bg-background token 变深（#0b1220），而内部文字/输入仍继承黑色，不可读。
+ * 应用层用 theme.css 的 --color-foreground token 补足，不修改 vendored 冻结源码。
+ */
+[role='dialog'],
+[role='dialog'] input {
+  color: var(--color-foreground);
+}
+
+[role='dialog'] input::placeholder {
+  color: var(--color-muted-foreground);
+}
