@@ -85,6 +85,8 @@ function resolveWorkspaceDeps(manifest, versions) {
  */
 function toDistExportSpec(p) {
   if (p === './schemas/*.json') return './schemas/*.json';
+  // ./package.json 元数据子路径：原样保留（Node 生态约定，无 .d.ts/.js 变体）
+  if (p === './package.json') return './package.json';
   if (p.endsWith('.css')) return p.replace('./src/', './dist/');
   const base = p.replace('./src/', './dist/').replace(/\.(ts|tsx)$/, '');
   return { types: `${base}.d.ts`, default: `${base}.js` };

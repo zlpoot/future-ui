@@ -105,6 +105,16 @@ for (const f of tgzFiles) {
         continue;
       }
       const entry = `package/${t.replace(/^\.\//, '')}`;
+      // ./package.json 特殊子路径：Node 生态约定，指向归档内 package/package.json 本身
+      if (entry === 'package/package.json') {
+        if (entries.includes(entry)) {
+          console.log(`  [exports] ${sub} -> ${t} OK (package.json 元数据子路径)`);
+        } else {
+          failures++;
+          console.error(`  exports ${sub} 文件缺失: ${entry}`);
+        }
+        continue;
+      }
       if (!entries.includes(entry)) {
         failures++;
         console.error(`  exports ${sub} 文件缺失: ${entry}`);

@@ -53,10 +53,19 @@ Draft · 停 **AWAITING_INDEPENDENT_REVIEW**（交 ChatGPT 对 exact HEAD 独立
 - 版本：contracts 1.0.0；react-provider/theme/shadcn-adapter 0.1.0-rc.1（全部从已安装 package.json 派生）
 - Theme：`@future-ui/theme/theme.css`；Light/Dark `<html data-theme>`；Dialog 走 body Portal
 
-## Windows 离仓验收（Node 24.21.0 · npm 11.19.0 · 源仓库外全新目录）
+## 最终归档 SHA-256（本轮 build:rc 修复后；CI 环境独立构建值以其日志打印为准）
 
-CLI 归档 `create-future-ui-0.1.0-rc.1.tgz` SHA-256：
+```
+C4E21549CD9C6BA53BCD6AD9EDEF4B3A622E0E30EF4A70D02A8FA5255D8AFBEB  future-ui-contracts-1.0.0.tgz
+32A020793604D6B818EF2F33424E14F30E4ED17891F6976003730006E8E17671  future-ui-react-provider-0.1.0-rc.1.tgz
+A474A793F224452EFF071BAC80DD68B4DC52E06E998CE59D4BB6E087410413CF  future-ui-shadcn-adapter-0.1.0-rc.1.tgz
+D7C1D0FCEA33D3D468A38B12F81880808E187E80A8A662EC7DFE8EF2461F516C  future-ui-theme-0.1.0-rc.1.tgz
+```
+
+CLI 归档 `create-future-ui-0.1.0-rc.1.tgz`（含 BOM 修复与模板 AI 工具）：
 `71DDBBE68AD72E20D4034EE2742E802E67DF320B789C18C56CE71CA5B5BD8561`
+
+## Windows 离仓验收（Node 24.21.0 · npm 11.19.0 · 源仓库外全新目录，基于最终归档重做）
 
 | 步骤 | 命令 | 退出码 |
 |---|---|---|
@@ -86,6 +95,10 @@ Chrome 冒烟：`http://127.0.0.1:5173/` 浅/深主题、三组件渲染正常�
 3. forwardRef 组件 typeof 为 object → 导出检查改为"导出存在"
 4. ai:view 映射名 `text-input`.pop() 得 input → 显式 MAPPING_EXPORT 表
 5. 负例注入 BOM → readJson 容忍 UTF-8 BOM
+6. **CI run 38107487914 failure（check:rc）**：build-rc.mjs 的 toDistExportSpec 把裸
+   `"./package.json"` 误改写成 `{types:.d.ts, default:.js}` → build-rc 原样保留该元数据子路径；
+   check-rc 对 `package/package.json` 特殊子路径按"归档内存在"判定。修复后本地
+   `pnpm build:rc` + `pnpm check:rc` 双 PASS，四包 SHA 见上（CI 独立构建值以其日志为准）。
 
 ## 未测 / 未覆盖
 
